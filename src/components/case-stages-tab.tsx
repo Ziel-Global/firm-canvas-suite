@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleDot, Clock, FileOutput, Loader2, StickyNote, Undo2, User } from "lucide-react";
+import { Check, CircleDot, Clock, FileOutput, Loader2, Lock, StickyNote, Undo2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
