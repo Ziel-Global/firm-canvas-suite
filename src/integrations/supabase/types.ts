@@ -14,13 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          client_ref: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          client_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          client_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          two_factor_enabled: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          full_name?: string | null
+          id: string
+          is_active?: boolean | null
+          phone?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          two_factor_enabled?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          two_factor_enabled?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["user_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       approval_status: "pending" | "approved" | "returned" | "locked"
