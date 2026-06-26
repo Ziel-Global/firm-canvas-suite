@@ -107,6 +107,63 @@ export type Database = {
           },
         ]
       }
+      case_stages: {
+        Row: {
+          assignee_id: string | null
+          case_id: string | null
+          completed_at: string | null
+          deadline: string | null
+          id: string
+          name: string | null
+          notes: string | null
+          sequence_order: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["stage_status"] | null
+          template_stage_id: string | null
+        }
+        Insert: {
+          assignee_id?: string | null
+          case_id?: string | null
+          completed_at?: string | null
+          deadline?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          sequence_order?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"] | null
+          template_stage_id?: string | null
+        }
+        Update: {
+          assignee_id?: string | null
+          case_id?: string | null
+          completed_at?: string | null
+          deadline?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          sequence_order?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"] | null
+          template_stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_stages_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_stages_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           case_ref: string | null
@@ -329,6 +386,74 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workflow_template_stages: {
+        Row: {
+          deadline_days: number | null
+          expected_output: string | null
+          id: string
+          name: string | null
+          responsible_role: Database["public"]["Enums"]["user_role"] | null
+          sequence_order: number | null
+          template_id: string | null
+        }
+        Insert: {
+          deadline_days?: number | null
+          expected_output?: string | null
+          id?: string
+          name?: string | null
+          responsible_role?: Database["public"]["Enums"]["user_role"] | null
+          sequence_order?: number | null
+          template_id?: string | null
+        }
+        Update: {
+          deadline_days?: number | null
+          expected_output?: string | null
+          id?: string
+          name?: string | null
+          responsible_role?: Database["public"]["Enums"]["user_role"] | null
+          sequence_order?: number | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_template_stages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          case_type: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string | null
+        }
+        Insert: {
+          case_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+        }
+        Update: {
+          case_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
