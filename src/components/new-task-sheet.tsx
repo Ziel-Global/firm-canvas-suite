@@ -41,6 +41,8 @@ import {
 interface NewTaskSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCaseId?: string | null;
+  lockCase?: boolean;
 }
 
 const NO_CASE = "__none__";
@@ -61,14 +63,19 @@ const ROLE_LABELS: Record<string, string> = {
   support: "Support",
 };
 
-export function NewTaskSheet({ open, onOpenChange }: NewTaskSheetProps) {
+export function NewTaskSheet({
+  open,
+  onOpenChange,
+  defaultCaseId,
+  lockCase,
+}: NewTaskSheetProps) {
   const queryClient = useQueryClient();
   const fetchOptions = useServerFn(getTaskFormOptions);
   const create = useServerFn(createTask);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [caseId, setCaseId] = useState<string>(NO_CASE);
+  const [caseId, setCaseId] = useState<string>(defaultCaseId ?? NO_CASE);
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [priority, setPriority] = useState<string>("medium");
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -90,7 +97,7 @@ export function NewTaskSheet({ open, onOpenChange }: NewTaskSheetProps) {
   function reset() {
     setTitle("");
     setDescription("");
-    setCaseId(NO_CASE);
+    setCaseId(defaultCaseId ?? NO_CASE);
     setAssigneeId("");
     setPriority("medium");
     setStartDate(undefined);
@@ -172,7 +179,7 @@ export function NewTaskSheet({ open, onOpenChange }: NewTaskSheetProps) {
 
           <div className="space-y-1.5">
             <Label>Case (optional)</Label>
-            <Select value={caseId} onValueChange={setCaseId}>
+            <Select value={caseId} onValueChange={setCaseId} disabled={lockCase}>
               <SelectTrigger>
                 <SelectValue placeholder="No case" />
               </SelectTrigger>
@@ -187,6 +194,7 @@ export function NewTaskSheet({ open, onOpenChange }: NewTaskSheetProps) {
               </SelectContent>
             </Select>
           </div>
+
 
           <div className="space-y-1.5">
             <Label>Assignee</Label>

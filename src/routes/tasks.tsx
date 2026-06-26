@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MoreHorizontal, Plus, CalendarClock, CalendarRange, X } from "lucide-react";
+import { MoreHorizontal, Plus, CalendarClock, CalendarRange, X, LayoutGrid, List } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -32,6 +32,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/new-task-sheet";
+import { TaskListView } from "@/components/task-list-view";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import {
@@ -370,6 +371,7 @@ function TasksPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [tolerance, setTolerance] = useState(0);
+  const [view, setView] = useState<"board" | "list">("board");
 
 
   useEffect(() => {
@@ -470,7 +472,35 @@ function TasksPage() {
             Track work across every case. Drag cards to update status.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-control border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("board")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "board"
+                  ? "bg-surface-dark text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-3.5" />
+              Board
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "list"
+                  ? "bg-surface-dark text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <List className="size-3.5" />
+              List
+            </button>
+          </div>
           <TimeframeFilter
             date={filterDate}
             tolerance={tolerance}
@@ -481,6 +511,7 @@ function TasksPage() {
               setTolerance(0);
             }}
           />
+
           <Button onClick={() => setSheetOpen(true)}>
             <Plus className="mr-1.5 size-4" />
             Add new task
@@ -490,6 +521,12 @@ function TasksPage() {
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading tasks…</p>
+      ) : view === "list" ? (
+        <TaskListView
+          tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
+            (col) => displayBoard[col],
+          )}
+        />
       ) : (
         <DndContext
           sensors={sensors}
@@ -519,6 +556,7 @@ function TasksPage() {
           </DragOverlay>
         </DndContext>
       )}
+
 
       <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
