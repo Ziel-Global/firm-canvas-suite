@@ -4,13 +4,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export interface CaseRow {
   id: string;
-  case_ref: string;
+  case_ref: string | null;
   title: string;
   client_id: string | null;
   client_name: string | null;
   case_type: string | null;
-  status: string;
-  health: string;
+  status: string | null;
+  health: string | null;
   current_stage_name: string | null;
   lead_name: string | null;
   next_deadline: string | null;
