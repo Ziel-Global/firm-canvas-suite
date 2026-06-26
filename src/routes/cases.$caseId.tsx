@@ -24,6 +24,7 @@ import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CaseOverviewTab } from "@/components/case-overview-tab";
 import { CaseNotesTab } from "@/components/case-notes-tab";
+import { CaseActivityTab } from "@/components/case-activity-tab";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
