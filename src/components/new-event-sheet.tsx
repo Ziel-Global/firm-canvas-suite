@@ -227,15 +227,19 @@ export function NewEventSheet({
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-control border border-border p-3">
-            <div>
-              <p className="text-sm font-medium text-foreground">Private</p>
-              <p className="text-xs text-muted-foreground">
-                Only you can see this event.
-              </p>
+          {isSuperAdmin && (
+            <div className="flex items-center justify-between rounded-control border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Principal-private
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only you can see this event.
+                </p>
+              </div>
+              <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
             </div>
-            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-          </div>
+          )}
         </div>
 
         <SheetFooter>
