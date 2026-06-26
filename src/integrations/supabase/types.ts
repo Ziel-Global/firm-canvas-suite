@@ -212,6 +212,7 @@ export type Database = {
           is_private: boolean | null
           location: string | null
           owner_id: string | null
+          source_stage_id: string | null
           starts_at: string | null
           title: string | null
         }
@@ -225,6 +226,7 @@ export type Database = {
           is_private?: boolean | null
           location?: string | null
           owner_id?: string | null
+          source_stage_id?: string | null
           starts_at?: string | null
           title?: string | null
         }
@@ -238,6 +240,7 @@ export type Database = {
           is_private?: boolean | null
           location?: string | null
           owner_id?: string | null
+          source_stage_id?: string | null
           starts_at?: string | null
           title?: string | null
         }
@@ -247,6 +250,13 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_source_stage_id_fkey"
+            columns: ["source_stage_id"]
+            isOneToOne: false
+            referencedRelation: "case_stages"
             referencedColumns: ["id"]
           },
         ]
