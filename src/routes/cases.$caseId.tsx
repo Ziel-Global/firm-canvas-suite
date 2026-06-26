@@ -244,6 +244,16 @@ function CaseDetailPage() {
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (
                     <CaseActivityTab caseId={caseId} />
+                  ) : t === "access" ? (
+                    role === "super_admin" ? (
+                      <CaseAccessTab caseId={caseId} />
+                    ) : (
+                      <Card className="p-6">
+                        <p className="text-sm text-muted-foreground">
+                          Only super admins can view case access.
+                        </p>
+                      </Card>
+                    )
                   ) : (
                     <Card className="p-6">
                       <h3 className="text-sm font-semibold capitalize text-foreground">{t}</h3>
