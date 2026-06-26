@@ -260,6 +260,19 @@ export function NewEventSheet({
             />
           </div>
 
+          <div className="space-y-2">
+            <div>
+              <Label>Reminders</Label>
+              <p className="text-xs text-muted-foreground">
+                Pre-filled from the {eventType} defaults. Adjust offsets and
+                channels for this event.
+              </p>
+            </div>
+            <ReminderEditor rules={reminders} onChange={handleReminders} />
+          </div>
+
+
+
           {isSuperAdmin && (
             <div className="flex items-center justify-between rounded-control border border-border p-3">
               <div>
