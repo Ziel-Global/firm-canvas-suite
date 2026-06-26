@@ -145,5 +145,5 @@ export const createClient = createServerFn({ method: "POST" })
     });
     if (logError) throw new Error(logError.message);
 
-    return { id: inserted.id, client_ref: inserted.client_ref };
+    return { id: inserted.id, client_ref: inserted.client_ref ?? client_ref };
   });
