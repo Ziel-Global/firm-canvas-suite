@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   CheckSquare,
+  Activity,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
