@@ -16,7 +16,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, Eye, EyeOff } from "lucide-react";
 
 import {
   listCalendarEvents,
