@@ -17,6 +17,7 @@ import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CasesRouteImport } from './routes/cases'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as BootstrapRouteImport } from './routes/bootstrap'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
@@ -61,6 +62,11 @@ const CalendarRoute = CalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BootstrapRoute = BootstrapRouteImport.update({
+  id: '/bootstrap',
+  path: '/bootstrap',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
   '/clients': typeof ClientsRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
   '/clients': typeof ClientsRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
   '/clients': typeof ClientsRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/auth'
+    | '/bootstrap'
     | '/calendar'
     | '/cases'
     | '/clients'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/auth'
+    | '/bootstrap'
     | '/calendar'
     | '/cases'
     | '/clients'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/auth'
+    | '/bootstrap'
     | '/calendar'
     | '/cases'
     | '/clients'
@@ -163,6 +175,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
+  BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
   CasesRoute: typeof CasesRoute
   ClientsRoute: typeof ClientsRoute
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bootstrap': {
+      id: '/bootstrap'
+      path: '/bootstrap'
+      fullPath: '/bootstrap'
+      preLoaderRoute: typeof BootstrapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -259,6 +279,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,
+  BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
   CasesRoute: CasesRoute,
   ClientsRoute: ClientsRoute,
