@@ -705,3 +705,62 @@ export const getCaseActivity = createServerFn({ method: "GET" })
       created_at: a.created_at as string,
     }));
   });
+
+export interface CaseAccessRow {
+  user_id: string;
+  full_name: string | null;
+  role: string | null;
+  is_active: boolean;
+  role_default: string;
+  override_level: string | null;
+  effective_level: string;
+  folder_scope: string | null;
+}
+
+/**
+ * Compute every team member's effective access to a specific case.
+ * Super-admin only. Uses effective_case_access_for(_user_id, _case_id)
+ * to derive role default, override, effective level, and folder scope.
+ */
+export const getCaseAccessMatrix = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseAccessRow[]> => {
+    const { supabase, userId } = context;
+
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "super_admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: members, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, is_active")
+      .neq("role", "client")
+      .order("full_name", { ascending: true });
+    if (error) throw error;
+
+    const rows: CaseAccessRow[] = [];
+    for (const m of members ?? []) {
+      const { data: acc } = await supabase.rpc("effective_case_access_for", {
+        _user_id: m.id as string,
+        _case_id: data.caseId,
+      });
+      const a = Array.isArray(acc) ? acc[0] : acc;
+      rows.push({
+        user_id: m.id as string,
+        full_name: (m.full_name as string) ?? null,
+        role: (m.role as string) ?? null,
+        is_active: (m.is_active as boolean) ?? false,
+        role_default: (a?.role_default as string) ?? "none",
+        override_level: (a?.override_level as string) ?? null,
+        effective_level: (a?.effective_level as string) ?? "none",
+        folder_scope: (a?.folder_scope as string) ?? null,
+      });
+    }
+    return rows;
+  });
