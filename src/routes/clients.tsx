@@ -7,7 +7,7 @@ import { Search, Briefcase, CalendarClock, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { listClients, type ClientRow } from "@/lib/clients.functions";
 import { Card } from "@/components/ui/card";
-import { Pill } from "@/components/ui/pill";
+import { Tag } from "@/components/ui/tag";
 import { Input } from "@/components/ui/input";
 import {
   Select,
