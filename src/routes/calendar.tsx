@@ -23,6 +23,7 @@ import {
   type CalendarEvent,
 } from "@/lib/calendar.functions";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { NewEventSheet } from "@/components/new-event-sheet";
 
