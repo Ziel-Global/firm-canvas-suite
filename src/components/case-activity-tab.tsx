@@ -32,7 +32,7 @@ function actionLabel(action: string | null) {
 
 function describeDetail(
   action: string | null,
-  detail: Record<string, unknown> | null,
+  detail: Record<string, string | number | boolean | null> | null,
 ): string | null {
   if (!detail) return null;
   const get = (k: string) => {
