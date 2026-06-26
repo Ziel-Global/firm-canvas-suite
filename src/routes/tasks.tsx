@@ -505,7 +505,7 @@ function TasksPage() {
                 columnKey={col.key}
                 label={col.label}
                 accent={col.accent}
-                tasks={board[col.key]}
+                tasks={displayBoard[col.key]}
                 onAddTask={() => setSheetOpen(true)}
               />
             ))}
