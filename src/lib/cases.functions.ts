@@ -550,3 +550,105 @@ export const getCaseOverview = createServerFn({ method: "GET" })
       activity,
     };
   });
+
+export interface CaseNote {
+  id: string;
+  body: string;
+  is_principal_only: boolean;
+  created_at: string;
+  author_id: string | null;
+  author_name: string | null;
+}
+
+/**
+ * List notes for a case, newest first. RLS hides principal-only notes from
+ * everyone except super_admin.
+ */
+export const getCaseNotes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseNote[]> => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("case_notes")
+      .select("id, body, is_principal_only, created_at, author_id")
+      .eq("case_id", data.caseId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const authorIds = Array.from(
+      new Set((rows ?? []).map((r) => r.author_id).filter(Boolean) as string[]),
+    );
+    const names = new Map<string, string>();
+    if (authorIds.length) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", authorIds);
+      for (const p of profiles ?? []) names.set(p.id, p.full_name as string);
+    }
+
+    return (rows ?? []).map((r) => ({
+      id: r.id,
+      body: r.body,
+      is_principal_only: r.is_principal_only,
+      created_at: r.created_at,
+      author_id: r.author_id,
+      author_name: r.author_id ? names.get(r.author_id) ?? null : null,
+    }));
+  });
+
+/**
+ * Add a note to a case. RLS enforces that the caller has full case access and
+ * that only super_admin may flag a note principal-only.
+ */
+export const addCaseNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: {
+    caseId: string;
+    body: string;
+    isPrincipalOnly?: boolean;
+  }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    const body = (input.body ?? "").trim();
+    if (!body) throw new Error("Note text is required.");
+    return {
+      caseId: input.caseId,
+      body,
+      isPrincipalOnly: Boolean(input.isPrincipalOnly),
+    };
+  })
+  .handler(async ({ data, context }): Promise<CaseNote> => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabase
+      .from("case_notes")
+      .insert({
+        case_id: data.caseId,
+        author_id: userId,
+        body: data.body,
+        is_principal_only: data.isPrincipalOnly,
+      })
+      .select("id, body, is_principal_only, created_at, author_id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    let author_name: string | null = null;
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .maybeSingle();
+    author_name = (me?.full_name as string) ?? null;
+
+    return {
+      id: row.id,
+      body: row.body,
+      is_principal_only: row.is_principal_only,
+      created_at: row.created_at,
+      author_id: row.author_id,
+      author_name,
+    };
+  });
