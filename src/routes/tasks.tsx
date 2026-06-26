@@ -394,6 +394,12 @@ function TasksPage() {
     return null;
   }, [activeId, board]);
 
+  const displayBoard = useMemo(
+    () => filterBoard(board, filterDate, tolerance),
+    [board, filterDate, tolerance],
+  );
+
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
   }
