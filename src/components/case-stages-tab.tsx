@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleDot, Clock, FileOutput, Loader2, StickyNote, Undo2, User } from "lucide-react";
+import { Check, CircleDot, Clock, FileOutput, Loader2, Lock, StickyNote, Undo2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
@@ -142,6 +142,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         stage={selected}
         caseId={caseId}
         isFirst={stages[0]?.id === selected.id}
+        isSuperAdmin={role === "super_admin"}
         canAct={
           role === "super_admin" ||
           role === "admin" ||
@@ -155,6 +156,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         }}
       />
 
+
     </div>
   );
 }
@@ -164,12 +166,14 @@ function StageDetail({
   caseId,
   isFirst,
   canAct,
+  isSuperAdmin,
   onChanged,
 }: {
   stage: CaseStageRow;
   caseId: string;
   isFirst: boolean;
   canAct: boolean;
+  isSuperAdmin: boolean;
   onChanged: () => void;
 }) {
   const status = stage.status ?? "pending";
@@ -211,6 +215,9 @@ function StageDetail({
   });
 
   const isActive = status === "active";
+  const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
+  const principalLocked = isPrincipalApproval && !isSuperAdmin;
+
 
 
   return (
@@ -257,7 +264,19 @@ function StageDetail({
         </p>
       </div>
 
-      {isActive && canAct && (
+      {isActive && principalLocked && (
+        <div className="flex items-start gap-2 rounded-card border border-priority-high/40 bg-priority-high/10 p-4 text-sm text-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0 text-priority-high" />
+          <p>
+            This is the <span className="font-medium">Principal Approval</span>{" "}
+            stage. No output can advance past it without the Super Admin's
+            explicit sign-off. Only the Super Admin can mark this stage complete.
+          </p>
+        </div>
+      )}
+
+      {isActive && canAct && !principalLocked && (
+
         <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
           <h4 className="text-sm font-semibold text-foreground">
             Stage actions
