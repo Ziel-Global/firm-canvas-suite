@@ -21,6 +21,7 @@ import { Route as BootstrapRouteImport } from './routes/bootstrap'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -82,6 +83,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientsClientIdRoute = ClientsClientIdRouteImport.update({
+  id: '/$clientId',
+  path: '/$clientId',
+  getParentRoute: () => ClientsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,12 +96,13 @@ export interface FileRoutesByFullPath {
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
-  '/clients': typeof ClientsRoute
+  '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -104,12 +111,13 @@ export interface FileRoutesByTo {
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
-  '/clients': typeof ClientsRoute
+  '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,12 +127,13 @@ export interface FileRoutesById {
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
-  '/clients': typeof ClientsRoute
+  '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/clients/$clientId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/clients/$clientId'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/clients/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,7 +190,7 @@ export interface RootRouteChildren {
   BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
   CasesRoute: typeof CasesRoute
-  ClientsRoute: typeof ClientsRoute
+  ClientsRoute: typeof ClientsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
@@ -272,8 +284,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clients/$clientId': {
+      id: '/clients/$clientId'
+      path: '/$clientId'
+      fullPath: '/clients/$clientId'
+      preLoaderRoute: typeof ClientsClientIdRouteImport
+      parentRoute: typeof ClientsRoute
+    }
   }
 }
+
+interface ClientsRouteChildren {
+  ClientsClientIdRoute: typeof ClientsClientIdRoute
+}
+
+const ClientsRouteChildren: ClientsRouteChildren = {
+  ClientsClientIdRoute: ClientsClientIdRoute,
+}
+
+const ClientsRouteWithChildren =
+  ClientsRoute._addFileChildren(ClientsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -282,7 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
   CasesRoute: CasesRoute,
-  ClientsRoute: ClientsRoute,
+  ClientsRoute: ClientsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,

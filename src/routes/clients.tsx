@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, Briefcase, CalendarClock, Clock, Plus } from "lucide-react";
@@ -155,7 +155,13 @@ function ClientsPage() {
       {!isLoading && !error && rows.length > 0 && (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((c: ClientRow) => (
-            <Card key={c.id} className="flex flex-col gap-4 p-5">
+            <Link
+              key={c.id}
+              to="/clients/$clientId"
+              params={{ clientId: c.id }}
+              className="block transition-transform hover:-translate-y-0.5"
+            >
+              <Card className="flex h-full flex-col gap-4 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-base font-semibold text-foreground">
@@ -179,6 +185,7 @@ function ClientsPage() {
                 </div>
               </div>
             </Card>
+            </Link>
           ))}
         </div>
       )}
