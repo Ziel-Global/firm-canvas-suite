@@ -2,6 +2,114 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export interface CaseDetail {
+  id: string;
+  case_ref: string | null;
+  title: string;
+  client_id: string | null;
+  client_name: string | null;
+  case_type: string | null;
+  status: string | null;
+  health: string | null;
+  current_stage_name: string | null;
+  lead_name: string | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  retention_until: string | null;
+  next_deadline: string | null;
+}
+
+/**
+ * Fetch a single case with derived summary fields for the detail page.
+ * RLS on `cases` and child tables scopes visibility per role.
+ */
+export const getCaseDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => {
+    if (!input?.id) throw new Error("A case id is required.");
+    return { id: input.id };
+  })
+  .handler(async ({ data, context }): Promise<CaseDetail> => {
+    const { supabase } = context;
+
+    const { data: c, error } = await supabase
+      .from("cases")
+      .select(
+        "id, case_ref, title, client_id, case_type, status, health, current_stage_id, opened_at, closed_at, retention_until",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!c) throw new Error("Case not found.");
+
+    let client_name: string | null = null;
+    if (c.client_id) {
+      const { data: cl } = await supabase
+        .from("clients")
+        .select("full_name")
+        .eq("id", c.client_id)
+        .maybeSingle();
+      client_name = (cl?.full_name as string) ?? null;
+    }
+
+    let current_stage_name: string | null = null;
+    if (c.current_stage_id) {
+      const { data: st } = await supabase
+        .from("case_stages")
+        .select("name")
+        .eq("id", c.current_stage_id)
+        .maybeSingle();
+      current_stage_name = (st?.name as string) ?? null;
+    }
+
+    let lead_name: string | null = null;
+    const { data: lead } = await supabase
+      .from("case_assignments")
+      .select("user_id")
+      .eq("case_id", c.id)
+      .eq("is_lead", true)
+      .limit(1)
+      .maybeSingle();
+    if (lead?.user_id) {
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", lead.user_id)
+        .maybeSingle();
+      lead_name = (p?.full_name as string) ?? null;
+    }
+
+    let next_deadline: string | null = null;
+    const { data: stages } = await supabase
+      .from("case_stages")
+      .select("deadline, status")
+      .eq("case_id", c.id)
+      .not("deadline", "is", null);
+    for (const s of stages ?? []) {
+      if (!s.deadline || s.status === "complete") continue;
+      if (!next_deadline || new Date(s.deadline) < new Date(next_deadline)) {
+        next_deadline = s.deadline as string;
+      }
+    }
+
+    return {
+      id: c.id,
+      case_ref: c.case_ref,
+      title: c.title,
+      client_id: c.client_id,
+      client_name,
+      case_type: c.case_type,
+      status: c.status,
+      health: c.health,
+      current_stage_name,
+      lead_name,
+      opened_at: c.opened_at,
+      closed_at: c.closed_at,
+      retention_until: c.retention_until,
+      next_deadline,
+    };
+  });
+
 export const CASE_TYPES = [
   "property",
   "litigation",
