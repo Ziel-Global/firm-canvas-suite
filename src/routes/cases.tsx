@@ -150,22 +150,33 @@ function CasesPage() {
             Cases you can access based on your role and assignments.
           </p>
         </div>
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(v) => v && setView(v as ViewMode)}
-          className="rounded-control border border-border bg-surface p-1"
-        >
-          <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
-            <TableIcon className="size-4" />
-            Table
-          </ToggleGroupItem>
-          <ToggleGroupItem value="cards" aria-label="Card view" className="gap-1.5">
-            <LayoutGrid className="size-4" />
-            Cards
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(v) => v && setView(v as ViewMode)}
+            className="rounded-control border border-border bg-surface p-1"
+          >
+            <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
+              <TableIcon className="size-4" />
+              Table
+            </ToggleGroupItem>
+            <ToggleGroupItem value="cards" aria-label="Card view" className="gap-1.5">
+              <LayoutGrid className="size-4" />
+              Cards
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {canCreate && (
+            <Button onClick={() => setNewCaseOpen(true)} className="gap-1.5">
+              <Plus className="size-4" />
+              New case
+            </Button>
+          )}
+        </div>
       </div>
+
+      {canCreate && <NewCaseSheet open={newCaseOpen} onOpenChange={setNewCaseOpen} />}
+
 
       <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
         <div className="relative w-full lg:max-w-xs">
