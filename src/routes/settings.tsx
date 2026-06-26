@@ -26,6 +26,7 @@ function SettingsPage() {
         </p>
       </div>
       <ReminderDefaultsSettings />
+      <MorningDigestPreview />
     </div>
   );
 }
