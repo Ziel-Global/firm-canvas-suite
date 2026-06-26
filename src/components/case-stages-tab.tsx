@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleDot, Clock, FileOutput, StickyNote, User } from "lucide-react";
+import { Check, CircleDot, Clock, FileOutput, Loader2, StickyNote, Undo2, User } from "lucide-react";
+import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
+import { completeStage, returnStage } from "@/lib/stage-transitions.functions";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
 
 const STATUS_TAG: Record<string, { label: string; color: "high" | "medium" | "low" | "purple" | "blue" | "sand" | "green" }> = {
   pending: { label: "Pending", color: "low" },
