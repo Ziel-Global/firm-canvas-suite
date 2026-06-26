@@ -254,6 +254,8 @@ function TasksPage() {
 
   const [board, setBoard] = useState<Board>(emptyBoard());
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
 
   useEffect(() => {
     if (data) setBoard(groupTasks(data));
