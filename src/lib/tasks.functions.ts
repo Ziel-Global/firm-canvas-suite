@@ -47,19 +47,24 @@ export const listTasks = createServerFn({ method: "GET" })
       ...new Set(rows.map((t) => t.assignee_id).filter(Boolean)),
     ] as string[];
 
-    const caseMap = new Map<string, { case_ref: string | null; title: string }>();
+    const caseMap = new Map<
+      string,
+      { case_ref: string | null; title: string; case_type: string | null }
+    >();
     if (caseIds.length) {
       const { data: cases } = await supabase
         .from("cases")
-        .select("id, case_ref, title")
+        .select("id, case_ref, title, case_type")
         .in("id", caseIds);
       for (const c of cases ?? []) {
         caseMap.set(c.id as string, {
           case_ref: (c.case_ref as string) ?? null,
           title: (c.title as string) ?? "",
+          case_type: (c.case_type as string) ?? null,
         });
       }
     }
+
 
     const peopleMap = new Map<string, string>();
     if (assigneeIds.length) {
