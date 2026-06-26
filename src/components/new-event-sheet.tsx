@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -7,6 +7,13 @@ import {
   createCalendarEvent,
   getCalendarOptions,
 } from "@/lib/calendar.functions";
+import { getReminderDefaults } from "@/lib/reminders.functions";
+import {
+  offsetsToRules,
+  rulesToEventReminders,
+  type ReminderRule,
+} from "@/lib/reminder-utils";
+import { ReminderEditor } from "@/components/reminder-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +69,7 @@ export function NewEventSheet({
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
   const fetchOptions = useServerFn(getCalendarOptions);
+  const fetchDefaults = useServerFn(getReminderDefaults);
   const create = useServerFn(createCalendarEvent);
 
   const [title, setTitle] = useState("");
@@ -73,12 +81,34 @@ export function NewEventSheet({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [reminders, setReminders] = useState<ReminderRule[]>([]);
+  const [remindersTouched, setRemindersTouched] = useState(false);
 
   const { data: cases } = useQuery({
     queryKey: ["calendar-options"],
     queryFn: () => fetchOptions(),
     enabled: open,
   });
+
+  const { data: reminderDefaults } = useQuery({
+    queryKey: ["reminder-defaults"],
+    queryFn: () => fetchDefaults(),
+    enabled: open,
+  });
+
+  // Pre-fill reminders from the selected event type's defaults until the user edits them.
+  useEffect(() => {
+    if (!open || remindersTouched || !reminderDefaults) return;
+    const def = reminderDefaults.find((d) => d.event_type === eventType);
+    setReminders(
+      def ? offsetsToRules(def.offsets, def.channels) : [],
+    );
+  }, [open, eventType, reminderDefaults, remindersTouched]);
+
+  function handleReminders(next: ReminderRule[]) {
+    setRemindersTouched(true);
+    setReminders(next);
+  }
 
   function reset() {
     setTitle("");
@@ -90,6 +120,8 @@ export function NewEventSheet({
     setStartTime("09:00");
     setEndTime("10:00");
     setIsPrivate(false);
+    setReminders([]);
+    setRemindersTouched(false);
   }
 
   const mutation = useMutation({
@@ -110,6 +142,7 @@ export function NewEventSheet({
           starts_at,
           ends_at,
           is_private: isPrivate,
+          reminders: rulesToEventReminders(reminders),
         },
       });
     },
@@ -226,6 +259,19 @@ export function NewEventSheet({
               rows={3}
             />
           </div>
+
+          <div className="space-y-2">
+            <div>
+              <Label>Reminders</Label>
+              <p className="text-xs text-muted-foreground">
+                Pre-filled from the {eventType} defaults. Adjust offsets and
+                channels for this event.
+              </p>
+            </div>
+            <ReminderEditor rules={reminders} onChange={handleReminders} />
+          </div>
+
+
 
           {isSuperAdmin && (
             <div className="flex items-center justify-between rounded-control border border-border p-3">
