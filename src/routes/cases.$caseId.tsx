@@ -218,6 +218,10 @@ function CaseDetailPage() {
                 </Button>
               </div>
             </Card>
+
+            {role === "super_admin" && (
+              <CaseLifecycleActions caseId={caseId} status={data.status} />
+            )}
           </aside>
 
           {/* Tabbed main area */}
