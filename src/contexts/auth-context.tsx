@@ -12,6 +12,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/lib/nav";
+import { verifyAccess } from "@/lib/access-guard.functions";
 
 interface Profile {
   id: string;
@@ -117,6 +118,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void signOut().then(() => navigate({ to: "/auth", replace: true }));
     }
   }, [loading, session, profile, pathname, navigate, signOut]);
+
+  // Live revocation: verify on the server (RLS-scoped) that the user is still
+  // active on every navigation and on a short interval. If deactivated (or an
+  // override removed access), sign them out immediately. RLS already blocks the
+  // data on the next request — this just ends the stale session.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const result = await verifyAccess();
+        if (!cancelled && result && result.active === false) {
+          await signOut();
+          navigate({ to: "/auth", replace: true });
+        }
+      } catch {
+        // A failed/unauthorized check means the session is no longer valid.
+        if (!cancelled) {
+          await signOut();
+          navigate({ to: "/auth", replace: true });
+        }
+      }
+    };
+
+    void check();
+    const interval = setInterval(check, 30_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session, pathname, navigate, signOut]);
+
+
 
   // Inactivity-based auto sign-out using firm_settings.session_timeout_minutes.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
