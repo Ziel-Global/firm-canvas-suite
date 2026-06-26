@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { DarkDatePicker } from "@/components/dark-date-picker";
+import { useAuth } from "@/contexts/auth-context";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,8 @@ export function NewEventSheet({
   defaultDate,
 }: NewEventSheetProps) {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const fetchOptions = useServerFn(getCalendarOptions);
   const create = useServerFn(createCalendarEvent);
 
@@ -224,15 +227,19 @@ export function NewEventSheet({
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-control border border-border p-3">
-            <div>
-              <p className="text-sm font-medium text-foreground">Private</p>
-              <p className="text-xs text-muted-foreground">
-                Only you can see this event.
-              </p>
+          {isSuperAdmin && (
+            <div className="flex items-center justify-between rounded-control border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Principal-private
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only you can see this event.
+                </p>
+              </div>
+              <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
             </div>
-            <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-          </div>
+          )}
         </div>
 
         <SheetFooter>

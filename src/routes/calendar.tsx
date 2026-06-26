@@ -16,13 +16,14 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, Eye, EyeOff, Lock } from "lucide-react";
 
 import {
   listCalendarEvents,
   type CalendarEvent,
 } from "@/lib/calendar.functions";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { NewEventSheet } from "@/components/new-event-sheet";
 
@@ -75,13 +76,16 @@ function rangeFor(view: ViewMode, anchor: Date) {
 
 function CalendarPage() {
   const fetchEvents = useServerFn(listCalendarEvents);
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showPrivate, setShowPrivate] = useState(true);
 
   const range = useMemo(() => rangeFor(view, anchor), [view, anchor]);
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: allEvents = [], isLoading } = useQuery({
     queryKey: [
       "calendar-events",
       range.from.toISOString(),
@@ -92,6 +96,16 @@ function CalendarPage() {
         data: { from: range.from.toISOString(), to: range.to.toISOString() },
       }),
   });
+
+  // Super Admin can overlay or hide his private layer. Other roles never
+  // receive private events from RLS, so this only affects the super_admin view.
+  const events = useMemo(
+    () =>
+      isSuperAdmin && !showPrivate
+        ? allEvents.filter((e) => !e.is_private)
+        : allEvents,
+    [allEvents, isSuperAdmin, showPrivate],
+  );
 
   function shift(dir: number) {
     if (view === "day") setAnchor((d) => addDays(d, dir));
@@ -115,10 +129,26 @@ function CalendarPage() {
             Day, week, and month views of firm commitments.
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
-          New event
-        </Button>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <Button
+              variant={showPrivate ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPrivate((s) => !s)}
+            >
+              {showPrivate ? (
+                <Eye className="mr-1.5 size-4" />
+              ) : (
+                <EyeOff className="mr-1.5 size-4" />
+              )}
+              Private layer
+            </Button>
+          )}
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-1.5 size-4" />
+            New event
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -368,7 +398,10 @@ function EventBlock({
         typeStyle(event.event_type),
       )}
     >
-      <p className="truncate text-sm font-medium">{event.title}</p>
+      <p className="flex items-center gap-1 truncate text-sm font-medium">
+        {event.is_private && <Lock className="size-3 shrink-0 text-muted-foreground" />}
+        <span className="truncate">{event.title}</span>
+      </p>
       <p className="text-xs text-muted-foreground">
         {eventTime(event)}
         {end && ` – ${end}`}
