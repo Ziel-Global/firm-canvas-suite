@@ -169,7 +169,7 @@ function CaseDetailPage() {
                 <RailRow icon={CheckSquare} label="Current stage">
                   {data.current_stage_name ?? "—"}
                 </RailRow>
-                <RailRow icon={StatusGlyph} label="Health">
+                <RailRow icon={Activity} label="Health">
                   <span className="inline-flex items-center gap-2">
                     {data.health && HEALTH_MAP[data.health] && (
                       <StatusDot status={HEALTH_MAP[data.health]} label="" />
