@@ -97,7 +97,7 @@ export function NewTaskSheet({
   function reset() {
     setTitle("");
     setDescription("");
-    setCaseId(NO_CASE);
+    setCaseId(defaultCaseId ?? NO_CASE);
     setAssigneeId("");
     setPriority("medium");
     setStartDate(undefined);
