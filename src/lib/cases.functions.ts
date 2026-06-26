@@ -79,7 +79,9 @@ export const listCases = createServerFn({ method: "GET" })
       .in("case_id", caseIds)
       .eq("is_lead", true);
     for (const a of assignments ?? []) {
-      if (!leadId.has(a.case_id)) leadId.set(a.case_id, a.user_id as string);
+      if (a.case_id && a.user_id && !leadId.has(a.case_id)) {
+        leadId.set(a.case_id, a.user_id);
+      }
     }
 
     const leadUserIds = Array.from(new Set(leadId.values()));
