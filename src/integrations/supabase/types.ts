@@ -344,6 +344,48 @@ export type Database = {
           },
         ]
       }
+      case_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          case_id: string
+          created_at: string
+          id: string
+          is_principal_only: boolean
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          case_id: string
+          created_at?: string
+          id?: string
+          is_principal_only?: boolean
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          is_principal_only?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_notes_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_stages: {
         Row: {
           assignee_id: string | null
