@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, MoreHorizontal, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { NewUserSheet } from "@/components/new-user-sheet";
@@ -26,12 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { UserRowActions } from "@/components/user-row-actions";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { AppRole } from "@/lib/nav";
 
@@ -219,19 +214,7 @@ function UsersPage() {
                       {formatDate(u.created_at)}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Row actions">
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Edit user</DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {u.is_active ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <UserRowActions user={u} />
                     </TableCell>
                   </TableRow>
                 ))}
