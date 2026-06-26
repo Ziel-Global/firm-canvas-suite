@@ -164,7 +164,7 @@ export interface ActivityEntry {
   actor_id: string | null;
   actor_name: string | null;
   action: string | null;
-  detail: Record<string, unknown> | null;
+  detail: Json | null;
   created_at: string;
 }
 
