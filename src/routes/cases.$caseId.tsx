@@ -29,6 +29,7 @@ import { CaseActivityTab } from "@/components/case-activity-tab";
 import { CaseAccessTab } from "@/components/case-access-tab";
 import { CaseTasksTab } from "@/components/case-tasks-tab";
 import { CaseStagesTab } from "@/components/case-stages-tab";
+import { CaseDocumentsTab } from "@/components/case-documents-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 
 export const Route = createFileRoute("/cases/$caseId")({
