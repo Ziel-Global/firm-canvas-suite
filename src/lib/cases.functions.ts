@@ -504,7 +504,7 @@ export const getCaseOverview = createServerFn({ method: "GET" })
       .select("id, status")
       .eq("case_id", c.id);
     const open_tasks = (tasks ?? []).filter(
-      (t) => t.status !== "done" && t.status !== "complete" && t.status !== "completed",
+      (t) => t.status !== "done",
     ).length;
 
     // Recent activity
