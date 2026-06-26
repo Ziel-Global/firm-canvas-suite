@@ -85,6 +85,7 @@ function UsersPage() {
   const fetchProfiles = useServerFn(listProfiles);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const isSuperAdmin = role === "super_admin";
 
