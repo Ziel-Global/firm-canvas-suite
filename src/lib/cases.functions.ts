@@ -410,3 +410,143 @@ export const createCase = createServerFn({ method: "POST" })
 
     return { id: caseId, case_ref: inserted.case_ref ?? case_ref };
   });
+
+export interface CaseOverviewActivity {
+  id: string;
+  action: string | null;
+  actor_name: string | null;
+  created_at: string;
+}
+
+export interface CaseOverview {
+  current_stage_name: string | null;
+  current_stage_status: string | null;
+  current_stage_assignee: string | null;
+  next_deadline: string | null;
+  next_deadline_stage: string | null;
+  health: string | null;
+  status: string | null;
+  total_stages: number;
+  completed_stages: number;
+  open_tasks: number;
+  overdue_stages: number;
+  activity: CaseOverviewActivity[];
+}
+
+/**
+ * Live overview metrics for a case: current stage + responsible person,
+ * next deadline, a health snapshot, and recent activity_log entries.
+ * RLS scopes all child reads to what the caller may see.
+ */
+export const getCaseOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => {
+    if (!input?.id) throw new Error("A case id is required.");
+    return { id: input.id };
+  })
+  .handler(async ({ data, context }): Promise<CaseOverview> => {
+    const { supabase } = context;
+
+    const { data: c, error } = await supabase
+      .from("cases")
+      .select("id, status, health, current_stage_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!c) throw new Error("Case not found.");
+
+    const { data: stages } = await supabase
+      .from("case_stages")
+      .select("id, name, status, assignee_id, deadline, sequence_order")
+      .eq("case_id", c.id)
+      .order("sequence_order", { ascending: true });
+
+    const stageList = stages ?? [];
+    const total_stages = stageList.length;
+    const completed_stages = stageList.filter((s) => s.status === "complete").length;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let current_stage_name: string | null = null;
+    let current_stage_status: string | null = null;
+    let current_stage_assignee_id: string | null = null;
+
+    const current = c.current_stage_id
+      ? stageList.find((s) => s.id === c.current_stage_id)
+      : stageList.find((s) => s.status !== "complete");
+    if (current) {
+      current_stage_name = (current.name as string) ?? null;
+      current_stage_status = (current.status as string) ?? null;
+      current_stage_assignee_id = (current.assignee_id as string) ?? null;
+    }
+
+    let next_deadline: string | null = null;
+    let next_deadline_stage: string | null = null;
+    let overdue_stages = 0;
+    for (const s of stageList) {
+      if (!s.deadline || s.status === "complete") continue;
+      if (new Date(s.deadline) < today) overdue_stages += 1;
+      if (!next_deadline || new Date(s.deadline) < new Date(next_deadline)) {
+        next_deadline = s.deadline as string;
+        next_deadline_stage = (s.name as string) ?? null;
+      }
+    }
+
+    // Responsible person for the current stage
+    const profileName = new Map<string, string>();
+    const profileIds = new Set<string>();
+    if (current_stage_assignee_id) profileIds.add(current_stage_assignee_id);
+
+    // Open task count
+    const { data: tasks } = await supabase
+      .from("tasks")
+      .select("id, status")
+      .eq("case_id", c.id);
+    const open_tasks = (tasks ?? []).filter(
+      (t) => t.status !== "done",
+    ).length;
+
+    // Recent activity
+    const { data: acts } = await supabase
+      .from("activity_log")
+      .select("id, action, actor_id, created_at")
+      .eq("case_id", c.id)
+      .order("created_at", { ascending: false })
+      .limit(6);
+    for (const a of acts ?? []) {
+      if (a.actor_id) profileIds.add(a.actor_id as string);
+    }
+
+    if (profileIds.size > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", Array.from(profileIds));
+      for (const p of profiles ?? []) profileName.set(p.id, p.full_name as string);
+    }
+
+    const activity: CaseOverviewActivity[] = (acts ?? []).map((a) => ({
+      id: a.id as string,
+      action: (a.action as string) ?? null,
+      actor_name: a.actor_id ? profileName.get(a.actor_id as string) ?? null : null,
+      created_at: a.created_at as string,
+    }));
+
+    return {
+      current_stage_name,
+      current_stage_status,
+      current_stage_assignee: current_stage_assignee_id
+        ? profileName.get(current_stage_assignee_id) ?? null
+        : null,
+      next_deadline,
+      next_deadline_stage,
+      health: c.health,
+      status: c.status,
+      total_stages,
+      completed_stages,
+      open_tasks,
+      overdue_stages,
+      activity,
+    };
+  });

@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CaseOverviewTab } from "@/components/case-overview-tab";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
@@ -229,12 +230,16 @@ function CaseDetailPage() {
 
               {TABS.map((t) => (
                 <TabsContent key={t} value={t}>
-                  <Card className="p-6">
-                    <h3 className="text-sm font-semibold capitalize text-foreground">{t}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      The {t} view will be built in a later step.
-                    </p>
-                  </Card>
+                  {t === "overview" ? (
+                    <CaseOverviewTab caseId={caseId} role={role} />
+                  ) : (
+                    <Card className="p-6">
+                      <h3 className="text-sm font-semibold capitalize text-foreground">{t}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        The {t} view will be built in a later step.
+                      </p>
+                    </Card>
+                  )}
                 </TabsContent>
               ))}
             </Tabs>
