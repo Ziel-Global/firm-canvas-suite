@@ -16,6 +16,7 @@ import {
 
 import { useAuth } from "@/contexts/auth-context";
 import { getCaseDetail } from "@/lib/cases.functions";
+import { getMyCaseAccess } from "@/lib/case-access.functions";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Badge } from "@/components/ui/badge";
@@ -98,14 +99,26 @@ function CaseDetailPage() {
   const { caseId } = Route.useParams();
   const { role } = useAuth();
   const fetchDetail = useServerFn(getCaseDetail);
+  const checkMyAccess = useServerFn(getMyCaseAccess);
   const [tab, setTab] = useState<string>("overview");
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
 
+  // Poll the caller's effective access so a revoked override signs them out of
+  // this case immediately (RLS enforces it; this surfaces it in the UI).
+  const { data: myAccess } = useQuery({
+    queryKey: ["my-case-access", caseId],
+    queryFn: () => checkMyAccess({ data: { caseId } }),
+    enabled: canView,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
+  const accessRevoked = myAccess?.level === "none";
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["case", caseId],
     queryFn: () => fetchDetail({ data: { id: caseId } }),
-    enabled: canView,
+    enabled: canView && !accessRevoked,
   });
 
   if (!canView) {
@@ -114,6 +127,27 @@ function CaseDetailPage() {
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Case</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to view this page.
+        </p>
+      </main>
+    );
+  }
+
+  if (accessRevoked) {
+    return (
+      <main className="px-4 py-6 sm:px-6">
+        <Link
+          to="/cases"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          Back to cases
+        </Link>
+        <h2 className="mt-6 text-2xl font-semibold tracking-tight text-foreground">
+          Access removed
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Your access to this case has been revoked. You no longer have
+          permission to view its contents.
         </p>
       </main>
     );
