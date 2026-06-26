@@ -520,6 +520,12 @@ function TasksPage() {
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading tasks…</p>
+      ) : view === "list" ? (
+        <TaskListView
+          tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
+            (col) => displayBoard[col],
+          )}
+        />
       ) : (
         <DndContext
           sensors={sensors}
@@ -549,6 +555,7 @@ function TasksPage() {
           </DragOverlay>
         </DndContext>
       )}
+
 
       <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
