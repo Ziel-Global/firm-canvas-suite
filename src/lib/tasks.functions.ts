@@ -28,14 +28,21 @@ export interface TaskRow {
  */
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<TaskRow[]> => {
+  .inputValidator((input?: { caseId?: string | null }) => input ?? {})
+  .handler(async ({ data, context }): Promise<TaskRow[]> => {
     const { supabase } = context;
 
-    const { data: tasks, error } = await supabase
+    let query = supabase
       .from("tasks")
       .select(
         "id, title, description, status, priority, start_date, due_date, case_id, assignee_id, sort_order, created_at",
-      )
+      );
+
+    if (data?.caseId) {
+      query = query.eq("case_id", data.caseId);
+    }
+
+    const { data: tasks, error } = await query
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
 
