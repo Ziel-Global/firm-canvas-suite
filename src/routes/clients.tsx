@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Briefcase, CalendarClock, Clock } from "lucide-react";
+import { Search, Briefcase, CalendarClock, Clock, Plus } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { listClients, type ClientRow } from "@/lib/clients.functions";
@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { NewClientSheet } from "@/components/new-client-sheet";
 
 export const Route = createFileRoute("/clients")({
   head: () => ({
@@ -45,6 +47,8 @@ function ClientsPage() {
   const fetchClients = useServerFn(listClients);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const canCreate = role === "super_admin" || role === "admin";
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
 
@@ -98,12 +102,22 @@ function ClientsPage() {
 
   return (
     <main className="px-4 py-6 sm:px-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Clients</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Clients you can access through your assigned cases.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Clients</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Clients you can access through your assigned cases.
+          </p>
+        </div>
+        {canCreate && (
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="size-4" />
+            New client
+          </Button>
+        )}
       </div>
+
+      {canCreate && <NewClientSheet open={sheetOpen} onOpenChange={setSheetOpen} />}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
