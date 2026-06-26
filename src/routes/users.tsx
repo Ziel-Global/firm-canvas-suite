@@ -26,12 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { UserRowActions } from "@/components/user-row-actions";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { AppRole } from "@/lib/nav";
 
