@@ -24,17 +24,17 @@ export function TopBar({ title, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-frame bg-canvas/90 px-4 py-3 backdrop-blur-sm sm:px-6",
+        "sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-frame bg-canvas/90 px-4 py-3 backdrop-blur-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] sm:flex-nowrap sm:gap-y-0 sm:px-6",
         className,
       )}
     >
       {/* Left — section title */}
-      <h1 className="shrink-0 text-lg font-semibold tracking-tight text-foreground">
+      <h1 className="shrink-0 text-lg font-semibold tracking-tight text-foreground sm:col-start-1">
         {sectionTitle}
       </h1>
 
       {/* Center — search */}
-      <div className="order-last w-full min-w-0 sm:order-none sm:mx-4 sm:flex sm:max-w-md sm:flex-1 sm:justify-center">
+      <div className="order-last w-full min-w-0 sm:order-none sm:col-start-2">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.75} />
           <input
@@ -46,7 +46,7 @@ export function TopBar({ title, className }: TopBarProps) {
       </div>
 
       {/* Right — actions */}
-      <div className="ml-auto flex shrink-0 items-center gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-3 sm:col-start-3 sm:ml-0 sm:justify-self-end">
         {/* Notifications */}
         <button
           type="button"
