@@ -142,6 +142,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         stage={selected}
         caseId={caseId}
         isFirst={stages[0]?.id === selected.id}
+        isSuperAdmin={role === "super_admin"}
         canAct={
           role === "super_admin" ||
           role === "admin" ||
@@ -154,6 +155,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
           queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
         }}
       />
+
 
     </div>
   );
