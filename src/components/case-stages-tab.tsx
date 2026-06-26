@@ -44,6 +44,8 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
     queryKey: ["case-stages", caseId],
     queryFn: () => fetchStages({ data: { caseId } }),
   });
+  const { user, role } = useAuth();
+  const queryClient = useQueryClient();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
