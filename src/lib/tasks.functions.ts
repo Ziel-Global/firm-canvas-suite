@@ -135,3 +135,171 @@ export const reorderTasks = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+export interface TaskCaseOption {
+  id: string;
+  case_ref: string | null;
+  title: string;
+}
+
+export interface TaskAssigneeOption {
+  id: string;
+  full_name: string;
+  role: string;
+}
+
+export interface TaskFormOptions {
+  canAssignOthers: boolean;
+  cases: TaskCaseOption[];
+  assignees: TaskAssigneeOption[];
+}
+
+const ROLES_CAN_ASSIGN = ["super_admin", "admin"];
+
+/**
+ * Options for the New Task sheet. Only super_admin/admin may assign to others,
+ * so non-privileged roles receive only their own profile as an assignee option.
+ */
+export const getTaskFormOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<TaskFormOptions> => {
+    const { supabase, userId } = context;
+
+    const { data: me, error: meErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("id", userId)
+      .single();
+    if (meErr) throw new Error(meErr.message);
+
+    const canAssignOthers = ROLES_CAN_ASSIGN.includes(me.role as string);
+
+    let assignees: TaskAssigneeOption[];
+    if (canAssignOthers) {
+      const { data: people, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, role")
+        .eq("is_active", true)
+        .neq("role", "client")
+        .order("full_name", { ascending: true });
+      if (error) throw new Error(error.message);
+      assignees = (people ?? []).map((p) => ({
+        id: p.id as string,
+        full_name: (p.full_name as string) ?? "",
+        role: p.role as string,
+      }));
+    } else {
+      assignees = [
+        {
+          id: me.id as string,
+          full_name: (me.full_name as string) ?? "",
+          role: me.role as string,
+        },
+      ];
+    }
+
+    const { data: cases, error: caseErr } = await supabase
+      .from("cases")
+      .select("id, case_ref, title")
+      .order("created_at", { ascending: false });
+    if (caseErr) throw new Error(caseErr.message);
+
+    return {
+      canAssignOthers,
+      cases: (cases ?? []).map((c) => ({
+        id: c.id as string,
+        case_ref: (c.case_ref as string) ?? null,
+        title: (c.title as string) ?? "",
+      })),
+      assignees,
+    };
+  });
+
+export interface CreateTaskTagInput {
+  label: string;
+  color: string;
+}
+
+export interface CreateTaskInput {
+  title: string;
+  description?: string | null;
+  case_id?: string | null;
+  assignee_id?: string | null;
+  priority?: "low" | "medium" | "high" | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  tags?: CreateTaskTagInput[];
+}
+
+/**
+ * Create a task. Enforces assignment rules: only super_admin/admin may assign
+ * to other users; everyone else can only create tasks assigned to themselves.
+ * Notifies the assignee and relies on the task trigger to write activity_log.
+ */
+export const createTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: CreateTaskInput) => {
+    if (!input?.title?.trim()) throw new Error("A task title is required.");
+    return input;
+  })
+  .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const { supabase, userId } = context;
+
+    const { data: me, error: meErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("id", userId)
+      .single();
+    if (meErr) throw new Error(meErr.message);
+
+    const canAssignOthers = ROLES_CAN_ASSIGN.includes(me.role as string);
+
+    let assigneeId = data.assignee_id?.trim() || userId;
+    if (assigneeId !== userId && !canAssignOthers) {
+      throw new Error("You can only create tasks assigned to yourself.");
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("tasks")
+      .insert({
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        case_id: data.case_id?.trim() || null,
+        assignee_id: assigneeId,
+        priority: data.priority ?? null,
+        start_date: data.start_date || null,
+        due_date: data.due_date || null,
+        status: "todo",
+        created_by: userId,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const taskId = inserted.id as string;
+
+    const tags = (data.tags ?? []).filter((t) => t.label.trim());
+    if (tags.length) {
+      const { error: tagErr } = await supabase.from("task_tags").insert(
+        tags.map((t) => ({
+          task_id: taskId,
+          label: t.label.trim(),
+          color: t.color,
+        })),
+      );
+      if (tagErr) throw new Error(tagErr.message);
+    }
+
+    // Notify the assignee (skip self-assignment to avoid noise).
+    if (assigneeId !== userId) {
+      await supabase.from("notifications").insert({
+        user_id: assigneeId,
+        type: "task_assigned",
+        title: "New task assigned",
+        body: `${(me.full_name as string) || "A colleague"} assigned you: ${data.title.trim()}`,
+        link: "/tasks",
+      });
+    }
+
+    return { id: taskId };
+  });

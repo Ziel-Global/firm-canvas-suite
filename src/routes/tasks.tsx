@@ -30,6 +30,8 @@ import {
   type TaskOrderInput,
 } from "@/lib/tasks.functions";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { NewTaskSheet } from "@/components/new-task-sheet";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import {
@@ -178,11 +180,13 @@ function Column({
   label,
   accent,
   tasks,
+  onAddTask,
 }: {
   columnKey: TaskStatus;
   label: string;
   accent: string;
   tasks: TaskRow[];
+  onAddTask: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: columnKey });
 
@@ -201,7 +205,7 @@ function Column({
             <MoreHorizontal className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Add task</DropdownMenuItem>
+            <DropdownMenuItem onClick={onAddTask}>Add task</DropdownMenuItem>
             <DropdownMenuItem>Sort by due date</DropdownMenuItem>
             <DropdownMenuItem>Collapse column</DropdownMenuItem>
           </DropdownMenuContent>
@@ -220,10 +224,14 @@ function Column({
             <SortableTaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
-        <button className="flex items-center justify-center gap-1.5 rounded-control border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground">
+        <button
+          onClick={onAddTask}
+          className="flex items-center justify-center gap-1.5 rounded-control border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+        >
           <Plus className="size-3.5" />
           Add task
         </button>
+
       </div>
     </div>
   );
@@ -248,6 +256,8 @@ function TasksPage() {
 
   const [board, setBoard] = useState<Board>(emptyBoard());
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
 
   useEffect(() => {
     if (data) setBoard(groupTasks(data));
@@ -334,11 +344,17 @@ function TasksPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
-        <p className="text-sm text-muted-foreground">
-          Track work across every case. Drag cards to update status.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
+          <p className="text-sm text-muted-foreground">
+            Track work across every case. Drag cards to update status.
+          </p>
+        </div>
+        <Button onClick={() => setSheetOpen(true)}>
+          <Plus className="mr-1.5 size-4" />
+          Add new task
+        </Button>
       </div>
 
       {isLoading ? (
@@ -359,6 +375,7 @@ function TasksPage() {
                 label={col.label}
                 accent={col.accent}
                 tasks={board[col.key]}
+                onAddTask={() => setSheetOpen(true)}
               />
             ))}
           </div>
@@ -371,6 +388,8 @@ function TasksPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }
