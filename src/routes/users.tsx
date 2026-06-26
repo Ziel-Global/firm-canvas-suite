@@ -121,10 +121,20 @@ function UsersPage() {
 
   return (
     <main className="px-4 py-6 sm:px-6">
-      <h2 className="text-2xl font-semibold tracking-tight text-foreground">Users</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Manage everyone with access to the firm system.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Users</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage everyone with access to the firm system.
+          </p>
+        </div>
+        <Button onClick={() => setSheetOpen(true)}>
+          <Plus />
+          New user
+        </Button>
+      </div>
+
+      <NewUserSheet open={sheetOpen} onOpenChange={setSheetOpen} />
 
       <Card className="mt-6 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
