@@ -69,6 +69,7 @@ export function NewEventSheet({
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
   const fetchOptions = useServerFn(getCalendarOptions);
+  const fetchDefaults = useServerFn(getReminderDefaults);
   const create = useServerFn(createCalendarEvent);
 
   const [title, setTitle] = useState("");
@@ -80,12 +81,34 @@ export function NewEventSheet({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [isPrivate, setIsPrivate] = useState(false);
+  const [reminders, setReminders] = useState<ReminderRule[]>([]);
+  const [remindersTouched, setRemindersTouched] = useState(false);
 
   const { data: cases } = useQuery({
     queryKey: ["calendar-options"],
     queryFn: () => fetchOptions(),
     enabled: open,
   });
+
+  const { data: reminderDefaults } = useQuery({
+    queryKey: ["reminder-defaults"],
+    queryFn: () => fetchDefaults(),
+    enabled: open,
+  });
+
+  // Pre-fill reminders from the selected event type's defaults until the user edits them.
+  useEffect(() => {
+    if (!open || remindersTouched || !reminderDefaults) return;
+    const def = reminderDefaults.find((d) => d.event_type === eventType);
+    setReminders(
+      def ? offsetsToRules(def.offsets, def.channels) : [],
+    );
+  }, [open, eventType, reminderDefaults, remindersTouched]);
+
+  function handleReminders(next: ReminderRule[]) {
+    setRemindersTouched(true);
+    setReminders(next);
+  }
 
   function reset() {
     setTitle("");
@@ -97,6 +120,8 @@ export function NewEventSheet({
     setStartTime("09:00");
     setEndTime("10:00");
     setIsPrivate(false);
+    setReminders([]);
+    setRemindersTouched(false);
   }
 
   const mutation = useMutation({
@@ -117,6 +142,7 @@ export function NewEventSheet({
           starts_at,
           ends_at,
           is_private: isPrivate,
+          reminders: rulesToEventReminders(reminders),
         },
       });
     },
