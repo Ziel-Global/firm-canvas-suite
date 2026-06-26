@@ -656,7 +656,7 @@ export const addCaseNote = createServerFn({ method: "POST" })
 export interface CaseActivityEntry {
   id: string;
   action: string | null;
-  detail: Record<string, unknown> | null;
+  detail: Record<string, string | number | boolean | null> | null;
   actor_name: string | null;
   created_at: string;
 }
@@ -700,7 +700,7 @@ export const getCaseActivity = createServerFn({ method: "GET" })
     return (acts ?? []).map((a) => ({
       id: a.id as string,
       action: (a.action as string) ?? null,
-      detail: (a.detail as Record<string, unknown> | null) ?? null,
+      detail: (a.detail as Record<string, string | number | boolean | null> | null) ?? null,
       actor_name: a.actor_id ? names.get(a.actor_id as string) ?? null : null,
       created_at: a.created_at as string,
     }));
