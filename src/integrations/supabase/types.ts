@@ -95,6 +95,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       approval_status: "pending" | "approved" | "returned" | "locked"
