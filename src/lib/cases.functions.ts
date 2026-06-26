@@ -104,10 +104,10 @@ export const listCases = createServerFn({ method: "GET" })
       .in("case_id", caseIds)
       .not("deadline", "is", null);
     for (const s of deadlineStages ?? []) {
-      if (!s.deadline || s.status === "complete") continue;
+      if (!s.case_id || !s.deadline || s.status === "complete") continue;
       const prev = nextDeadline.get(s.case_id);
       if (!prev || new Date(s.deadline) < new Date(prev)) {
-        nextDeadline.set(s.case_id, s.deadline as string);
+        nextDeadline.set(s.case_id, s.deadline);
       }
     }
 
