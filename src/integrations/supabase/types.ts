@@ -351,6 +351,7 @@ export type Database = {
           completed_at: string | null
           deadline: string | null
           id: string
+          is_private: boolean
           name: string | null
           notes: string | null
           sequence_order: number | null
@@ -364,6 +365,7 @@ export type Database = {
           completed_at?: string | null
           deadline?: string | null
           id?: string
+          is_private?: boolean
           name?: string | null
           notes?: string | null
           sequence_order?: number | null
@@ -377,6 +379,7 @@ export type Database = {
           completed_at?: string | null
           deadline?: string | null
           id?: string
+          is_private?: boolean
           name?: string | null
           notes?: string | null
           sequence_order?: number | null
@@ -413,6 +416,7 @@ export type Database = {
           current_stage_id: string | null
           health: Database["public"]["Enums"]["health_status"] | null
           id: string
+          is_private: boolean
           opened_at: string | null
           retention_until: string | null
           status: Database["public"]["Enums"]["case_status"] | null
@@ -429,6 +433,7 @@ export type Database = {
           current_stage_id?: string | null
           health?: Database["public"]["Enums"]["health_status"] | null
           id?: string
+          is_private?: boolean
           opened_at?: string | null
           retention_until?: string | null
           status?: Database["public"]["Enums"]["case_status"] | null
@@ -445,6 +450,7 @@ export type Database = {
           current_stage_id?: string | null
           health?: Database["public"]["Enums"]["health_status"] | null
           id?: string
+          is_private?: boolean
           opened_at?: string | null
           retention_until?: string | null
           status?: Database["public"]["Enums"]["case_status"] | null
@@ -966,6 +972,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_read_case: { Args: { _case_id: string }; Returns: boolean }
       case_override_level: { Args: { _case_id: string }; Returns: string }
       current_role: {
         Args: never
