@@ -127,7 +127,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthRoute = pathname === "/auth";
+  const isAuthRoute = pathname === "/auth" || pathname === "/bootstrap";
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
