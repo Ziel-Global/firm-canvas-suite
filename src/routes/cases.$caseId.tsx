@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CaseOverviewTab } from "@/components/case-overview-tab";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
