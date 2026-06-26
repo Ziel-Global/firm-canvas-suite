@@ -471,7 +471,35 @@ function TasksPage() {
             Track work across every case. Drag cards to update status.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-control border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("board")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "board"
+                  ? "bg-surface-dark text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-3.5" />
+              Board
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
+                view === "list"
+                  ? "bg-surface-dark text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <List className="size-3.5" />
+              List
+            </button>
+          </div>
           <TimeframeFilter
             date={filterDate}
             tolerance={tolerance}
@@ -482,6 +510,7 @@ function TasksPage() {
               setTolerance(0);
             }}
           />
+
           <Button onClick={() => setSheetOpen(true)}>
             <Plus className="mr-1.5 size-4" />
             Add new task
