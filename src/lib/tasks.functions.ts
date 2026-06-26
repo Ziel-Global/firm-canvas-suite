@@ -85,13 +85,16 @@ export const listTasks = createServerFn({ method: "GET" })
         description: (t.description as string) ?? null,
         status: (t.status as TaskStatus) ?? "todo",
         priority: (t.priority as string) ?? null,
+        start_date: (t.start_date as string) ?? null,
         due_date: (t.due_date as string) ?? null,
         case_id: (t.case_id as string) ?? null,
         case_ref: c?.case_ref ?? null,
         case_title: c?.title ?? null,
+        case_type: c?.case_type ?? null,
         assignee_id: (t.assignee_id as string) ?? null,
         assignee_name: t.assignee_id ? peopleMap.get(t.assignee_id) ?? null : null,
         sort_order: (t.sort_order as number) ?? null,
+
       };
     });
   });
