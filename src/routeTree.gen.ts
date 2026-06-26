@@ -23,6 +23,7 @@ import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
 import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
+import { Route as ApiPublicHooksEscalateOverdueStagesRouteImport } from './routes/api/public/hooks/escalate-overdue-stages'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -94,6 +95,12 @@ const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
   path: '/$caseId',
   getParentRoute: () => CasesRoute,
 } as any)
+const ApiPublicHooksEscalateOverdueStagesRoute =
+  ApiPublicHooksEscalateOverdueStagesRouteImport.update({
+    id: '/api/public/hooks/escalate-overdue-stages',
+    path: '/api/public/hooks/escalate-overdue-stages',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
+  '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +134,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
+  '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +152,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
+  '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/cases/$caseId'
     | '/clients/$clientId'
+    | '/api/public/hooks/escalate-overdue-stages'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/cases/$caseId'
     | '/clients/$clientId'
+    | '/api/public/hooks/escalate-overdue-stages'
   id:
     | '__root__'
     | '/'
@@ -193,6 +205,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/cases/$caseId'
     | '/clients/$clientId'
+    | '/api/public/hooks/escalate-overdue-stages'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,6 +221,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
   UsersRoute: typeof UsersRoute
+  ApiPublicHooksEscalateOverdueStagesRoute: typeof ApiPublicHooksEscalateOverdueStagesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesCaseIdRouteImport
       parentRoute: typeof CasesRoute
     }
+    '/api/public/hooks/escalate-overdue-stages': {
+      id: '/api/public/hooks/escalate-overdue-stages'
+      path: '/api/public/hooks/escalate-overdue-stages'
+      fullPath: '/api/public/hooks/escalate-overdue-stages'
+      preLoaderRoute: typeof ApiPublicHooksEscalateOverdueStagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -347,6 +368,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,
   UsersRoute: UsersRoute,
+  ApiPublicHooksEscalateOverdueStagesRoute:
+    ApiPublicHooksEscalateOverdueStagesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
