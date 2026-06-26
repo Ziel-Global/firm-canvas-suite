@@ -23,7 +23,19 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      approval_status: "pending" | "approved" | "returned" | "locked"
+      case_status: "intake" | "active" | "on_hold" | "closed"
+      health_status: "on_track" | "at_risk" | "overdue"
+      priority: "low" | "medium" | "high"
+      stage_status: "pending" | "active" | "complete" | "returned"
+      task_status: "todo" | "in_progress" | "in_review" | "done"
+      user_role:
+        | "super_admin"
+        | "admin"
+        | "senior_lawyer"
+        | "junior_lawyer"
+        | "support"
+        | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +162,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      approval_status: ["pending", "approved", "returned", "locked"],
+      case_status: ["intake", "active", "on_hold", "closed"],
+      health_status: ["on_track", "at_risk", "overdue"],
+      priority: ["low", "medium", "high"],
+      stage_status: ["pending", "active", "complete", "returned"],
+      task_status: ["todo", "in_progress", "in_review", "done"],
+      user_role: [
+        "super_admin",
+        "admin",
+        "senior_lawyer",
+        "junior_lawyer",
+        "support",
+        "client",
+      ],
+    },
   },
 } as const
