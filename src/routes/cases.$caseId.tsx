@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CaseOverviewTab } from "@/components/case-overview-tab";
 import { CaseNotesTab } from "@/components/case-notes-tab";
 import { CaseActivityTab } from "@/components/case-activity-tab";
+import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
@@ -217,6 +218,10 @@ function CaseDetailPage() {
                 </Button>
               </div>
             </Card>
+
+            {role === "super_admin" && (
+              <CaseLifecycleActions caseId={caseId} status={data.status} />
+            )}
           </aside>
 
           {/* Tabbed main area */}
