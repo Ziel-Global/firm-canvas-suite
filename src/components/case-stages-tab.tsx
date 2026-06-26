@@ -264,7 +264,19 @@ function StageDetail({
         </p>
       </div>
 
-      {isActive && canAct && (
+      {isActive && principalLocked && (
+        <div className="flex items-start gap-2 rounded-card border border-priority-high/40 bg-priority-high/10 p-4 text-sm text-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0 text-priority-high" />
+          <p>
+            This is the <span className="font-medium">Principal Approval</span>{" "}
+            stage. No output can advance past it without the Super Admin's
+            explicit sign-off. Only the Super Admin can mark this stage complete.
+          </p>
+        </div>
+      )}
+
+      {isActive && canAct && !principalLocked && (
+
         <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
           <h4 className="text-sm font-semibold text-foreground">
             Stage actions
