@@ -1,0 +1,207 @@
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Check, CircleDot, Clock, FileOutput, StickyNote, User } from "lucide-react";
+
+import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
+import { Card } from "@/components/ui/card";
+import { Tag } from "@/components/ui/tag";
+import { cn } from "@/lib/utils";
+
+const STATUS_TAG: Record<string, { label: string; color: "high" | "medium" | "low" | "purple" | "blue" | "sand" | "green" }> = {
+  pending: { label: "Pending", color: "low" },
+  active: { label: "Active", color: "blue" },
+  complete: { label: "Complete", color: "green" },
+  returned: { label: "Returned", color: "high" },
+};
+
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function StepIcon({ status }: { status: string | null }) {
+  if (status === "complete")
+    return <Check className="size-4 text-primary-foreground" />;
+  if (status === "active")
+    return <CircleDot className="size-4 text-primary-foreground" />;
+  return <span className="text-xs font-semibold" />;
+}
+
+export function CaseStagesTab({ caseId }: { caseId: string }) {
+  const fetchStages = useServerFn(getCaseStages);
+  const { data: stages, isLoading } = useQuery({
+    queryKey: ["case-stages", caseId],
+    queryFn: () => fetchStages({ data: { caseId } }),
+  });
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!stages || stages.length === 0) return;
+    setSelectedId((prev) => {
+      if (prev && stages.some((s) => s.id === prev)) return prev;
+      const active = stages.find((s) => s.status === "active");
+      return active?.id ?? stages[0].id;
+    });
+  }, [stages]);
+
+  if (isLoading) {
+    return (
+      <Card className="p-6 text-sm text-muted-foreground">Loading stages…</Card>
+    );
+  }
+
+  if (!stages || stages.length === 0) {
+    return (
+      <Card className="p-6">
+        <h3 className="text-sm font-semibold text-foreground">Stages</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This case has no workflow stages yet. Stages are added when a workflow
+          template is applied.
+        </p>
+      </Card>
+    );
+  }
+
+  const selected = stages.find((s) => s.id === selectedId) ?? stages[0];
+
+  return (
+    <div className="space-y-6">
+      {/* Horizontal stepper */}
+      <Card className="overflow-x-auto p-5">
+        <ol className="flex min-w-max items-start gap-2">
+          {stages.map((stage, idx) => {
+            const isActive = stage.status === "active";
+            const isComplete = stage.status === "complete";
+            const isSelected = stage.id === selected.id;
+            return (
+              <li key={stage.id} className="flex items-start">
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(stage.id)}
+                  className={cn(
+                    "flex w-32 flex-col items-center gap-2 rounded-control px-2 py-2 text-center transition-colors",
+                    isSelected ? "bg-frame" : "hover:bg-frame/50",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-full border-2 text-sm font-semibold",
+                      isComplete && "border-primary bg-primary text-primary-foreground",
+                      isActive &&
+                        "border-primary bg-primary text-primary-foreground ring-4 ring-primary/20",
+                      !isComplete &&
+                        !isActive &&
+                        "border-border bg-surface text-muted-foreground",
+                    )}
+                  >
+                    {isComplete || isActive ? (
+                      <StepIcon status={stage.status} />
+                    ) : (
+                      idx + 1
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "line-clamp-2 text-xs font-medium",
+                      isSelected ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {stage.name ?? `Stage ${idx + 1}`}
+                  </span>
+                </button>
+                {idx < stages.length - 1 && (
+                  <span
+                    className={cn(
+                      "mt-[18px] h-0.5 w-6 shrink-0 rounded-full",
+                      isComplete ? "bg-primary" : "bg-border",
+                    )}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
+
+      {/* Detail panel */}
+      <StageDetail stage={selected} />
+    </div>
+  );
+}
+
+function StageDetail({ stage }: { stage: CaseStageRow }) {
+  const status = stage.status ?? "pending";
+  const tag = STATUS_TAG[status] ?? STATUS_TAG.pending;
+
+  return (
+    <Card className="space-y-5 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-foreground">
+          {stage.name ?? "Stage"}
+        </h3>
+        <Tag color={tag.color}>{tag.label}</Tag>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field icon={<User className="size-4" />} label="Assignee">
+          {stage.assignee_name || "Unassigned"}
+        </Field>
+        <Field icon={<Clock className="size-4" />} label="Deadline">
+          {formatDate(stage.deadline)}
+        </Field>
+        <Field icon={<Clock className="size-4" />} label="Started">
+          {formatDate(stage.started_at)}
+        </Field>
+        <Field icon={<Check className="size-4" />} label="Completed">
+          {formatDate(stage.completed_at)}
+        </Field>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <FileOutput className="size-4 text-muted-foreground" />
+          Expected output
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {stage.expected_output || "No expected output defined for this stage."}
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <StickyNote className="size-4 text-muted-foreground" />
+          Notes
+        </div>
+        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+          {stage.notes || "No notes on this stage."}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function Field({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className="text-sm font-medium text-foreground">{children}</div>
+    </div>
+  );
+}
