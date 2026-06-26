@@ -123,12 +123,35 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       </Card>
 
       {/* Document list */}
-      <div className="min-w-0">
+      <div className="min-w-0 space-y-3">
+        <div className="flex items-center justify-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            variant="primary"
+            disabled={!selectedFolderId || uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="size-4" />
+            {uploading ? "Uploading…" : "Upload document"}
+          </Button>
+        </div>
+
         {docsLoading && (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Loading files…
           </p>
         )}
+
 
         {!docsLoading && documents && documents.length === 0 && (
           <Card className="p-6">
