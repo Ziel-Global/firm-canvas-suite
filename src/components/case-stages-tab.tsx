@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleDot, Clock, FileOutput, StickyNote, User } from "lucide-react";
+import { Check, CircleDot, Clock, FileOutput, Loader2, StickyNote, Undo2, User } from "lucide-react";
+import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
+import { completeStage, returnStage } from "@/lib/stage-transitions.functions";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
 
 const STATUS_TAG: Record<string, { label: string; color: "high" | "medium" | "low" | "purple" | "blue" | "sand" | "green" }> = {
   pending: { label: "Pending", color: "low" },
@@ -38,6 +44,8 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
     queryKey: ["case-stages", caseId],
     queryFn: () => fetchStages({ data: { caseId } }),
   });
+  const { user, role } = useAuth();
+  const queryClient = useQueryClient();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -130,14 +138,80 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
       </Card>
 
       {/* Detail panel */}
-      <StageDetail stage={selected} />
+      <StageDetail
+        stage={selected}
+        caseId={caseId}
+        isFirst={stages[0]?.id === selected.id}
+        canAct={
+          role === "super_admin" ||
+          role === "admin" ||
+          role === "senior_lawyer" ||
+          selected.assignee_id === user?.id
+        }
+        onChanged={() => {
+          queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
+          queryClient.invalidateQueries({ queryKey: ["case-detail", caseId] });
+          queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
+        }}
+      />
+
     </div>
   );
 }
 
-function StageDetail({ stage }: { stage: CaseStageRow }) {
+function StageDetail({
+  stage,
+  caseId,
+  isFirst,
+  canAct,
+  onChanged,
+}: {
+  stage: CaseStageRow;
+  caseId: string;
+  isFirst: boolean;
+  canAct: boolean;
+  onChanged: () => void;
+}) {
   const status = stage.status ?? "pending";
   const tag = STATUS_TAG[status] ?? STATUS_TAG.pending;
+
+  const complete = useServerFn(completeStage);
+  const sendBack = useServerFn(returnStage);
+  const [notes, setNotes] = useState("");
+  const [comments, setComments] = useState("");
+  const [returning, setReturning] = useState(false);
+
+  const completeMutation = useMutation({
+    mutationFn: () =>
+      complete({
+        data: {
+          caseId,
+          stageId: stage.id,
+          notes: notes.trim() ? notes.trim() : undefined,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Stage marked complete. The next assignee was notified.");
+      setNotes("");
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const returnMutation = useMutation({
+    mutationFn: () =>
+      sendBack({ data: { caseId, stageId: stage.id, comments } }),
+    onSuccess: () => {
+      toast.success("Stage returned to the previous assignee.");
+      setComments("");
+      setReturning(false);
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const isActive = status === "active";
+
 
   return (
     <Card className="space-y-5 p-6">
@@ -182,7 +256,92 @@ function StageDetail({ stage }: { stage: CaseStageRow }) {
           {stage.notes || "No notes on this stage."}
         </p>
       </div>
+
+      {isActive && canAct && (
+        <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
+          <h4 className="text-sm font-semibold text-foreground">
+            Stage actions
+          </h4>
+          {!returning ? (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Completion notes (optional)
+                </label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Summarise the work completed for this stage…"
+                  rows={3}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => completeMutation.mutate()}
+                  disabled={completeMutation.isPending}
+                >
+                  {completeMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
+                  Mark complete
+                </Button>
+                {!isFirst && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setReturning(true)}
+                    disabled={completeMutation.isPending}
+                  >
+                    <Undo2 className="size-4" />
+                    Return to previous
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Comments for the previous assignee
+                </label>
+                <Textarea
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Explain what needs to change before this stage can proceed…"
+                  rows={3}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => returnMutation.mutate()}
+                  disabled={returnMutation.isPending || !comments.trim()}
+                >
+                  {returnMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Undo2 className="size-4" />
+                  )}
+                  Return stage
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setReturning(false);
+                    setComments("");
+                  }}
+                  disabled={returnMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
+
   );
 }
 
