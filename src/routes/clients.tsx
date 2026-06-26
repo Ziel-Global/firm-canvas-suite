@@ -47,6 +47,8 @@ function ClientsPage() {
   const fetchClients = useServerFn(listClients);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const canCreate = role === "super_admin" || role === "admin";
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
 
