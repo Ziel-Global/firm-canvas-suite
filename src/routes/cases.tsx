@@ -84,8 +84,10 @@ function CasesPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const canView = role != null;
+  const canCreate = role === "super_admin" || role === "admin";
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["cases"],
