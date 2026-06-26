@@ -137,7 +137,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
             }}
           />
           <Button
-            variant="primary"
+            variant="default"
             disabled={!selectedFolderId || uploading}
             onClick={() => fileInputRef.current?.click()}
           >
