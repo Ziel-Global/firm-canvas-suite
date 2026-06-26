@@ -12,6 +12,7 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/lib/nav";
+import { verifyAccess } from "@/lib/access-guard.functions";
 
 interface Profile {
   id: string;
