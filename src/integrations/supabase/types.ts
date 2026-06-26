@@ -743,6 +743,33 @@ export type Database = {
           },
         ]
       }
+      event_reminder_defaults: {
+        Row: {
+          channels: string[]
+          created_at: string
+          event_type: string
+          id: string
+          offsets: number[]
+          updated_at: string
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          event_type: string
+          id?: string
+          offsets?: number[]
+          updated_at?: string
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          event_type?: string
+          id?: string
+          offsets?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_reminders: {
         Row: {
           channel: string | null
