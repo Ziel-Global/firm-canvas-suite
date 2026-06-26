@@ -89,3 +89,61 @@ export const listClients = createServerFn({ method: "GET" })
       created_at: c.created_at as string,
     }));
   });
+
+export interface CreateClientInput {
+  full_name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+}
+
+/**
+ * Create a new client. Auto-generates a unique, sequential client_ref in the
+ * format CL-YYYY-NNNN via the `next_client_ref` DB function (advisory-locked to
+ * avoid race conditions) and writes the creation to activity_log.
+ */
+export const createClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: CreateClientInput) => {
+    const full_name = (input.full_name ?? "").trim();
+    if (!full_name) throw new Error("Full name is required.");
+    return {
+      full_name,
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      address: input.address?.trim() || null,
+      notes: input.notes?.trim() || null,
+    };
+  })
+  .handler(async ({ data, context }): Promise<{ id: string; client_ref: string }> => {
+    const { supabase, userId } = context;
+
+    const { data: refData, error: refError } = await supabase.rpc("next_client_ref");
+    if (refError) throw new Error(refError.message);
+    const client_ref = refData as string;
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("clients")
+      .insert({
+        client_ref,
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        created_by: userId,
+      })
+      .select("id, client_ref")
+      .single();
+    if (insertError) throw new Error(insertError.message);
+
+    const { error: logError } = await supabase.from("activity_log").insert({
+      actor_id: userId,
+      action: "client_created",
+      detail: { client_id: inserted.id, client_ref: inserted.client_ref, full_name: data.full_name },
+    });
+    if (logError) throw new Error(logError.message);
+
+    return { id: inserted.id, client_ref: inserted.client_ref };
+  });
