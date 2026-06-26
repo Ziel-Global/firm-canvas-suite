@@ -335,7 +335,7 @@ export const updateClient = createServerFn({ method: "POST" })
     const changed: Record<string, { from: Json; to: Json }> = {};
     for (const f of fields) {
       if ((before as Record<string, unknown>)[f] !== (data as Record<string, unknown>)[f]) {
-        changed[f] = { from: (before as Record<string, unknown>)[f], to: (data as Record<string, unknown>)[f] };
+        changed[f] = { from: ((before as Record<string, Json>)[f] ?? null), to: ((data as Record<string, Json>)[f] ?? null) };
       }
     }
 
