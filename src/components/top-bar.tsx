@@ -24,7 +24,7 @@ export function TopBar({ title, className }: TopBarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-frame bg-canvas/90 px-4 py-3 backdrop-blur-sm sm:grid sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:flex-nowrap sm:gap-y-0 sm:px-6",
+        "sticky top-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-frame bg-canvas/90 px-4 py-3 backdrop-blur-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,28rem)_minmax(0,1fr)] sm:flex-nowrap sm:gap-y-0 sm:px-6",
         className,
       )}
     >
