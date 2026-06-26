@@ -100,6 +100,56 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          event_type: string | null
+          id: string
+          is_private: boolean | null
+          location: string | null
+          owner_id: string | null
+          starts_at: string | null
+          title: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string | null
+          id?: string
+          is_private?: boolean | null
+          location?: string | null
+          owner_id?: string | null
+          starts_at?: string | null
+          title?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string | null
+          id?: string
+          is_private?: boolean | null
+          location?: string | null
+          owner_id?: string | null
+          starts_at?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_access_overrides: {
         Row: {
           access_level: string | null
@@ -495,6 +545,38 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reminders: {
+        Row: {
+          channel: string | null
+          event_id: string | null
+          id: string
+          offset_minutes: number | null
+          sent: boolean | null
+        }
+        Insert: {
+          channel?: string | null
+          event_id?: string | null
+          id?: string
+          offset_minutes?: number | null
+          sent?: boolean | null
+        }
+        Update: {
+          channel?: string | null
+          event_id?: string | null
+          id?: string
+          offset_minutes?: number | null
+          sent?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reminders_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
             referencedColumns: ["id"]
           },
         ]
