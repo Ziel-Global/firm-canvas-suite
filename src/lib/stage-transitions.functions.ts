@@ -40,6 +40,15 @@ export const completeStage = createServerFn({ method: "POST" })
     if (!elevated && stage.assignee_id !== userId)
       throw new Error("Only the stage assignee can complete this stage.");
 
+    // Principal Approval gate: this stage cannot be passed without the
+    // Super Admin's explicit sign-off. No output advances past it otherwise.
+    const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
+    if (isPrincipalApproval && (role as string) !== "super_admin")
+      throw new Error(
+        "The Principal Approval stage requires the Super Admin's explicit sign-off and cannot be completed by anyone else.",
+      );
+
+
     const { supabaseAdmin } = await import(
       "@/integrations/supabase/client.server"
     );
