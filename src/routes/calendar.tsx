@@ -129,10 +129,26 @@ function CalendarPage() {
             Day, week, and month views of firm commitments.
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
-          New event
-        </Button>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <Button
+              variant={showPrivate ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPrivate((s) => !s)}
+            >
+              {showPrivate ? (
+                <Eye className="mr-1.5 size-4" />
+              ) : (
+                <EyeOff className="mr-1.5 size-4" />
+              )}
+              Private layer
+            </Button>
+          )}
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-1.5 size-4" />
+            New event
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
