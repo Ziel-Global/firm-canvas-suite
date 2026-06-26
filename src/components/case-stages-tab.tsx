@@ -138,7 +138,23 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
       </Card>
 
       {/* Detail panel */}
-      <StageDetail stage={selected} />
+      <StageDetail
+        stage={selected}
+        caseId={caseId}
+        isFirst={stages[0]?.id === selected.id}
+        canAct={
+          role === "super_admin" ||
+          role === "admin" ||
+          role === "senior_lawyer" ||
+          selected.assignee_id === user?.id
+        }
+        onChanged={() => {
+          queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
+          queryClient.invalidateQueries({ queryKey: ["case-detail", caseId] });
+          queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
+        }}
+      />
+
     </div>
   );
 }
