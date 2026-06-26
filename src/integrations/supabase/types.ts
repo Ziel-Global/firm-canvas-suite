@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          case_id: string | null
+          created_at: string
+          detail: Json | null
+          id: string
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          case_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          case_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_comments: {
         Row: {
           anchor: Json | null
@@ -99,6 +134,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      audit_log: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          created_at: string
+          detail: Json | null
+          id: string
+          target_id: string | null
+          target_table: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: string
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Relationships: []
       }
       calendar_events: {
         Row: {
@@ -577,6 +642,47 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          link: string | null
+          title: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          link?: string | null
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
