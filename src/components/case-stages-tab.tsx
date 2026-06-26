@@ -166,12 +166,14 @@ function StageDetail({
   caseId,
   isFirst,
   canAct,
+  isSuperAdmin,
   onChanged,
 }: {
   stage: CaseStageRow;
   caseId: string;
   isFirst: boolean;
   canAct: boolean;
+  isSuperAdmin: boolean;
   onChanged: () => void;
 }) {
   const status = stage.status ?? "pending";
