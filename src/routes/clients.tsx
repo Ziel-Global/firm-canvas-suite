@@ -149,10 +149,10 @@ function ClientsPage() {
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">{c.client_ref}</p>
                 </div>
-                <Pill tint="blue">
+                <Tag color="blue">
                   <Briefcase className="size-3.5" />
                   {c.active_case_count} active
-                </Pill>
+                </Tag>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
