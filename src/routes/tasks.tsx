@@ -38,9 +38,20 @@ const PRIORITY_TAG: Record<string, { color: "high" | "medium" | "low"; label: st
   low: { color: "low", label: "Low" },
 };
 
-function formatDue(value: string | null) {
+const TAG_TINTS = ["purple", "blue", "sand", "green"] as const;
+
+function shortDate(value: string | null) {
   if (!value) return null;
   return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function dateRange(start: string | null, due: string | null) {
+  const s = shortDate(start);
+  const d = shortDate(due);
+  if (s && d) return `${s} – ${d}`;
+  if (d) return `Due ${d}`;
+  if (s) return `From ${s}`;
+  return null;
 }
 
 function isOverdue(value: string | null) {
@@ -53,23 +64,20 @@ function isOverdue(value: string | null) {
 
 function TaskCard({ task }: { task: TaskRow }) {
   const priority = task.priority ? PRIORITY_TAG[task.priority] : undefined;
-  const due = formatDue(task.due_date);
+  const range = dateRange(task.start_date, task.due_date);
   const overdue = isOverdue(task.due_date) && task.status !== "done";
+
+  const tags = [task.case_type, task.case_ref].filter(Boolean) as string[];
 
   return (
     <Card className="cursor-pointer rounded-card border-0 bg-card p-4 shadow-[0_1px_3px_rgba(26,26,26,0.06),0_4px_12px_rgba(26,26,26,0.05)] transition-shadow hover:shadow-[0_2px_6px_rgba(26,26,26,0.08),0_8px_20px_rgba(26,26,26,0.08)]">
       <div className="flex items-start justify-between gap-2">
+        {task.assignee_name ? (
+          <AvatarStack people={[{ name: task.assignee_name }]} />
+        ) : (
+          <span className="size-8" />
+        )}
         {priority ? <Tag color={priority.color}>{priority.label}</Tag> : <span />}
-        {task.case_ref ? (
-          <Link
-            to="/cases/$caseId"
-            params={{ caseId: task.case_id! }}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {task.case_ref}
-          </Link>
-        ) : null}
       </div>
 
       <p className="mt-3 text-sm font-semibold leading-snug text-foreground">{task.title}</p>
@@ -77,27 +85,35 @@ function TaskCard({ task }: { task: TaskRow }) {
         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
       ) : null}
 
-      <div className="mt-4 flex items-center justify-between">
-        {due ? (
+      {tags.length ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {tags.map((label, i) => (
+            <Tag key={`${label}-${i}`} color={TAG_TINTS[i % TAG_TINTS.length]}>
+              {label}
+            </Tag>
+          ))}
+        </div>
+      ) : null}
+
+      {range ? (
+        <div className="mt-4 flex items-center gap-1.5 border-t border-border pt-3">
+          <CalendarClock
+            className={"size-3.5 " + (overdue ? "text-priority-high" : "text-muted-foreground")}
+          />
           <span
             className={
-              "inline-flex items-center gap-1.5 text-xs font-medium " +
+              "text-xs font-medium " +
               (overdue ? "text-priority-high" : "text-muted-foreground")
             }
           >
-            <CalendarClock className="size-3.5" />
-            {due}
+            {range}
           </span>
-        ) : (
-          <span />
-        )}
-        {task.assignee_name ? (
-          <AvatarStack people={[{ name: task.assignee_name }]} />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </Card>
   );
 }
+
 
 function Column({
   label,
