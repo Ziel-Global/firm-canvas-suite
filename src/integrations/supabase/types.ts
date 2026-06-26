@@ -1088,6 +1088,15 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       effective_case_access: { Args: { _case_id: string }; Returns: string }
+      effective_case_access_for: {
+        Args: { _case_id: string; _user_id: string }
+        Returns: {
+          effective_level: string
+          folder_scope: string
+          override_level: string
+          role_default: string
+        }[]
+      }
       folder_scope_for_case: { Args: { _case_id: string }; Returns: string }
       has_role: {
         Args: {
