@@ -972,6 +972,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_folder: {
+        Args: { _case_id: string; _folder_code: string }
+        Returns: boolean
+      }
       can_read_case: { Args: { _case_id: string }; Returns: boolean }
       case_override_level: { Args: { _case_id: string }; Returns: string }
       current_role: {
@@ -979,6 +983,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       effective_case_access: { Args: { _case_id: string }; Returns: string }
+      folder_scope_for_case: { Args: { _case_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
