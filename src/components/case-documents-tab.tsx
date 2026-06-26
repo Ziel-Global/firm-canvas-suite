@@ -1,17 +1,23 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Folder, FolderOpen, FileText, Lock } from "lucide-react";
+import { Folder, FolderOpen, FileText, Lock, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   getCaseFolders,
   getFolderDocuments,
+  uploadDocument,
   type CaseDocument,
 } from "@/lib/documents.functions";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { Pill } from "@/components/ui/pill";
 import { cn } from "@/lib/utils";
+
+const ACCEPT = ".pdf,.docx,.xlsx,.jpg,.jpeg,.png";
+
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -24,7 +30,32 @@ function formatDate(value: string) {
 export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const fetchFolders = useServerFn(getCaseFolders);
   const fetchDocs = useServerFn(getFolderDocuments);
+  const upload = useServerFn(uploadDocument);
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  async function handleFile(file: File) {
+    if (!selectedFolderId) return;
+    setUploading(true);
+    const form = new FormData();
+    form.append("caseId", caseId);
+    form.append("folderId", selectedFolderId);
+    form.append("file", file);
+    try {
+      await upload({ data: form });
+      toast.success("Document uploaded");
+      queryClient.invalidateQueries({
+        queryKey: ["folder-documents", caseId, selectedFolderId],
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   const { data: folders, isLoading: foldersLoading } = useQuery({
     queryKey: ["case-folders", caseId],
@@ -92,12 +123,35 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       </Card>
 
       {/* Document list */}
-      <div className="min-w-0">
+      <div className="min-w-0 space-y-3">
+        <div className="flex items-center justify-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            variant="default"
+            disabled={!selectedFolderId || uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="size-4" />
+            {uploading ? "Uploading…" : "Upload document"}
+          </Button>
+        </div>
+
         {docsLoading && (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Loading files…
           </p>
         )}
+
 
         {!docsLoading && documents && documents.length === 0 && (
           <Card className="p-6">
