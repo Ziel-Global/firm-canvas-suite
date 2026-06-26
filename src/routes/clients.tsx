@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Briefcase, CalendarClock, Clock } from "lucide-react";
+import { Search, Briefcase, CalendarClock, Clock, Plus } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { listClients, type ClientRow } from "@/lib/clients.functions";
