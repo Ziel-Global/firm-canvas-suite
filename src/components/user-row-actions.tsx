@@ -160,7 +160,7 @@ export function UserRowActions({ user }: { user: ProfileRow }) {
           <DropdownMenuSeparator />
           {user.is_active ? (
             <DropdownMenuItem
-              variant="destructive"
+              className="text-destructive focus:text-destructive"
               onSelect={() => setConfirm("deactivate")}
             >
               Deactivate
