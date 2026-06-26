@@ -3,10 +3,14 @@ import { Plus, Scale } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NAV_GROUPS } from "@/lib/nav";
+import { navGroupsForRole } from "@/lib/nav";
+import { useAuth } from "@/contexts/auth-context";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { role } = useAuth();
+  const navGroups = navGroupsForRole(role);
+
 
   const isActive = (url: string) =>
     url === "/" ? pathname === "/" : pathname.startsWith(url);
