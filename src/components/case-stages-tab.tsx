@@ -215,6 +215,9 @@ function StageDetail({
   });
 
   const isActive = status === "active";
+  const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
+  const principalLocked = isPrincipalApproval && !isSuperAdmin;
+
 
 
   return (
