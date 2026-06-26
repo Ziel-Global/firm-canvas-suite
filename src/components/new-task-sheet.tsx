@@ -63,14 +63,19 @@ const ROLE_LABELS: Record<string, string> = {
   support: "Support",
 };
 
-export function NewTaskSheet({ open, onOpenChange }: NewTaskSheetProps) {
+export function NewTaskSheet({
+  open,
+  onOpenChange,
+  defaultCaseId,
+  lockCase,
+}: NewTaskSheetProps) {
   const queryClient = useQueryClient();
   const fetchOptions = useServerFn(getTaskFormOptions);
   const create = useServerFn(createTask);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [caseId, setCaseId] = useState<string>(NO_CASE);
+  const [caseId, setCaseId] = useState<string>(defaultCaseId ?? NO_CASE);
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [priority, setPriority] = useState<string>("medium");
   const [startDate, setStartDate] = useState<Date | undefined>();
