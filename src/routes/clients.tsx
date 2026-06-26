@@ -102,12 +102,22 @@ function ClientsPage() {
 
   return (
     <main className="px-4 py-6 sm:px-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Clients</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Clients you can access through your assigned cases.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Clients</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Clients you can access through your assigned cases.
+          </p>
+        </div>
+        {canCreate && (
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="size-4" />
+            New client
+          </Button>
+        )}
       </div>
+
+      {canCreate && <NewClientSheet open={sheetOpen} onOpenChange={setSheetOpen} />}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
