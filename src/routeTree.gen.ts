@@ -22,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
+import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -88,6 +89,11 @@ const ClientsClientIdRoute = ClientsClientIdRouteImport.update({
   path: '/$clientId',
   getParentRoute: () => ClientsRoute,
 } as any)
+const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
+  id: '/$caseId',
+  path: '/$caseId',
+  getParentRoute: () => CasesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,13 +101,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRoute
+  '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRoutesByTo {
@@ -110,13 +117,14 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRoute
+  '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRoutesById {
@@ -126,13 +134,14 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRoute
+  '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/cases/$caseId'
     | '/clients/$clientId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/cases/$caseId'
     | '/clients/$clientId'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/cases/$caseId'
     | '/clients/$clientId'
   fileRoutesById: FileRoutesById
 }
@@ -189,7 +201,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
-  CasesRoute: typeof CasesRoute
+  CasesRoute: typeof CasesRouteWithChildren
   ClientsRoute: typeof ClientsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
   ReportsRoute: typeof ReportsRoute
@@ -291,8 +303,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsClientIdRouteImport
       parentRoute: typeof ClientsRoute
     }
+    '/cases/$caseId': {
+      id: '/cases/$caseId'
+      path: '/$caseId'
+      fullPath: '/cases/$caseId'
+      preLoaderRoute: typeof CasesCaseIdRouteImport
+      parentRoute: typeof CasesRoute
+    }
   }
 }
+
+interface CasesRouteChildren {
+  CasesCaseIdRoute: typeof CasesCaseIdRoute
+}
+
+const CasesRouteChildren: CasesRouteChildren = {
+  CasesCaseIdRoute: CasesCaseIdRoute,
+}
+
+const CasesRouteWithChildren = CasesRoute._addFileChildren(CasesRouteChildren)
 
 interface ClientsRouteChildren {
   ClientsClientIdRoute: typeof ClientsClientIdRoute
@@ -311,7 +340,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
-  CasesRoute: CasesRoute,
+  CasesRoute: CasesRouteWithChildren,
   ClientsRoute: ClientsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
   ReportsRoute: ReportsRoute,

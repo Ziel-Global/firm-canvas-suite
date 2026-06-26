@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, LayoutGrid, Table as TableIcon, CalendarClock, User, Plus } from "lucide-react";
@@ -272,8 +272,24 @@ function CasesPage() {
               <TableBody>
                 {rows.map((c: CaseRow) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.case_ref ?? "—"}</TableCell>
-                    <TableCell>{c.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        to="/cases/$caseId"
+                        params={{ caseId: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.case_ref ?? "—"}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to="/cases/$caseId"
+                        params={{ caseId: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.title}
+                      </Link>
+                    </TableCell>
                     <TableCell>{c.client_name ?? "—"}</TableCell>
                     <TableCell>{c.case_type ?? "—"}</TableCell>
                     <TableCell>{c.current_stage_name ?? "—"}</TableCell>
@@ -293,13 +309,17 @@ function CasesPage() {
           {rows.map((c: CaseRow) => (
             <Card key={c.id} className="flex flex-col gap-4 p-5">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <Link
+                  to="/cases/$caseId"
+                  params={{ caseId: c.id }}
+                  className="min-w-0"
+                >
                   <p className="text-xs text-muted-foreground">{c.case_ref ?? "—"}</p>
-                  <h3 className="truncate text-base font-semibold text-foreground">{c.title}</h3>
+                  <h3 className="truncate text-base font-semibold text-foreground hover:underline">{c.title}</h3>
                   <p className="mt-0.5 truncate text-sm text-muted-foreground">
                     {c.client_name ?? "—"}
                   </p>
-                </div>
+                </Link>
                 {healthDot(c.health)}
               </div>
               <div className="flex flex-wrap gap-2">
