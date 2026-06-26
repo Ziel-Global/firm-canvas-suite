@@ -272,8 +272,24 @@ function CasesPage() {
               <TableBody>
                 {rows.map((c: CaseRow) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.case_ref ?? "—"}</TableCell>
-                    <TableCell>{c.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        to="/cases/$caseId"
+                        params={{ caseId: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.case_ref ?? "—"}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to="/cases/$caseId"
+                        params={{ caseId: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.title}
+                      </Link>
+                    </TableCell>
                     <TableCell>{c.client_name ?? "—"}</TableCell>
                     <TableCell>{c.case_type ?? "—"}</TableCell>
                     <TableCell>{c.current_stage_name ?? "—"}</TableCell>
