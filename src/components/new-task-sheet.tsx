@@ -179,7 +179,7 @@ export function NewTaskSheet({
 
           <div className="space-y-1.5">
             <Label>Case (optional)</Label>
-            <Select value={caseId} onValueChange={setCaseId}>
+            <Select value={caseId} onValueChange={setCaseId} disabled={lockCase}>
               <SelectTrigger>
                 <SelectValue placeholder="No case" />
               </SelectTrigger>
@@ -194,6 +194,7 @@ export function NewTaskSheet({
               </SelectContent>
             </Select>
           </div>
+
 
           <div className="space-y-1.5">
             <Label>Assignee</Label>
