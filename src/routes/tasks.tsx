@@ -368,6 +368,8 @@ function TasksPage() {
   const [board, setBoard] = useState<Board>(emptyBoard());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [tolerance, setTolerance] = useState(0);
 
 
   useEffect(() => {
