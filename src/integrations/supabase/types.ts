@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_comments: {
+        Row: {
+          anchor: Json | null
+          approval_id: string | null
+          author_id: string | null
+          body: string | null
+          created_at: string
+          id: string
+        }
+        Insert: {
+          anchor?: Json | null
+          approval_id?: string | null
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          anchor?: Json | null
+          approval_id?: string | null
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_comments_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "approvals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approvals: {
+        Row: {
+          ai_report: Json | null
+          case_id: string | null
+          decided_at: string | null
+          decided_by: string | null
+          document_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["approval_status"] | null
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          ai_report?: Json | null
+          case_id?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          document_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          ai_report?: Json | null
+          case_id?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          document_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_access_overrides: {
         Row: {
           access_level: string | null
