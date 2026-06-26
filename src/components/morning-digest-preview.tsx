@@ -237,7 +237,7 @@ export function MorningDigestPreview() {
                             {t.title}
                           </p>
                           {t.priority && (
-                            <Tag tone={priorityTone[t.priority] ?? "low"}>
+                            <Tag color={priorityColor[t.priority] ?? "low"}>
                               {t.priority}
                             </Tag>
                           )}
