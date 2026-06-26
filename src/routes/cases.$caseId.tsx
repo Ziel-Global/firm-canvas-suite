@@ -28,6 +28,7 @@ import { CaseNotesTab } from "@/components/case-notes-tab";
 import { CaseActivityTab } from "@/components/case-activity-tab";
 import { CaseAccessTab } from "@/components/case-access-tab";
 import { CaseTasksTab } from "@/components/case-tasks-tab";
+import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 
 export const Route = createFileRoute("/cases/$caseId")({
@@ -275,6 +276,8 @@ function CaseDetailPage() {
                 <TabsContent key={t} value={t}>
                   {t === "overview" ? (
                     <CaseOverviewTab caseId={caseId} role={role} />
+                  ) : t === "stages" ? (
+                    <CaseStagesTab caseId={caseId} />
                   ) : t === "notes" ? (
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (

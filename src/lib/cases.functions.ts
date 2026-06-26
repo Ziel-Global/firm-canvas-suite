@@ -764,3 +764,84 @@ export const getCaseAccessMatrix = createServerFn({ method: "GET" })
     }
     return rows;
   });
+
+export interface CaseStageRow {
+  id: string;
+  name: string | null;
+  sequence_order: number | null;
+  status: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  deadline: string | null;
+  expected_output: string | null;
+  notes: string | null;
+}
+
+/** Ordered stages for a case, with assignee names and expected output from the template. RLS scopes visibility. */
+export const getCaseStages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseStageRow[]> => {
+    const { supabase } = context;
+    const { data: stages, error } = await supabase
+      .from("case_stages")
+      .select(
+        "id, name, sequence_order, status, assignee_id, started_at, completed_at, deadline, notes, template_stage_id",
+      )
+      .eq("case_id", data.caseId)
+      .order("sequence_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    const list = stages ?? [];
+
+    const assigneeIds = Array.from(
+      new Set(list.map((s) => s.assignee_id).filter(Boolean) as string[]),
+    );
+    const templateStageIds = Array.from(
+      new Set(
+        list.map((s) => s.template_stage_id).filter(Boolean) as string[],
+      ),
+    );
+
+    const nameMap = new Map<string, string>();
+    if (assigneeIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", assigneeIds);
+      for (const p of profiles ?? [])
+        nameMap.set(p.id as string, (p.full_name as string) ?? "");
+    }
+
+    const outputMap = new Map<string, string>();
+    if (templateStageIds.length > 0) {
+      const { data: tStages } = await supabase
+        .from("workflow_template_stages")
+        .select("id, expected_output")
+        .in("id", templateStageIds);
+      for (const ts of tStages ?? [])
+        outputMap.set(ts.id as string, (ts.expected_output as string) ?? "");
+    }
+
+    return list.map((s) => ({
+      id: s.id as string,
+      name: (s.name as string) ?? null,
+      sequence_order: (s.sequence_order as number) ?? null,
+      status: (s.status as string) ?? null,
+      assignee_id: (s.assignee_id as string) ?? null,
+      assignee_name: s.assignee_id
+        ? nameMap.get(s.assignee_id as string) ?? null
+        : null,
+      started_at: (s.started_at as string) ?? null,
+      completed_at: (s.completed_at as string) ?? null,
+      deadline: (s.deadline as string) ?? null,
+      expected_output: s.template_stage_id
+        ? outputMap.get(s.template_stage_id as string) ?? null
+        : null,
+      notes: (s.notes as string) ?? null,
+    }));
+  });
