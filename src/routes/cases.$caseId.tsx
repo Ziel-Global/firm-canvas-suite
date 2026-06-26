@@ -279,6 +279,8 @@ function CaseDetailPage() {
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (
                     <CaseActivityTab caseId={caseId} />
+                  ) : t === "tasks" ? (
+                    <CaseTasksTab caseId={caseId} />
                   ) : t === "access" ? (
                     role === "super_admin" ? (
                       <CaseAccessTab caseId={caseId} />
