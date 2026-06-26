@@ -256,7 +256,92 @@ function StageDetail({
           {stage.notes || "No notes on this stage."}
         </p>
       </div>
+
+      {isActive && canAct && (
+        <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
+          <h4 className="text-sm font-semibold text-foreground">
+            Stage actions
+          </h4>
+          {!returning ? (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Completion notes (optional)
+                </label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Summarise the work completed for this stage…"
+                  rows={3}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => completeMutation.mutate()}
+                  disabled={completeMutation.isPending}
+                >
+                  {completeMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
+                  Mark complete
+                </Button>
+                {!isFirst && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setReturning(true)}
+                    disabled={completeMutation.isPending}
+                  >
+                    <Undo2 className="size-4" />
+                    Return to previous
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Comments for the previous assignee
+                </label>
+                <Textarea
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Explain what needs to change before this stage can proceed…"
+                  rows={3}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => returnMutation.mutate()}
+                  disabled={returnMutation.isPending || !comments.trim()}
+                >
+                  {returnMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Undo2 className="size-4" />
+                  )}
+                  Return stage
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setReturning(false);
+                    setComments("");
+                  }}
+                  disabled={returnMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
+
   );
 }
 
