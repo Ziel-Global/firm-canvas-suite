@@ -30,7 +30,32 @@ function formatDate(value: string) {
 export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const fetchFolders = useServerFn(getCaseFolders);
   const fetchDocs = useServerFn(getFolderDocuments);
+  const upload = useServerFn(uploadDocument);
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  async function handleFile(file: File) {
+    if (!selectedFolderId) return;
+    setUploading(true);
+    const form = new FormData();
+    form.append("caseId", caseId);
+    form.append("folderId", selectedFolderId);
+    form.append("file", file);
+    try {
+      await upload({ data: form });
+      toast.success("Document uploaded");
+      queryClient.invalidateQueries({
+        queryKey: ["folder-documents", caseId, selectedFolderId],
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
 
   const { data: folders, isLoading: foldersLoading } = useQuery({
     queryKey: ["case-folders", caseId],
