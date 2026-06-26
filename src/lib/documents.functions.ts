@@ -2,6 +2,32 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const BUCKET = "case-documents";
+
+/**
+ * Allowed upload types. Maps a normalised file extension to its MIME type.
+ * Anything outside this list (notably executables) is rejected.
+ */
+const ALLOWED: Record<string, string[]> = {
+  pdf: ["application/pdf"],
+  docx: [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
+  xlsx: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  jpg: ["image/jpeg"],
+  jpeg: ["image/jpeg"],
+  png: ["image/png"],
+};
+
+const DOC_TYPE_BY_EXT: Record<string, string> = {
+  pdf: "PDF",
+  docx: "Word",
+  xlsx: "Excel",
+  jpg: "Image",
+  jpeg: "Image",
+  png: "Image",
+};
+
 export interface CaseFolder {
   id: string;
   code: string;
