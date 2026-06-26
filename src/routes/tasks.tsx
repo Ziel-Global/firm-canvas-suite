@@ -342,11 +342,17 @@ function TasksPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
-        <p className="text-sm text-muted-foreground">
-          Track work across every case. Drag cards to update status.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
+          <p className="text-sm text-muted-foreground">
+            Track work across every case. Drag cards to update status.
+          </p>
+        </div>
+        <Button onClick={() => setSheetOpen(true)}>
+          <Plus className="mr-1.5 size-4" />
+          Add new task
+        </Button>
       </div>
 
       {isLoading ? (
@@ -367,6 +373,7 @@ function TasksPage() {
                 label={col.label}
                 accent={col.accent}
                 tasks={board[col.key]}
+                onAddTask={() => setSheetOpen(true)}
               />
             ))}
           </div>
@@ -379,6 +386,8 @@ function TasksPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }
