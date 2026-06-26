@@ -24,6 +24,7 @@ import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CaseOverviewTab } from "@/components/case-overview-tab";
 import { CaseNotesTab } from "@/components/case-notes-tab";
+import { CaseActivityTab } from "@/components/case-activity-tab";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
@@ -235,6 +236,8 @@ function CaseDetailPage() {
                     <CaseOverviewTab caseId={caseId} role={role} />
                   ) : t === "notes" ? (
                     <CaseNotesTab caseId={caseId} role={role} />
+                  ) : t === "activity" ? (
+                    <CaseActivityTab caseId={caseId} />
                   ) : (
                     <Card className="p-6">
                       <h3 className="text-sm font-semibold capitalize text-foreground">{t}</h3>

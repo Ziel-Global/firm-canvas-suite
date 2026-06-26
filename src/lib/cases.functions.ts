@@ -652,3 +652,56 @@ export const addCaseNote = createServerFn({ method: "POST" })
       author_name,
     };
   });
+
+export interface CaseActivityEntry {
+  id: string;
+  action: string | null;
+  detail: Record<string, string | number | boolean | null> | null;
+  actor_name: string | null;
+  created_at: string;
+}
+
+/**
+ * Full activity_log timeline for a case. RLS on activity_log scopes rows to
+ * the cases the caller is allowed to read, so each role only sees permitted
+ * entries.
+ */
+export const getCaseActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseActivityEntry[]> => {
+    const { supabase } = context;
+
+    const { data: acts, error } = await supabase
+      .from("activity_log")
+      .select("id, action, detail, actor_id, created_at")
+      .eq("case_id", data.caseId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+
+    const ids = new Set<string>();
+    for (const a of acts ?? []) {
+      if (a.actor_id) ids.add(a.actor_id as string);
+    }
+
+    const names = new Map<string, string>();
+    if (ids.size > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", Array.from(ids));
+      for (const p of profiles ?? []) names.set(p.id, p.full_name as string);
+    }
+
+    return (acts ?? []).map((a) => ({
+      id: a.id as string,
+      action: (a.action as string) ?? null,
+      detail: (a.detail as Record<string, string | number | boolean | null> | null) ?? null,
+      actor_name: a.actor_id ? names.get(a.actor_id as string) ?? null : null,
+      created_at: a.created_at as string,
+    }));
+  });
