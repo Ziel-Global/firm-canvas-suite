@@ -75,13 +75,16 @@ function rangeFor(view: ViewMode, anchor: Date) {
 
 function CalendarPage() {
   const fetchEvents = useServerFn(listCalendarEvents);
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showPrivate, setShowPrivate] = useState(true);
 
   const range = useMemo(() => rangeFor(view, anchor), [view, anchor]);
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: allEvents = [], isLoading } = useQuery({
     queryKey: [
       "calendar-events",
       range.from.toISOString(),
@@ -92,6 +95,16 @@ function CalendarPage() {
         data: { from: range.from.toISOString(), to: range.to.toISOString() },
       }),
   });
+
+  // Super Admin can overlay or hide his private layer. Other roles never
+  // receive private events from RLS, so this only affects the super_admin view.
+  const events = useMemo(
+    () =>
+      isSuperAdmin && !showPrivate
+        ? allEvents.filter((e) => !e.is_private)
+        : allEvents,
+    [allEvents, isSuperAdmin, showPrivate],
+  );
 
   function shift(dir: number) {
     if (view === "day") setAnchor((d) => addDays(d, dir));
