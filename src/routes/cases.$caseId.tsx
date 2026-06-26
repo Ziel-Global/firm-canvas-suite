@@ -16,6 +16,7 @@ import {
 
 import { useAuth } from "@/contexts/auth-context";
 import { getCaseDetail } from "@/lib/cases.functions";
+import { getMyCaseAccess } from "@/lib/case-access.functions";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Badge } from "@/components/ui/badge";
