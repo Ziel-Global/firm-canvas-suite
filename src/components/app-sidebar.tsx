@@ -3,10 +3,14 @@ import { Plus, Scale } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NAV_GROUPS } from "@/lib/nav";
+import { navGroupsForRole } from "@/lib/nav";
+import { useAuth } from "@/contexts/auth-context";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { role } = useAuth();
+  const navGroups = navGroupsForRole(role);
+
 
   const isActive = (url: string) =>
     url === "/" ? pathname === "/" : pathname.startsWith(url);
@@ -34,7 +38,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 lg:px-3">
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label} className="mb-5">
             <p className="hidden px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:block">
               {group.label}

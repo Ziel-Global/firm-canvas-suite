@@ -48,9 +48,43 @@ export const NAV_GROUPS: NavGroup[] = [
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
+export type AppRole =
+  | "super_admin"
+  | "admin"
+  | "senior_lawyer"
+  | "junior_lawyer"
+  | "support"
+  | "client";
+
+// Which nav URLs each role may see.
+const ROLE_NAV: Record<AppRole, string[] | "all"> = {
+  super_admin: "all",
+  admin: ["/", "/cases", "/calendar", "/tasks", "/documents", "/approvals", "/clients", "/reports", "/settings"],
+  senior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  junior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  support: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  client: [],
+};
+
+export function allowedPathsForRole(role: AppRole | null | undefined): string[] {
+  if (!role) return [];
+  const allowed = ROLE_NAV[role];
+  if (allowed === "all") return NAV_ITEMS.map((i) => i.url);
+  return allowed;
+}
+
+export function navGroupsForRole(role: AppRole | null | undefined): NavGroup[] {
+  const allowed = new Set(allowedPathsForRole(role));
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => allowed.has(item.url)),
+  })).filter((group) => group.items.length > 0);
+}
+
 export function titleForPath(pathname: string): string {
   const match = NAV_ITEMS.find((item) =>
     item.url === "/" ? pathname === "/" : pathname.startsWith(item.url),
   );
   return match?.title ?? "Dashboard";
 }
+

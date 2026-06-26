@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
+import { AuthProvider } from "@/contexts/auth-context";
 
 function NotFoundComponent() {
   return (
@@ -140,18 +141,20 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {isAuthRoute ? (
-        <Outlet />
-      ) : (
-        <div className="min-h-screen bg-canvas">
-          <AppSidebar />
-          <div className="pl-16 lg:pl-64">
-            <TopBar />
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
+      <AuthProvider>
+        {isAuthRoute ? (
+          <Outlet />
+        ) : (
+          <div className="min-h-screen bg-canvas">
+            <AppSidebar />
+            <div className="pl-16 lg:pl-64">
+              <TopBar />
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
