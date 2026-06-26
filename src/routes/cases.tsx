@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, LayoutGrid, Table as TableIcon, CalendarClock, User } from "lucide-react";
+import { Search, LayoutGrid, Table as TableIcon, CalendarClock, User, Plus } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { NewCaseSheet } from "@/components/new-case-sheet";
 
 import { useAuth } from "@/contexts/auth-context";
 import { listCases, type CaseRow } from "@/lib/cases.functions";
@@ -81,8 +84,10 @@ function CasesPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const canView = role != null;
+  const canCreate = role === "super_admin" || role === "admin";
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["cases"],
@@ -145,22 +150,33 @@ function CasesPage() {
             Cases you can access based on your role and assignments.
           </p>
         </div>
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(v) => v && setView(v as ViewMode)}
-          className="rounded-control border border-border bg-surface p-1"
-        >
-          <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
-            <TableIcon className="size-4" />
-            Table
-          </ToggleGroupItem>
-          <ToggleGroupItem value="cards" aria-label="Card view" className="gap-1.5">
-            <LayoutGrid className="size-4" />
-            Cards
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={(v) => v && setView(v as ViewMode)}
+            className="rounded-control border border-border bg-surface p-1"
+          >
+            <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
+              <TableIcon className="size-4" />
+              Table
+            </ToggleGroupItem>
+            <ToggleGroupItem value="cards" aria-label="Card view" className="gap-1.5">
+              <LayoutGrid className="size-4" />
+              Cards
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {canCreate && (
+            <Button onClick={() => setNewCaseOpen(true)} className="gap-1.5">
+              <Plus className="size-4" />
+              New case
+            </Button>
+          )}
+        </div>
       </div>
+
+      {canCreate && <NewCaseSheet open={newCaseOpen} onOpenChange={setNewCaseOpen} />}
+
 
       <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
         <div className="relative w-full lg:max-w-xs">

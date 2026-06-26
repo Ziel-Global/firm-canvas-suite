@@ -1057,6 +1057,7 @@ export type Database = {
       is_active_staff: { Args: { _user_id: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_assigned_to_case: { Args: { _case_id: string }; Returns: boolean }
+      next_case_ref: { Args: never; Returns: string }
       next_client_ref: { Args: never; Returns: string }
       role_can_read_folder: { Args: { _code: string }; Returns: boolean }
       role_can_write_folder: { Args: { _code: string }; Returns: boolean }

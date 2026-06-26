@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export const CASE_TYPES = [
+  "property",
+  "litigation",
+  "corporate",
+  "criminal_defence",
+  "other",
+] as const;
+export type CaseType = (typeof CASE_TYPES)[number];
+
 export interface CaseRow {
   id: string;
   case_ref: string | null;
@@ -129,4 +138,167 @@ export const listCases = createServerFn({ method: "GET" })
         next_deadline: nextDeadline.get(c.id) ?? null,
       };
     });
+  });
+
+export interface ClientOption {
+  id: string;
+  client_ref: string | null;
+  full_name: string;
+}
+
+/** Lightweight client list for the new-case searchable select (RLS-filtered). */
+export const listClientOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ClientOption[]> => {
+    const { data, error } = await context.supabase
+      .from("clients")
+      .select("id, client_ref, full_name")
+      .order("full_name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((c) => ({
+      id: c.id,
+      client_ref: c.client_ref as string | null,
+      full_name: c.full_name as string,
+    }));
+  });
+
+export interface WorkflowTemplateOption {
+  id: string;
+  name: string;
+  case_type: string | null;
+}
+
+/** Active workflow templates for the optional template select. */
+export const listWorkflowTemplateOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<WorkflowTemplateOption[]> => {
+    const { data, error } = await context.supabase
+      .from("workflow_templates")
+      .select("id, name, case_type, is_active")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((t) => ({
+      id: t.id,
+      name: t.name as string,
+      case_type: t.case_type as string | null,
+    }));
+  });
+
+export interface CreateCaseInput {
+  title: string;
+  client_id: string;
+  case_type: CaseType;
+  workflow_template_id?: string | null;
+}
+
+/**
+ * Create a new case. Generates a unique case_ref (CASE-YYYY-NNNN) via the
+ * `next_case_ref` DB function. The DB trigger auto-creates the seven standard
+ * folders. If a workflow template is chosen, its stages are copied into
+ * case_stages and current_stage_id is set to the first stage. Writes to
+ * activity_log (also covered by the case-insert trigger).
+ */
+export const createCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: CreateCaseInput) => {
+    const title = (input.title ?? "").trim();
+    if (!title) throw new Error("Title is required.");
+    if (!input.client_id) throw new Error("A client is required.");
+    if (!CASE_TYPES.includes(input.case_type)) {
+      throw new Error("A valid case type is required.");
+    }
+    return {
+      title,
+      client_id: input.client_id,
+      case_type: input.case_type,
+      workflow_template_id: input.workflow_template_id || null,
+    };
+  })
+  .handler(async ({ data, context }): Promise<{ id: string; case_ref: string }> => {
+    const { supabase, userId } = context;
+
+    const { data: refData, error: refError } = await supabase.rpc("next_case_ref");
+    if (refError) throw new Error(refError.message);
+    const case_ref = refData as string;
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("cases")
+      .insert({
+        case_ref,
+        title: data.title,
+        client_id: data.client_id,
+        case_type: data.case_type,
+        status: "intake",
+        health: "on_track",
+        created_by: userId,
+      })
+      .select("id, case_ref")
+      .single();
+    if (insertError) throw new Error(insertError.message);
+
+    const caseId = inserted.id;
+    let firstStageId: string | null = null;
+
+    if (data.workflow_template_id) {
+      const { data: tplStages, error: tplError } = await supabase
+        .from("workflow_template_stages")
+        .select("name, sequence_order, responsible_role, deadline_days")
+        .eq("template_id", data.workflow_template_id)
+        .order("sequence_order", { ascending: true });
+      if (tplError) throw new Error(tplError.message);
+
+      if (tplStages && tplStages.length > 0) {
+        const today = new Date();
+        const rows = tplStages.map((s) => {
+          let deadline: string | null = null;
+          if (typeof s.deadline_days === "number") {
+            const d = new Date(today);
+            d.setDate(d.getDate() + s.deadline_days);
+            deadline = d.toISOString().slice(0, 10);
+          }
+          return {
+            case_id: caseId,
+            name: s.name as string,
+            sequence_order: s.sequence_order as number,
+            status: "pending" as const,
+            deadline,
+          };
+        });
+
+        const { data: createdStages, error: stageError } = await supabase
+          .from("case_stages")
+          .insert(rows)
+          .select("id, sequence_order");
+        if (stageError) throw new Error(stageError.message);
+
+        const sorted = (createdStages ?? []).sort(
+          (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0),
+        );
+        if (sorted.length > 0) {
+          firstStageId = sorted[0].id;
+          await supabase
+            .from("cases")
+            .update({ current_stage_id: firstStageId })
+            .eq("id", caseId);
+        }
+      }
+    }
+
+    const { error: logError } = await supabase.from("activity_log").insert({
+      case_id: caseId,
+      actor_id: userId,
+      action: "case_created",
+      detail: {
+        case_id: caseId,
+        case_ref: inserted.case_ref ?? case_ref,
+        title: data.title,
+        client_id: data.client_id,
+        case_type: data.case_type,
+        workflow_template_id: data.workflow_template_id,
+      },
+    });
+    if (logError) throw new Error(logError.message);
+
+    return { id: caseId, case_ref: inserted.case_ref ?? case_ref };
   });
