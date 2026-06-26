@@ -259,6 +259,160 @@ export type Database = {
         }
         Relationships: []
       }
+      document_folders: {
+        Row: {
+          case_id: string | null
+          code: string | null
+          id: string
+          name: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          code?: string | null
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          code?: string | null
+          id?: string
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folders_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string | null
+          doc_type: string | null
+          fields: Json | null
+          id: string
+          name: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string | null
+          fields?: Json | null
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string | null
+          fields?: Json | null
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      document_versions: {
+        Row: {
+          document_id: string | null
+          file_path: string | null
+          id: string
+          note: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+          version_number: number | null
+        }
+        Insert: {
+          document_id?: string | null
+          file_path?: string | null
+          id?: string
+          note?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          document_id?: string | null
+          file_path?: string | null
+          id?: string
+          note?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          current_version: number | null
+          doc_type: string | null
+          file_path: string | null
+          folder_id: string | null
+          id: string
+          is_archived: boolean | null
+          is_locked: boolean | null
+          title: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          current_version?: number | null
+          doc_type?: string | null
+          file_path?: string | null
+          folder_id?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_locked?: boolean | null
+          title?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          current_version?: number | null
+          doc_type?: string | null
+          file_path?: string | null
+          folder_id?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_locked?: boolean | null
+          title?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
