@@ -130,20 +130,36 @@ export const getMorningDigest = createServerFn({ method: "GET" })
     const { data: approvals, error: apErr } = await supabase
       .from("approvals")
       .select(
-        "id, submitted_at, profiles:submitted_by(full_name), cases(case_ref, title), documents(title)",
+        "id, submitted_at, submitted_by, cases(case_ref, title), documents(title)",
       )
       .eq("status", "pending")
       .order("submitted_at", { ascending: true });
     if (apErr) throw new Error(apErr.message);
 
+    // Resolve submitter names (no FK relationship to embed directly).
+    const submitterIds = Array.from(
+      new Set((approvals ?? []).map((a) => a.submitted_by).filter(Boolean)),
+    ) as string[];
+    const nameById = new Map<string, string>();
+    if (submitterIds.length > 0) {
+      const { data: people } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", submitterIds);
+      (people ?? []).forEach((p) => {
+        if (p.full_name) nameById.set(p.id, p.full_name);
+      });
+    }
+
     const pending_approvals: DigestApprovalItem[] = (approvals ?? []).map((a) => {
       const c = a.cases as { case_ref: string; title: string } | null;
       const doc = a.documents as { title: string } | null;
-      const sb = a.profiles as { full_name: string } | null;
       return {
         id: a.id,
         submitted_at: a.submitted_at as string,
-        submitted_by_name: sb?.full_name ?? null,
+        submitted_by_name: a.submitted_by
+          ? nameById.get(a.submitted_by) ?? null
+          : null,
         case_ref: c?.case_ref ?? null,
         case_title: c?.title ?? null,
         document_title: doc?.title ?? null,
