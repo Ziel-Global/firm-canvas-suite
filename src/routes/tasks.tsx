@@ -470,10 +470,22 @@ function TasksPage() {
             Track work across every case. Drag cards to update status.
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
-          Add new task
-        </Button>
+        <div className="flex items-center gap-2">
+          <TimeframeFilter
+            date={filterDate}
+            tolerance={tolerance}
+            onDateChange={setFilterDate}
+            onToleranceChange={setTolerance}
+            onClear={() => {
+              setFilterDate(undefined);
+              setTolerance(0);
+            }}
+          />
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-1.5 size-4" />
+            Add new task
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
