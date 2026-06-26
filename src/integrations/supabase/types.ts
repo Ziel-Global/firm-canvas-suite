@@ -966,6 +966,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      case_override_level: { Args: { _case_id: string }; Returns: string }
+      current_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      effective_case_access: { Args: { _case_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
@@ -974,6 +980,9 @@ export type Database = {
         Returns: boolean
       }
       is_active_staff: { Args: { _user_id: string }; Returns: boolean }
+      is_active_user: { Args: never; Returns: boolean }
+      is_assigned_to_case: { Args: { _case_id: string }; Returns: boolean }
+      stage_assigned_to_user: { Args: { _case_id: string }; Returns: number }
     }
     Enums: {
       approval_status: "pending" | "approved" | "returned" | "locked"
