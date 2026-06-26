@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MoreHorizontal, Plus, CalendarClock, CalendarRange, X } from "lucide-react";
+import { MoreHorizontal, Plus, CalendarClock, CalendarRange, X, LayoutGrid, List } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
