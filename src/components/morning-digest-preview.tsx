@@ -37,9 +37,9 @@ function caseLabel(ref: string | null, title: string | null) {
   return [ref, title].filter(Boolean).join(" · ");
 }
 
-const priorityTone: Record<string, "high" | "med" | "low"> = {
+const priorityColor: Record<string, "high" | "medium" | "low"> = {
   high: "high",
-  medium: "med",
+  medium: "medium",
   low: "low",
 };
 
