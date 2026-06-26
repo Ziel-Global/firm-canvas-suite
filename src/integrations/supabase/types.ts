@@ -49,6 +49,42 @@ export type Database = {
           },
         ]
       }
+      ai_jobs: {
+        Row: {
+          case_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          input: Json | null
+          kind: string | null
+          output: Json | null
+          requested_by: string | null
+          status: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input?: Json | null
+          kind?: string | null
+          output?: Json | null
+          requested_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input?: Json | null
+          kind?: string | null
+          output?: Json | null
+          requested_by?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       approval_comments: {
         Row: {
           anchor: Json | null
@@ -646,6 +682,24 @@ export type Database = {
           },
         ]
       }
+      firm_settings: {
+        Row: {
+          id: string
+          key: string | null
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          key?: string | null
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          key?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -717,6 +771,30 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           two_factor_enabled?: boolean | null
+        }
+        Relationships: []
+      }
+      reports_cache: {
+        Row: {
+          generated_at: string
+          id: string
+          params: Json | null
+          payload: Json | null
+          report_type: string | null
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          params?: Json | null
+          payload?: Json | null
+          report_type?: string | null
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          params?: Json | null
+          payload?: Json | null
+          report_type?: string | null
         }
         Relationships: []
       }
