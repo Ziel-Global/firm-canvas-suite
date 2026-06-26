@@ -398,7 +398,10 @@ function EventBlock({
         typeStyle(event.event_type),
       )}
     >
-      <p className="truncate text-sm font-medium">{event.title}</p>
+      <p className="flex items-center gap-1 truncate text-sm font-medium">
+        {event.is_private && <Lock className="size-3 shrink-0 text-muted-foreground" />}
+        <span className="truncate">{event.title}</span>
+      </p>
       <p className="text-xs text-muted-foreground">
         {eventTime(event)}
         {end && ` – ${end}`}
