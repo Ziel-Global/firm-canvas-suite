@@ -1,0 +1,184 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+
+import { createUser, type CreateUserInput } from "@/lib/create-user.functions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { AppRole } from "@/lib/nav";
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Admin",
+  senior_lawyer: "Senior Lawyer",
+  junior_lawyer: "Junior Lawyer",
+  support: "Support",
+  client: "Client",
+};
+
+const ROLE_OPTIONS: AppRole[] = [
+  "admin",
+  "senior_lawyer",
+  "junior_lawyer",
+  "support",
+  "client",
+];
+
+interface NewUserSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const EMPTY: CreateUserInput = {
+  fullName: "",
+  email: "",
+  role: "junior_lawyer",
+  phone: "",
+  requireTwoFactor: false,
+};
+
+export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
+  const [form, setForm] = useState<CreateUserInput>(EMPTY);
+  const submit = useServerFn(createUser);
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (input: CreateUserInput) => submit({ data: input }),
+    onSuccess: (res) => {
+      toast.success(`User created — ${res.email}`, {
+        description: "A welcome email with a temporary password has been queued.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      setForm(EMPTY);
+      onOpenChange(false);
+    },
+    onError: (err: unknown) => {
+      toast.error("Could not create user", {
+        description: err instanceof Error ? err.message : "Unexpected error",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.fullName.trim() || !form.email.trim()) {
+      toast.error("Full name and email are required.");
+      return;
+    }
+    mutation.mutate(form);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>New user</SheetTitle>
+          <SheetDescription>
+            Create an account. The user receives a temporary password by email.
+          </SheetDescription>
+        </SheetHeader>
+
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
+          <div className="grid gap-2">
+            <Label htmlFor="full-name">Full name</Label>
+            <Input
+              id="full-name"
+              value={form.fullName}
+              onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+              placeholder="Jane Vance"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="jane@marlowevance.com"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="role">Role</Label>
+            <Select
+              value={form.role}
+              onValueChange={(v) => setForm((f) => ({ ...f, role: v as AppRole }))}
+            >
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="+1 555 0100"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-control border border-frame px-4 py-3">
+            <div>
+              <Label htmlFor="require-2fa">Require 2FA</Label>
+              <p className="text-xs text-muted-foreground">
+                User must set up two-factor authentication.
+              </p>
+            </div>
+            <Switch
+              id="require-2fa"
+              checked={form.requireTwoFactor}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, requireTwoFactor: v }))}
+            />
+          </div>
+
+          <SheetFooter className="mt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={mutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Creating…" : "Create user"}
+            </Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
