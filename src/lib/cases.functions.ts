@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export const CASE_TYPES = [
+  "property",
+  "litigation",
+  "corporate",
+  "criminal_defence",
+  "other",
+] as const;
+export type CaseType = (typeof CASE_TYPES)[number];
+
 export interface CaseRow {
   id: string;
   case_ref: string | null;
