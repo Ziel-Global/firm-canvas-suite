@@ -245,15 +245,7 @@ function CaseDetailPage() {
   );
 }
 
-function StatusGlyph({ className }: { className?: string }) {
-  return (
-    <span
-      className={className}
-      aria-hidden
-      style={{ display: "inline-block", width: "1rem", height: "1rem" }}
-    />
-  );
-}
+
 
 function RailRow({
   icon: Icon,
