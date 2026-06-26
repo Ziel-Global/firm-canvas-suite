@@ -87,7 +87,7 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
     return docs.map((d) => ({
       id: d.id,
       folder_id: d.folder_id,
-      title: d.title,
+      title: d.title ?? "Untitled",
       doc_type: d.doc_type,
       current_version: d.current_version,
       is_locked: Boolean(d.is_locked),
