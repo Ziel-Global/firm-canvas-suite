@@ -185,6 +185,7 @@ function ClientsPage() {
                 </div>
               </div>
             </Card>
+            </Link>
           ))}
         </div>
       )}
