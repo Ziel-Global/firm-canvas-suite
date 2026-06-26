@@ -98,3 +98,40 @@ export const listTasks = createServerFn({ method: "GET" })
       };
     });
   });
+
+export interface TaskOrderInput {
+  id: string;
+  status: TaskStatus;
+  sort_order: number;
+}
+
+/**
+ * Persist drag-and-drop board changes: each moved/reordered task gets its new
+ * status and sort_order. Tasks moved into "done" get completed_at stamped;
+ * tasks moved out of "done" have it cleared. RLS scopes writes per role.
+ */
+export const reorderTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { tasks: TaskOrderInput[] }) => {
+    if (!input?.tasks?.length) throw new Error("No tasks to update.");
+    return input;
+  })
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const { supabase } = context;
+    const nowIso = new Date().toISOString();
+
+    await Promise.all(
+      data.tasks.map((t) =>
+        supabase
+          .from("tasks")
+          .update({
+            status: t.status,
+            sort_order: t.sort_order,
+            completed_at: t.status === "done" ? nowIso : null,
+          })
+          .eq("id", t.id),
+      ),
+    );
+
+    return { ok: true };
+  });
