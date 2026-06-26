@@ -30,6 +30,8 @@ import {
   type TaskOrderInput,
 } from "@/lib/tasks.functions";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { NewTaskSheet } from "@/components/new-task-sheet";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import {
