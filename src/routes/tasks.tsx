@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MoreHorizontal, Plus, CalendarClock } from "lucide-react";
+import { MoreHorizontal, Plus, CalendarClock, CalendarRange, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -40,6 +40,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({
@@ -244,6 +251,110 @@ function findColumn(board: Board, id: string): TaskStatus | undefined {
   );
 }
 
+const TOLERANCE_CHIPS: { label: string; days: number }[] = [
+  { label: "Exact Dates", days: 0 },
+  { label: "± 1 Day", days: 1 },
+  { label: "± 2 Days", days: 2 },
+  { label: "± 3 Days", days: 3 },
+];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function startOfDay(value: string | Date) {
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function withinTolerance(due: string | null, target: Date, tolerance: number) {
+  if (!due) return false;
+  const diff = Math.abs(startOfDay(due).getTime() - startOfDay(target).getTime());
+  return Math.round(diff / DAY_MS) <= tolerance;
+}
+
+function filterBoard(board: Board, target: Date | undefined, tolerance: number): Board {
+  if (!target) return board;
+  const next = emptyBoard();
+  for (const col of Object.keys(board) as TaskStatus[]) {
+    next[col] = board[col].filter((t) => withinTolerance(t.due_date, target, tolerance));
+  }
+  return next;
+}
+
+function TimeframeFilter({
+  date,
+  tolerance,
+  onDateChange,
+  onToleranceChange,
+  onClear,
+}: {
+  date: Date | undefined;
+  tolerance: number;
+  onDateChange: (d: Date | undefined) => void;
+  onToleranceChange: (t: number) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = Boolean(date);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant={active ? "dark" : "ghost"} className="gap-1.5">
+          <CalendarRange className="size-4" />
+          {active
+            ? `${date!.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${
+                TOLERANCE_CHIPS.find((c) => c.days === tolerance)?.label ?? "Exact Dates"
+              }`
+            : "Timeframe"}
+          {active ? (
+            <X
+              className="ml-1 size-3.5 opacity-70 hover:opacity-100"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+            />
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-auto rounded-card border-0 bg-surface-dark p-3 text-white shadow-xl"
+      >
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={onDateChange}
+          initialFocus
+          className="pointer-events-auto p-0 text-white [&_.rdp-weekday]:text-muted [&_button]:text-white"
+        />
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/10 pt-3">
+          {TOLERANCE_CHIPS.map((chip) => {
+            const selected = tolerance === chip.days;
+            return (
+              <button
+                key={chip.days}
+                type="button"
+                onClick={() => onToleranceChange(chip.days)}
+                className={cn(
+                  "rounded-pill px-3 py-1 text-xs font-medium transition-colors",
+                  selected
+                    ? "bg-primary text-primary-ink"
+                    : "bg-white/10 text-white/80 hover:bg-white/20",
+                )}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
 function TasksPage() {
   const fetchTasks = useServerFn(listTasks);
   const persist = useServerFn(reorderTasks);
@@ -257,6 +368,8 @@ function TasksPage() {
   const [board, setBoard] = useState<Board>(emptyBoard());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [tolerance, setTolerance] = useState(0);
 
 
   useEffect(() => {
@@ -280,6 +393,12 @@ function TasksPage() {
     }
     return null;
   }, [activeId, board]);
+
+  const displayBoard = useMemo(
+    () => filterBoard(board, filterDate, tolerance),
+    [board, filterDate, tolerance],
+  );
+
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
@@ -351,10 +470,22 @@ function TasksPage() {
             Track work across every case. Drag cards to update status.
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
-          Add new task
-        </Button>
+        <div className="flex items-center gap-2">
+          <TimeframeFilter
+            date={filterDate}
+            tolerance={tolerance}
+            onDateChange={setFilterDate}
+            onToleranceChange={setTolerance}
+            onClear={() => {
+              setFilterDate(undefined);
+              setTolerance(0);
+            }}
+          />
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-1.5 size-4" />
+            Add new task
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -374,7 +505,7 @@ function TasksPage() {
                 columnKey={col.key}
                 label={col.label}
                 accent={col.accent}
-                tasks={board[col.key]}
+                tasks={displayBoard[col.key]}
                 onAddTask={() => setSheetOpen(true)}
               />
             ))}
