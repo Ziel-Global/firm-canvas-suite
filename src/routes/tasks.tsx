@@ -32,6 +32,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/new-task-sheet";
+import { TaskListView } from "@/components/task-list-view";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
 import {
