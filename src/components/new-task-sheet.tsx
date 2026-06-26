@@ -41,6 +41,8 @@ import {
 interface NewTaskSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCaseId?: string | null;
+  lockCase?: boolean;
 }
 
 const NO_CASE = "__none__";
