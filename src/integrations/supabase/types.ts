@@ -531,6 +531,41 @@ export type Database = {
           },
         ]
       }
+      document_shares: {
+        Row: {
+          can_download: boolean
+          created_at: string
+          document_id: string
+          id: string
+          shared_by: string | null
+          shared_with: string
+        }
+        Insert: {
+          can_download?: boolean
+          created_at?: string
+          document_id: string
+          id?: string
+          shared_by?: string | null
+          shared_with: string
+        }
+        Update: {
+          can_download?: boolean
+          created_at?: string
+          document_id?: string
+          id?: string
+          shared_by?: string | null
+          shared_with?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_shares_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           body: string | null
@@ -784,6 +819,7 @@ export type Database = {
         Row: {
           generated_at: string
           id: string
+          is_summary: boolean
           params: Json | null
           payload: Json | null
           report_type: string | null
@@ -791,6 +827,7 @@ export type Database = {
         Insert: {
           generated_at?: string
           id?: string
+          is_summary?: boolean
           params?: Json | null
           payload?: Json | null
           report_type?: string | null
@@ -798,6 +835,7 @@ export type Database = {
         Update: {
           generated_at?: string
           id?: string
+          is_summary?: boolean
           params?: Json | null
           payload?: Json | null
           report_type?: string | null
@@ -977,6 +1015,7 @@ export type Database = {
         Returns: boolean
       }
       can_read_case: { Args: { _case_id: string }; Returns: boolean }
+      can_read_document: { Args: { _doc_id: string }; Returns: boolean }
       case_override_level: { Args: { _case_id: string }; Returns: string }
       current_role: {
         Args: never
@@ -994,6 +1033,8 @@ export type Database = {
       is_active_staff: { Args: { _user_id: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_assigned_to_case: { Args: { _case_id: string }; Returns: boolean }
+      role_can_read_folder: { Args: { _code: string }; Returns: boolean }
+      role_can_write_folder: { Args: { _code: string }; Returns: boolean }
       stage_assigned_to_user: { Args: { _case_id: string }; Returns: number }
     }
     Enums: {
