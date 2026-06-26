@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { DarkDatePicker } from "@/components/dark-date-picker";
+import { useAuth } from "@/contexts/auth-context";
 import {
   Select,
   SelectContent,
