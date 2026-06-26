@@ -159,9 +159,59 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
   );
 }
 
-function StageDetail({ stage }: { stage: CaseStageRow }) {
+function StageDetail({
+  stage,
+  caseId,
+  isFirst,
+  canAct,
+  onChanged,
+}: {
+  stage: CaseStageRow;
+  caseId: string;
+  isFirst: boolean;
+  canAct: boolean;
+  onChanged: () => void;
+}) {
   const status = stage.status ?? "pending";
   const tag = STATUS_TAG[status] ?? STATUS_TAG.pending;
+
+  const complete = useServerFn(completeStage);
+  const sendBack = useServerFn(returnStage);
+  const [notes, setNotes] = useState("");
+  const [comments, setComments] = useState("");
+  const [returning, setReturning] = useState(false);
+
+  const completeMutation = useMutation({
+    mutationFn: () =>
+      complete({
+        data: {
+          caseId,
+          stageId: stage.id,
+          notes: notes.trim() ? notes.trim() : undefined,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Stage marked complete. The next assignee was notified.");
+      setNotes("");
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const returnMutation = useMutation({
+    mutationFn: () =>
+      sendBack({ data: { caseId, stageId: stage.id, comments } }),
+    onSuccess: () => {
+      toast.success("Stage returned to the previous assignee.");
+      setComments("");
+      setReturning(false);
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const isActive = status === "active";
+
 
   return (
     <Card className="space-y-5 p-6">
