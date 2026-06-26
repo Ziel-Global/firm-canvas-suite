@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, MoreHorizontal, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { NewUserSheet } from "@/components/new-user-sheet";
