@@ -33,22 +33,64 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  function formatCooldown(seconds: number) {
+    const minutes = Math.ceil(seconds / 60);
+    return minutes <= 1 ? "a minute" : `${minutes} minutes`;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    setLoading(false);
 
-    if (signInError) {
-      setError("Incorrect email or password. Please try again.");
+    const trimmedEmail = email.trim();
+
+    // 1. Refuse if the account is currently locked out.
+    const lock = await checkLockout({ data: { email: trimmedEmail } });
+    if (lock.locked) {
+      setLoading(false);
+      setError(
+        `Too many failed attempts. This account is locked. Try again in ${formatCooldown(
+          lock.retryAfterSeconds,
+        )}.`,
+      );
       return;
     }
+
+    // 2. Attempt sign in (session lands in the browser).
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+
+    if (signInError) {
+      // 3. Record the failure; lock the account once the limit is reached.
+      const outcome = await recordFailedLogin({ data: { email: trimmedEmail } });
+      setLoading(false);
+      if (outcome.locked) {
+        setError(
+          `Too many failed attempts. This account is now locked. Try again in ${formatCooldown(
+            outcome.retryAfterSeconds,
+          )}.`,
+        );
+      } else if (outcome.attemptsRemaining <= 2) {
+        setError(
+          `Incorrect email or password. ${outcome.attemptsRemaining} attempt${
+            outcome.attemptsRemaining === 1 ? "" : "s"
+          } remaining before lockout.`,
+        );
+      } else {
+        setError("Incorrect email or password. Please try again.");
+      }
+      return;
+    }
+
+    // 4. Success — clear the failure counter.
+    await clearFailedLogins({ data: { email: trimmedEmail } });
+    setLoading(false);
     navigate({ to: "/", replace: true });
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
