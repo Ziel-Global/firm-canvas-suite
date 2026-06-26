@@ -45,7 +45,11 @@ export const completeStage = createServerFn({ method: "POST" })
     );
 
     // Complete the current stage (and save notes if provided).
-    const completeUpdate: Record<string, unknown> = {
+    const completeUpdate: {
+      status: "complete";
+      completed_at: string;
+      notes?: string;
+    } = {
       status: "complete",
       completed_at: new Date().toISOString(),
     };
