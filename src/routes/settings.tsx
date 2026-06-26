@@ -26,6 +26,7 @@ function SettingsPage() {
           Firm-wide configuration.
         </p>
       </div>
+      <WorkflowTemplatesSettings />
       <ReminderDefaultsSettings />
       <MorningDigestPreview />
     </div>
