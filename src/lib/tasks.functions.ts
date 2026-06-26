@@ -34,10 +34,11 @@ export const listTasks = createServerFn({ method: "GET" })
     const { data: tasks, error } = await supabase
       .from("tasks")
       .select(
-        "id, title, description, status, priority, due_date, case_id, assignee_id, sort_order, created_at",
+        "id, title, description, status, priority, start_date, due_date, case_id, assignee_id, sort_order, created_at",
       )
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
+
     if (error) throw new Error(error.message);
     const rows = tasks ?? [];
 
