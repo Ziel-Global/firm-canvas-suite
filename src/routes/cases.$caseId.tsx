@@ -276,6 +276,8 @@ function CaseDetailPage() {
                 <TabsContent key={t} value={t}>
                   {t === "overview" ? (
                     <CaseOverviewTab caseId={caseId} role={role} />
+                  ) : t === "stages" ? (
+                    <CaseStagesTab caseId={caseId} />
                   ) : t === "notes" ? (
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (
