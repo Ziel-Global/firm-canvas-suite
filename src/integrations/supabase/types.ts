@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      case_access_overrides: {
+        Row: {
+          access_level: string | null
+          case_id: string | null
+          folder_scope: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          note: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_level?: string | null
+          case_id?: string | null
+          folder_scope?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_level?: string | null
+          case_id?: string | null
+          folder_scope?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          note?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_access_overrides_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_access_overrides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          case_id: string | null
+          id: string
+          is_lead: boolean | null
+          role_on_case: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          case_id?: string | null
+          id?: string
+          is_lead?: boolean | null
+          role_on_case?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          case_id?: string | null
+          id?: string
+          is_lead?: boolean | null
+          role_on_case?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_assignments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cases: {
+        Row: {
+          case_ref: string | null
+          case_type: string | null
+          client_id: string | null
+          closed_at: string | null
+          closure_summary: string | null
+          created_at: string
+          created_by: string | null
+          current_stage_id: string | null
+          health: Database["public"]["Enums"]["health_status"] | null
+          id: string
+          opened_at: string | null
+          retention_until: string | null
+          status: Database["public"]["Enums"]["case_status"] | null
+          title: string
+        }
+        Insert: {
+          case_ref?: string | null
+          case_type?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          closure_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_stage_id?: string | null
+          health?: Database["public"]["Enums"]["health_status"] | null
+          id?: string
+          opened_at?: string | null
+          retention_until?: string | null
+          status?: Database["public"]["Enums"]["case_status"] | null
+          title: string
+        }
+        Update: {
+          case_ref?: string | null
+          case_type?: string | null
+          client_id?: string | null
+          closed_at?: string | null
+          closure_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_stage_id?: string | null
+          health?: Database["public"]["Enums"]["health_status"] | null
+          id?: string
+          opened_at?: string | null
+          retention_until?: string | null
+          status?: Database["public"]["Enums"]["case_status"] | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
