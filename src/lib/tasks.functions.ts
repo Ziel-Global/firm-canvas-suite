@@ -10,13 +10,16 @@ export interface TaskRow {
   description: string | null;
   status: TaskStatus;
   priority: string | null;
+  start_date: string | null;
   due_date: string | null;
   case_id: string | null;
   case_ref: string | null;
   case_title: string | null;
+  case_type: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
   sort_order: number | null;
+
 }
 
 /**
