@@ -58,6 +58,8 @@ export function NewEventSheet({
   defaultDate,
 }: NewEventSheetProps) {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const fetchOptions = useServerFn(getCalendarOptions);
   const create = useServerFn(createCalendarEvent);
 
