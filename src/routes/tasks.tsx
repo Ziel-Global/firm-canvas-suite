@@ -222,10 +222,14 @@ function Column({
             <SortableTaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
-        <button className="flex items-center justify-center gap-1.5 rounded-control border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground">
+        <button
+          onClick={onAddTask}
+          className="flex items-center justify-center gap-1.5 rounded-control border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+        >
           <Plus className="size-3.5" />
           Add task
         </button>
+
       </div>
     </div>
   );
