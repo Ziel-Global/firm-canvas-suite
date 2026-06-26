@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ReminderDefaultsSettings } from "@/components/reminder-defaults-settings";
+import { MorningDigestPreview } from "@/components/morning-digest-preview";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -25,6 +26,7 @@ function SettingsPage() {
         </p>
       </div>
       <ReminderDefaultsSettings />
+      <MorningDigestPreview />
     </div>
   );
 }
