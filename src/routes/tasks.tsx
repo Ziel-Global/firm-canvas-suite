@@ -178,11 +178,13 @@ function Column({
   label,
   accent,
   tasks,
+  onAddTask,
 }: {
   columnKey: TaskStatus;
   label: string;
   accent: string;
   tasks: TaskRow[];
+  onAddTask: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: columnKey });
 
@@ -201,7 +203,7 @@ function Column({
             <MoreHorizontal className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Add task</DropdownMenuItem>
+            <DropdownMenuItem onClick={onAddTask}>Add task</DropdownMenuItem>
             <DropdownMenuItem>Sort by due date</DropdownMenuItem>
             <DropdownMenuItem>Collapse column</DropdownMenuItem>
           </DropdownMenuContent>
