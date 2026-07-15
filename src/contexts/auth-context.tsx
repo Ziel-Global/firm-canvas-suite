@@ -37,6 +37,10 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // Routes that don't require authentication.
 const PUBLIC_PATHS = new Set(["/auth", "/bootstrap"]);
 
+function isPortalPath(pathname: string) {
+  return pathname === "/portal" || pathname.startsWith("/portal/");
+}
+
 const DEFAULT_TIMEOUT_MINUTES = 30;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -103,19 +107,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Redirect unauthenticated users (and client-role users) away from internal app.
+  // Redirect: unauthenticated → /auth; clients → /portal only; staff stay internal.
   useEffect(() => {
     if (loading) return;
     const isPublic = PUBLIC_PATHS.has(pathname);
+    const onPortal = isPortalPath(pathname);
 
     if (!session && !isPublic) {
       navigate({ to: "/auth", replace: true });
       return;
     }
 
-    // The client role may never enter the internal app.
-    if (session && profile && (profile.role === "client" || !profile.is_active) && !isPublic) {
+    if (!session || !profile) return;
+
+    if (!profile.is_active && !isPublic) {
       void signOut().then(() => navigate({ to: "/auth", replace: true }));
+      return;
+    }
+
+    if (profile.role === "client") {
+      // Clients only use the portal — never the internal app shell.
+      if (!onPortal && !isPublic) {
+        navigate({ to: "/portal", replace: true });
+      }
+      return;
+    }
+
+    // Staff who land on the portal are sent back to the ops app.
+    if (onPortal) {
+      navigate({ to: "/", replace: true });
     }
   }, [loading, session, profile, pathname, navigate, signOut]);
 

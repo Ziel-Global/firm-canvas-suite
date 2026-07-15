@@ -79,7 +79,7 @@ function DashboardPage() {
 
 function DashboardShell({ children }: { children: ReactNode }) {
   return (
-    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto w-full max-w-[1440px] space-y-7">{children}</div>
     </main>
   );

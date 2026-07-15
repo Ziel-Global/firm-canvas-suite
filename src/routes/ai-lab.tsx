@@ -109,7 +109,7 @@ function AILabPage() {
 
   if (!isSuperAdmin) {
     return (
-      <main className="dashboard-shell px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           AI Lab
         </h2>
@@ -159,7 +159,7 @@ function AILabPage() {
   };
 
   return (
-    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-7 pb-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="min-w-0 max-w-2xl">

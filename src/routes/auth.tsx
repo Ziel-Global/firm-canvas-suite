@@ -29,9 +29,20 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/", replace: true });
-    });
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session?.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+      if (!profile?.is_active) return;
+      navigate({
+        to: profile.role === "client" ? "/portal" : "/",
+        replace: true,
+      });
+    })();
   }, [navigate]);
 
   function formatCooldown(seconds: number) {
@@ -57,7 +68,7 @@ function AuthPage() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: trimmedEmail,
       password,
     });
@@ -84,8 +95,22 @@ function AuthPage() {
     }
 
     await clearFailedLogins({ data: { email: trimmedEmail } });
+
+    let destination: "/portal" | "/" = "/";
+    const uid = signInData.user?.id;
+    if (uid) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", uid)
+        .maybeSingle();
+      if (profile?.role === "client" && profile.is_active) {
+        destination = "/portal";
+      }
+    }
+
     setLoading(false);
-    navigate({ to: "/", replace: true });
+    navigate({ to: destination, replace: true });
   }
 
   return (

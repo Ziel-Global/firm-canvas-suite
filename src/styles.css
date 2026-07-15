@@ -121,50 +121,7 @@
   --sidebar-ring: var(--brand-primary);
 }
 
-/* Light mode override - Keeping it similar but optimized for light */
-@media (prefers-color-scheme: light) {
-  :root:not(.dark) {
-    --canvas: oklch(0.98 0.002 250);
-    --frame: oklch(0.95 0.005 250);
-    --surface: oklch(1 0 0);
-    --surface-raised: oklch(0.99 0.002 250);
-    --text: oklch(0.20 0.01 250);
-    --text-secondary: oklch(0.40 0.01 250);
-    --muted-color: oklch(0.55 0.01 250);
-
-    --brand-primary: oklch(0.15 0.01 250);
-    --brand-primary-hover: oklch(0.25 0.01 250);
-    --brand-primary-ink: oklch(1 0 0);
-
-    --border-subtle: oklch(0 0 0 / 0.05);
-    --border-default: oklch(0 0 0 / 0.10);
-    --border-strong: oklch(0 0 0 / 0.18);
-    --shadow-card: 0 4px 20px -2px oklch(0 0 0 / 0.05), inset 0 1px 1px oklch(1 0 0 / 0.5);
-    --shadow-elevated: 0 10px 40px -10px oklch(0 0 0 / 0.10), inset 0 1px 1px oklch(1 0 0 / 0.8);
-  }
-}
-
-.dark {
-  --background: var(--canvas);
-  --foreground: var(--text);
-  --card: var(--surface);
-  --card-foreground: var(--text);
-  --popover: var(--surface-raised);
-  --popover-foreground: var(--text);
-  --primary: var(--brand-primary);
-  --primary-foreground: var(--brand-primary-ink);
-  --secondary: var(--frame);
-  --secondary-foreground: var(--text);
-  --muted: var(--frame);
-  --muted-foreground: var(--muted-color);
-  --accent: oklch(1 0 0 / 0.05);
-  --accent-foreground: var(--brand-primary);
-  --destructive: var(--status-overdue);
-  --destructive-foreground: oklch(1 0 0);
-  --border: var(--border-default);
-  --input: var(--frame);
-  --ring: var(--brand-primary);
-}
+/* Dark theme only — ignore OS / phone light-dark mode. Tokens live on :root. */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -266,21 +223,34 @@
   html {
     font-size: var(--font-size-base);
     scroll-behavior: smooth;
+    color-scheme: only dark;
+    background-color: var(--canvas);
+    overflow-x: clip;
   }
 
   body {
     /* Premium slate background */
+    color-scheme: only dark;
     background-color: var(--color-canvas);
     background-image:
       radial-gradient(circle at 15% 0%, oklch(1 0 0 / 0.03), transparent 35%),
       radial-gradient(circle at 85% 100%, oklch(1 0 0 / 0.02), transparent 35%);
-    background-attachment: fixed;
+    /* `fixed` attachment breaks position:fixed on many Android browsers */
+    background-attachment: scroll;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-size: var(--font-size-base);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+    min-width: 0;
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      background-attachment: fixed;
+    }
   }
 
   /* Custom scrollbar */
@@ -471,6 +441,9 @@ tbody tr:hover {
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .dashboard-shell::before {
@@ -497,6 +470,28 @@ tbody tr:hover {
 .dashboard-shell > * {
   position: relative;
   z-index: 1;
+}
+
+/* App sidebar — pin for Android Chromium (no blur; solid bg in component) */
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  overscroll-behavior: contain;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+@supports (height: 100dvh) {
+  .app-sidebar {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
 }
 
 .dashboard-panel {
@@ -867,4 +862,82 @@ tbody tr:hover {
   .auth-portal__footer {
     padding: 0.5rem 1rem 0.75rem;
   }
+}
+
+/* ─── Client Portal (restricted external experience) ─────────────────────── */
+
+.client-portal__header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border-subtle);
+  background: oklch(0.16 0.01 250 / 0.92);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.client-portal__header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+}
+
+.client-portal__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.client-portal__logo {
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
+  border-radius: 0.35rem;
+}
+
+.client-portal__brand-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.client-portal__brand-sub {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  margin-top: 0.15rem;
+}
+
+.client-portal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.client-portal__user {
+  display: none;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+@media (min-width: 640px) {
+  .client-portal__user {
+    display: inline;
+  }
+
+  .client-portal__header-inner {
+    padding-inline: 1.75rem;
+  }
+}
+
+.client-portal__main {
+  min-height: calc(100vh - 4rem);
 }

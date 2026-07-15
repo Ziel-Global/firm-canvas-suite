@@ -67,6 +67,7 @@ const ROLE_NAV: Record<AppRole, string[] | "all"> = {
   senior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents", "/knowledge-base"],
   junior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
   support: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  // Clients use /portal exclusively — not listed in the internal sidebar.
   client: [],
 };
 

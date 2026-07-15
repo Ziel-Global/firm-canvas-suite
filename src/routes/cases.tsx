@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -122,6 +122,16 @@ function CasesPage() {
   const [healthFilter, setHealthFilter] = useState("all");
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => {
+      if (mq.matches) setView("cards");
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   const canView = role != null;
   const canCreate = role === "super_admin" || role === "admin";
 
@@ -177,7 +187,7 @@ function CasesPage() {
 
   if (!canView) {
     return (
-      <main className="dashboard-shell px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           Cases
         </h2>
@@ -189,7 +199,7 @@ function CasesPage() {
   }
 
   return (
-    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto w-full max-w-[1440px] space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4">

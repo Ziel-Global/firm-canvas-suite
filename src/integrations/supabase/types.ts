@@ -529,6 +529,7 @@ export type Database = {
           id: string
           notes: string | null
           phone: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -540,6 +541,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -551,6 +553,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1139,6 +1142,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      current_client_id: { Args: never; Returns: string }
       effective_case_access: { Args: { _case_id: string }; Returns: string }
       effective_case_access_for: {
         Args: { _case_id: string; _user_id: string }

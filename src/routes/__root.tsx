@@ -81,7 +81,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   pendingComponent: () => (
-    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto w-full max-w-[1440px] pt-10">
         <PremiumLoaderPanel label="Loading page…" />
       </div>
@@ -125,11 +125,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" style={{ colorScheme: "only dark" }}>
       <head>
         <HeadContent />
+        <meta name="color-scheme" content="only dark" />
+        <meta name="theme-color" content="#1a1d24" />
       </head>
-      <body>
+      <body className="dark" style={{ colorScheme: "only dark" }}>
         {children}
         <Scripts />
       </body>
@@ -142,6 +144,7 @@ function RootComponent() {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAuthRoute = pathname === "/auth" || pathname === "/bootstrap";
+  const isPortalRoute = pathname === "/portal" || pathname.startsWith("/portal/");
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
@@ -155,11 +158,14 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {isAuthRoute ? (
-          <Outlet />
+        {isAuthRoute || isPortalRoute ? (
+          <>
+            {!isAuthRoute ? <GlobalLoadingBar /> : null}
+            <Outlet />
+          </>
         ) : (
           <AppSidebarProvider>
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen min-w-0 overflow-x-clip bg-canvas">
               <GlobalLoadingBar />
               <AppSidebar />
               <AppMain>
