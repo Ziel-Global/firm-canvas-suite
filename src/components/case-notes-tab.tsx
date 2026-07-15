@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Lock, Mic, Send } from "lucide-react";
+import { Lock, Send } from "lucide-react";
 
 import { addCaseNote, getCaseNotes } from "@/lib/cases.functions";
+import { MicButton } from "@/components/mic-button";
+import { CleanupButton } from "@/components/cleanup-button";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
@@ -74,17 +76,17 @@ export function CaseNotesTab({
               onChange={(e) => setBody(e.target.value)}
               placeholder="Add a note…"
               rows={3}
-              className="w-full resize-none rounded-[var(--radius-control)] border border-border bg-background px-3 py-2 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+              className="w-full resize-none rounded-[var(--radius-control)] border border-border bg-background px-3 py-2 pr-[4.5rem] text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
             />
-            <button
-              type="button"
-              title="Dictate note (coming soon)"
-              aria-label="Dictate note (coming soon)"
-              disabled
-              className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground opacity-60"
-            >
-              <Mic className="size-4" />
-            </button>
+            <div className="absolute right-2 top-2 flex items-center gap-0.5">
+              <CleanupButton
+                text={body}
+                onCleaned={setBody}
+              />
+              <MicButton
+                onTranscript={(text) => setBody(prev => prev ? prev + " " + text : text)}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">

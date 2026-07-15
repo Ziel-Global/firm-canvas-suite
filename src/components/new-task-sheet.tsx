@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/mic-button";
+import { CleanupButton } from "@/components/cleanup-button";
 import { Tag } from "@/components/ui/tag";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -168,13 +170,25 @@ export function NewTaskSheet({
 
           <div className="space-y-1.5">
             <Label htmlFor="task-desc">Description</Label>
-            <Textarea
-              id="task-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional details"
-              rows={3}
-            />
+            <div className="relative">
+              <Textarea
+                id="task-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional details"
+                rows={3}
+                className="pr-[4.5rem]"
+              />
+              <div className="absolute right-2 top-2 flex items-center gap-0.5">
+                <CleanupButton
+                  text={description}
+                  onCleaned={setDescription}
+                />
+                <MicButton
+                  onTranscript={(text) => setDescription(prev => prev ? prev + " " + text : text)}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-1.5">

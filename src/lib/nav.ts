@@ -9,6 +9,8 @@ import {
   BarChart3,
   UserCog,
   Settings,
+  Bot,
+  Library,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,8 +42,10 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "Clients", url: "/clients", icon: Users },
       { title: "Reports", url: "/reports", icon: BarChart3 },
+      { title: "Knowledge Base", url: "/knowledge-base", icon: Library },
       { title: "Users", url: "/users", icon: UserCog },
       { title: "Settings", url: "/settings", icon: Settings },
+      { title: "AI Lab", url: "/ai-lab", icon: Bot },
     ],
   },
 ];
@@ -59,8 +63,8 @@ export type AppRole =
 // Which nav URLs each role may see.
 const ROLE_NAV: Record<AppRole, string[] | "all"> = {
   super_admin: "all",
-  admin: ["/", "/cases", "/calendar", "/tasks", "/documents", "/approvals", "/clients", "/reports", "/settings"],
-  senior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  admin: ["/", "/cases", "/calendar", "/tasks", "/documents", "/approvals", "/clients", "/reports", "/knowledge-base", "/settings"],
+  senior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents", "/knowledge-base"],
   junior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
   support: ["/", "/cases", "/tasks", "/calendar", "/documents"],
   client: [],

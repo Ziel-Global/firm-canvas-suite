@@ -24,7 +24,7 @@ async function assertSuperAdmin(supabase: any, userId: string) {
  */
 export const changeCaseStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string; status: CaseStatus }) => {
+  .validator((input: { caseId: string; status: CaseStatus }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     if (!CASE_STATUSES.includes(input.status)) {
       throw new Error("Invalid status.");
@@ -51,7 +51,7 @@ export const changeCaseStatus = createServerFn({ method: "POST" })
  */
 export const reassignLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: {
+  .validator((input: {
     caseId: string;
     newLeadId: string;
     keepReadOnly: boolean;
@@ -169,7 +169,7 @@ export const reassignLead = createServerFn({ method: "POST" })
  */
 export const closeCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string; closureSummary: string }) => {
+  .validator((input: { caseId: string; closureSummary: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     const summary = (input.closureSummary ?? "").trim();
     if (summary.length < 3) {

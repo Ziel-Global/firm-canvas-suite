@@ -63,7 +63,7 @@ async function writeAudit(
 /** Edit a user's role and details. Super Admin only. */
 export const updateUserDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         userId: z.string().uuid(),
@@ -98,7 +98,7 @@ export const updateUserDetails = createServerFn({ method: "POST" })
 /** Deactivate a user — sets is_active false (forced sign-out + revocation via 2.9). */
 export const deactivateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const actorId = await requireSuperAdmin(context.supabase, context.userId);
     if (actorId === data.userId) {
@@ -126,7 +126,7 @@ export const deactivateUser = createServerFn({ method: "POST" })
 /** Reactivate a user — sets is_active true. */
 export const reactivateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const actorId = await requireSuperAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -144,7 +144,7 @@ export const reactivateUser = createServerFn({ method: "POST" })
 /** Reset a user's password — issues a new temporary password by email (notification). */
 export const resetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const actorId = await requireSuperAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

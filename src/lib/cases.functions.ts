@@ -25,7 +25,7 @@ export interface CaseDetail {
  */
 export const getCaseDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => {
+  .validator((input: { id: string }) => {
     if (!input?.id) throw new Error("A case id is required.");
     return { id: input.id };
   })
@@ -309,7 +309,7 @@ export interface CreateCaseInput {
  */
 export const createCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: CreateCaseInput) => {
+  .validator((input: CreateCaseInput) => {
     const title = (input.title ?? "").trim();
     if (!title) throw new Error("Title is required.");
     if (!input.client_id) throw new Error("A client is required.");
@@ -440,7 +440,7 @@ export interface CaseOverview {
  */
 export const getCaseOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => {
+  .validator((input: { id: string }) => {
     if (!input?.id) throw new Error("A case id is required.");
     return { id: input.id };
   })
@@ -566,7 +566,7 @@ export interface CaseNote {
  */
 export const getCaseNotes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string }) => {
+  .validator((input: { caseId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     return { caseId: input.caseId };
   })
@@ -607,7 +607,7 @@ export const getCaseNotes = createServerFn({ method: "GET" })
  */
 export const addCaseNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: {
+  .validator((input: {
     caseId: string;
     body: string;
     isPrincipalOnly?: boolean;
@@ -668,7 +668,7 @@ export interface CaseActivityEntry {
  */
 export const getCaseActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string }) => {
+  .validator((input: { caseId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     return { caseId: input.caseId };
   })
@@ -724,7 +724,7 @@ export interface CaseAccessRow {
  */
 export const getCaseAccessMatrix = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string }) => {
+  .validator((input: { caseId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     return { caseId: input.caseId };
   })
@@ -782,7 +782,7 @@ export interface CaseStageRow {
 /** Ordered stages for a case, with assignee names and expected output from the template. RLS scopes visibility. */
 export const getCaseStages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string }) => {
+  .validator((input: { caseId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     return { caseId: input.caseId };
   })

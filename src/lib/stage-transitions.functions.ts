@@ -10,17 +10,15 @@ const ELEVATED_ROLES = ["super_admin", "admin", "senior_lawyer"];
  */
 export const completeStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: { caseId: string; stageId: string; notes?: string }) => {
-      if (!input?.caseId) throw new Error("A case id is required.");
-      if (!input?.stageId) throw new Error("A stage id is required.");
-      return {
-        caseId: input.caseId,
-        stageId: input.stageId,
-        notes: input.notes ?? undefined,
-      };
-    },
-  )
+  .validator((input: { caseId: string; stageId: string; notes?: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.stageId) throw new Error("A stage id is required.");
+    return {
+      caseId: input.caseId,
+      stageId: input.stageId,
+      notes: input.notes ?? undefined,
+    };
+  })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -33,10 +31,8 @@ export const completeStage = createServerFn({ method: "POST" })
       .eq("id", data.stageId)
       .single();
     if (stageErr || !stage) throw new Error("Stage not found.");
-    if (stage.case_id !== data.caseId)
-      throw new Error("Stage does not belong to this case.");
-    if (stage.status === "complete")
-      throw new Error("This stage is already complete.");
+    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this case.");
+    if (stage.status === "complete") throw new Error("This stage is already complete.");
     if (!elevated && stage.assignee_id !== userId)
       throw new Error("Only the stage assignee can complete this stage.");
 
@@ -48,10 +44,7 @@ export const completeStage = createServerFn({ method: "POST" })
         "The Principal Approval stage requires the Super Admin's explicit sign-off and cannot be completed by anyone else.",
       );
 
-
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Complete the current stage (and save notes if provided).
     const completeUpdate: {
@@ -97,13 +90,27 @@ export const completeStage = createServerFn({ method: "POST" })
           body: `"${nextStage.name ?? "A stage"}" is now active and assigned to you.`,
           link: `/cases/${data.caseId}`,
         });
+
+        // Send email
+        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(nextStage.assignee_id);
+        const { data: assigneeProf } = await supabaseAdmin.from("profiles").select("full_name").eq("id", nextStage.assignee_id).single();
+          
+        if (authUser?.user?.email) {
+          const { data: cData } = await supabaseAdmin.from("cases").select("title").eq("id", data.caseId).single();
+          const cTitle = cData?.title ?? "Unknown Case";
+
+          supabaseAdmin.functions.invoke("send-email", {
+            body: {
+              to: authUser.user.email,
+              subject: `Stage Ready: ${nextStage.name}`,
+              html: `<p>Hi ${(assigneeProf as any)?.full_name || 'Team Member'},</p><p>The stage <strong>${nextStage.name}</strong> on case <strong>${cTitle}</strong> is now active and assigned to you.</p><p><a href="https://firmcanvas.app/cases/${data.caseId}">View Case</a></p>`
+            }
+          }).catch(err => console.error("Failed to send stage email:", err));
+        }
       }
     } else {
       // No further stages — clear the current stage pointer.
-      await supabaseAdmin
-        .from("cases")
-        .update({ current_stage_id: null })
-        .eq("id", data.caseId);
+      await supabaseAdmin.from("cases").update({ current_stage_id: null }).eq("id", data.caseId);
     }
 
     await supabaseAdmin.from("activity_log").insert({
@@ -115,6 +122,7 @@ export const completeStage = createServerFn({ method: "POST" })
         stage_name: stage.name,
         next_stage_id: nextStage?.id ?? null,
         next_stage_name: nextStage?.name ?? null,
+        notes: data.notes ?? null,
       },
     });
 
@@ -128,19 +136,17 @@ export const completeStage = createServerFn({ method: "POST" })
  */
 export const returnStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: { caseId: string; stageId: string; comments: string }) => {
-      if (!input?.caseId) throw new Error("A case id is required.");
-      if (!input?.stageId) throw new Error("A stage id is required.");
-      if (!input?.comments?.trim())
-        throw new Error("Please add comments explaining why you are returning.");
-      return {
-        caseId: input.caseId,
-        stageId: input.stageId,
-        comments: input.comments.trim(),
-      };
-    },
-  )
+  .validator((input: { caseId: string; stageId: string; comments: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.stageId) throw new Error("A stage id is required.");
+    if (!input?.comments?.trim())
+      throw new Error("Please add comments explaining why you are returning.");
+    return {
+      caseId: input.caseId,
+      stageId: input.stageId,
+      comments: input.comments.trim(),
+    };
+  })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -153,14 +159,11 @@ export const returnStage = createServerFn({ method: "POST" })
       .eq("id", data.stageId)
       .single();
     if (stageErr || !stage) throw new Error("Stage not found.");
-    if (stage.case_id !== data.caseId)
-      throw new Error("Stage does not belong to this case.");
+    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this case.");
     if (!elevated && stage.assignee_id !== userId)
       throw new Error("Only the stage assignee can return this stage.");
 
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: prevStage } = await supabaseAdmin
       .from("case_stages")
@@ -171,13 +174,9 @@ export const returnStage = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
-    if (!prevStage)
-      throw new Error("There is no previous stage to return to.");
+    if (!prevStage) throw new Error("There is no previous stage to return to.");
 
-    await supabaseAdmin
-      .from("case_stages")
-      .update({ status: "returned" })
-      .eq("id", stage.id);
+    await supabaseAdmin.from("case_stages").update({ status: "returned" }).eq("id", stage.id);
 
     await supabaseAdmin
       .from("case_stages")

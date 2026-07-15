@@ -32,7 +32,7 @@ export const getReminderDefaults = createServerFn({ method: "GET" })
 /** Update the default offsets/channels for an event type (super_admin / admin only via RLS). */
 export const updateReminderDefault = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       event_type: string;
       offsets: number[];
@@ -58,7 +58,7 @@ export const updateReminderDefault = createServerFn({ method: "POST" })
 /** Reminders configured for a specific event. */
 export const getEventReminders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { event_id: string }) => input)
+  .validator((input: { event_id: string }) => input)
   .handler(async ({ data, context }): Promise<EventReminder[]> => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
@@ -73,7 +73,7 @@ export const getEventReminders = createServerFn({ method: "GET" })
 /** Replace all reminders for an event with the supplied set. */
 export const setEventReminders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: { event_id: string; reminders: EventReminder[] }) => input,
   )
   .handler(async ({ data, context }): Promise<{ count: number }> => {

@@ -13,6 +13,7 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as KnowledgeBaseRouteImport } from './routes/knowledge-base'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CasesRouteImport } from './routes/cases'
@@ -20,9 +21,11 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as BootstrapRouteImport } from './routes/bootstrap'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
+import { Route as AiLabRouteImport } from './routes/ai-lab'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
 import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
+import { Route as ApprovalsApprovalIdRouteImport } from './routes/approvals.$approvalId'
 import { Route as ApiPublicHooksEscalateOverdueStagesRouteImport } from './routes/api/public/hooks/escalate-overdue-stages'
 
 const UsersRoute = UsersRouteImport.update({
@@ -43,6 +46,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KnowledgeBaseRoute = KnowledgeBaseRouteImport.update({
+  id: '/knowledge-base',
+  path: '/knowledge-base',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentsRoute = DocumentsRouteImport.update({
@@ -80,6 +88,11 @@ const ApprovalsRoute = ApprovalsRouteImport.update({
   path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiLabRoute = AiLabRouteImport.update({
+  id: '/ai-lab',
+  path: '/ai-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -95,6 +108,11 @@ const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
   path: '/$caseId',
   getParentRoute: () => CasesRoute,
 } as any)
+const ApprovalsApprovalIdRoute = ApprovalsApprovalIdRouteImport.update({
+  id: '/$approvalId',
+  path: '/$approvalId',
+  getParentRoute: () => ApprovalsRoute,
+} as any)
 const ApiPublicHooksEscalateOverdueStagesRoute =
   ApiPublicHooksEscalateOverdueStagesRouteImport.update({
     id: '/api/public/hooks/escalate-overdue-stages',
@@ -104,34 +122,40 @@ const ApiPublicHooksEscalateOverdueStagesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
+  '/ai-lab': typeof AiLabRoute
+  '/approvals': typeof ApprovalsRouteWithChildren
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
+  '/knowledge-base': typeof KnowledgeBaseRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
+  '/ai-lab': typeof AiLabRoute
+  '/approvals': typeof ApprovalsRouteWithChildren
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
+  '/knowledge-base': typeof KnowledgeBaseRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
@@ -139,17 +163,20 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/approvals': typeof ApprovalsRoute
+  '/ai-lab': typeof AiLabRoute
+  '/approvals': typeof ApprovalsRouteWithChildren
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRouteWithChildren
   '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
+  '/knowledge-base': typeof KnowledgeBaseRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
+  '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
@@ -158,6 +185,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-lab'
     | '/approvals'
     | '/auth'
     | '/bootstrap'
@@ -165,16 +193,19 @@ export interface FileRouteTypes {
     | '/cases'
     | '/clients'
     | '/documents'
+    | '/knowledge-base'
     | '/reports'
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/approvals/$approvalId'
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-lab'
     | '/approvals'
     | '/auth'
     | '/bootstrap'
@@ -182,16 +213,19 @@ export interface FileRouteTypes {
     | '/cases'
     | '/clients'
     | '/documents'
+    | '/knowledge-base'
     | '/reports'
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/approvals/$approvalId'
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
   id:
     | '__root__'
     | '/'
+    | '/ai-lab'
     | '/approvals'
     | '/auth'
     | '/bootstrap'
@@ -199,10 +233,12 @@ export interface FileRouteTypes {
     | '/cases'
     | '/clients'
     | '/documents'
+    | '/knowledge-base'
     | '/reports'
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/approvals/$approvalId'
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
@@ -210,13 +246,15 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApprovalsRoute: typeof ApprovalsRoute
+  AiLabRoute: typeof AiLabRoute
+  ApprovalsRoute: typeof ApprovalsRouteWithChildren
   AuthRoute: typeof AuthRoute
   BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
   CasesRoute: typeof CasesRouteWithChildren
   ClientsRoute: typeof ClientsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
+  KnowledgeBaseRoute: typeof KnowledgeBaseRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
@@ -252,6 +290,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/knowledge-base': {
+      id: '/knowledge-base'
+      path: '/knowledge-base'
+      fullPath: '/knowledge-base'
+      preLoaderRoute: typeof KnowledgeBaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documents': {
@@ -303,6 +348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-lab': {
+      id: '/ai-lab'
+      path: '/ai-lab'
+      fullPath: '/ai-lab'
+      preLoaderRoute: typeof AiLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -324,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesCaseIdRouteImport
       parentRoute: typeof CasesRoute
     }
+    '/approvals/$approvalId': {
+      id: '/approvals/$approvalId'
+      path: '/$approvalId'
+      fullPath: '/approvals/$approvalId'
+      preLoaderRoute: typeof ApprovalsApprovalIdRouteImport
+      parentRoute: typeof ApprovalsRoute
+    }
     '/api/public/hooks/escalate-overdue-stages': {
       id: '/api/public/hooks/escalate-overdue-stages'
       path: '/api/public/hooks/escalate-overdue-stages'
@@ -333,6 +392,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApprovalsRouteChildren {
+  ApprovalsApprovalIdRoute: typeof ApprovalsApprovalIdRoute
+}
+
+const ApprovalsRouteChildren: ApprovalsRouteChildren = {
+  ApprovalsApprovalIdRoute: ApprovalsApprovalIdRoute,
+}
+
+const ApprovalsRouteWithChildren = ApprovalsRoute._addFileChildren(
+  ApprovalsRouteChildren,
+)
 
 interface CasesRouteChildren {
   CasesCaseIdRoute: typeof CasesCaseIdRoute
@@ -357,13 +428,15 @@ const ClientsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApprovalsRoute: ApprovalsRoute,
+  AiLabRoute: AiLabRoute,
+  ApprovalsRoute: ApprovalsRouteWithChildren,
   AuthRoute: AuthRoute,
   BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
   CasesRoute: CasesRouteWithChildren,
   ClientsRoute: ClientsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
+  KnowledgeBaseRoute: KnowledgeBaseRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,

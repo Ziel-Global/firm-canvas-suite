@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ReminderDefaultsSettings } from "@/components/reminder-defaults-settings";
 import { MorningDigestPreview } from "@/components/morning-digest-preview";
 import { WorkflowTemplatesSettings } from "@/components/workflow-templates-settings";
+import { DelegationSettings } from "@/components/delegation-settings";
+import { DocumentTemplatesSettings } from "@/components/document-templates-settings";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -26,6 +28,8 @@ function SettingsPage() {
           Firm-wide configuration.
         </p>
       </div>
+      <DelegationSettings />
+      <DocumentTemplatesSettings />
       <WorkflowTemplatesSettings />
       <ReminderDefaultsSettings />
       <MorningDigestPreview />

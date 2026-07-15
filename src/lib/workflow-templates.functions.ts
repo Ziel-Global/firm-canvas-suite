@@ -62,7 +62,7 @@ export const listWorkflowTemplates = createServerFn({ method: "GET" })
 /** Fetch a single template with its ordered stages. */
 export const getWorkflowTemplate = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => input)
+  .validator((input: { id: string }) => input)
   .handler(
     async ({
       data,
@@ -98,7 +98,7 @@ export const getWorkflowTemplate = createServerFn({ method: "GET" })
 /** Create a new template. Returns the new id. */
 export const createWorkflowTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       case_type: string;
@@ -124,7 +124,7 @@ export const createWorkflowTemplate = createServerFn({ method: "POST" })
 /** Update template metadata. */
 export const updateWorkflowTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       id: string;
       name: string;
@@ -151,7 +151,7 @@ export const updateWorkflowTemplate = createServerFn({ method: "POST" })
 /** Delete a template (cascade removes its stages). */
 export const deleteWorkflowTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => input)
+  .validator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase
@@ -165,7 +165,7 @@ export const deleteWorkflowTemplate = createServerFn({ method: "POST" })
 /** Replace the full ordered list of stages for a template. */
 export const saveTemplateStages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: { template_id: string; stages: StageInput[] }) => input,
   )
   .handler(async ({ data, context }) => {

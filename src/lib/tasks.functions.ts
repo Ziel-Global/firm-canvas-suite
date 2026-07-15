@@ -28,7 +28,7 @@ export interface TaskRow {
  */
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { caseId?: string | null }) => input ?? {})
+  .validator((input?: { caseId?: string | null }) => input ?? {})
   .handler(async ({ data, context }): Promise<TaskRow[]> => {
     const { supabase } = context;
 
@@ -119,7 +119,7 @@ export interface TaskOrderInput {
  */
 export const reorderTasks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { tasks: TaskOrderInput[] }) => {
+  .validator((input: { tasks: TaskOrderInput[] }) => {
     if (!input?.tasks?.length) throw new Error("No tasks to update.");
     return input;
   })
@@ -245,7 +245,7 @@ export interface CreateTaskInput {
  */
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: CreateTaskInput) => {
+  .validator((input: CreateTaskInput) => {
     if (!input?.title?.trim()) throw new Error("A task title is required.");
     return input;
   })
@@ -306,6 +306,21 @@ export const createTask = createServerFn({ method: "POST" })
         body: `${(me.full_name as string) || "A colleague"} assigned you: ${data.title.trim()}`,
         link: "/tasks",
       });
+
+      // Send email via auth admin
+      const { supabaseAdmin: supabaseAdminInst } = await import("@/integrations/supabase/client.server");
+      const { data: authUser } = await supabaseAdminInst.auth.admin.getUserById(assigneeId);
+      const { data: assigneeProf } = await supabase.from("profiles").select("full_name").eq("id", assigneeId).single();
+
+      if (authUser?.user?.email) {
+        supabase.functions.invoke("send-email", {
+          body: {
+            to: authUser.user.email,
+            subject: `New Task Assigned: ${data.title.trim()}`,
+            html: `<p>Hi ${(assigneeProf as any)?.full_name || 'Team Member'},</p><p>${(me.full_name as string) || "A colleague"} has assigned you a new task: <strong>${data.title.trim()}</strong>.</p><p><a href="https://firmcanvas.app/tasks">View Task</a></p>`
+          }
+        }).catch(err => console.error("Failed to send task email:", err));
+      }
     }
 
     return { id: taskId };

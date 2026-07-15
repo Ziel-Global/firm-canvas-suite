@@ -46,7 +46,7 @@ function generateTempPassword(): string {
  */
 export const createUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => createUserSchema.parse(data))
+  .validator((data: unknown) => createUserSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -105,6 +105,15 @@ export const createUser = createServerFn({ method: "POST" })
         `this temporary password: ${tempPassword}. You will be asked to change it after signing in.`,
       link: "/auth",
     });
+
+    // Send the actual email
+    supabaseAdmin.functions.invoke("send-email", {
+      body: {
+        to: data.email,
+        subject: "Welcome to Firm Canvas - Your Temporary Password",
+        html: `<p>Hi ${data.fullName},</p><p>Your account has been created. Sign in with your email (<strong>${data.email}</strong>) and this temporary password: <strong>${tempPassword}</strong>.</p><p>You will be asked to change it upon first login.</p><p><a href="https://firmcanvas.app/auth">Login to Firm Canvas</a></p>`
+      }
+    }).catch(err => console.error("Failed to send welcome email:", err));
 
     // Write the creation to the immutable audit log.
     await supabaseAdmin.from("audit_log").insert({

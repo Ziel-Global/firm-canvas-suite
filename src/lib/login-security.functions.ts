@@ -2,9 +2,22 @@ import { createServerFn } from "@tanstack/react-start";
 
 const DEFAULT_MAX_FAILED = 5;
 const DEFAULT_LOCKOUT_MINUTES = 15;
+let hasWarnedDegradedMode = false;
 
 function normalize(email: string) {
   return email.trim().toLowerCase();
+}
+
+function isDegradedLocalDevMode() {
+  return !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+}
+
+function warnDegradedLocalDevMode() {
+  if (hasWarnedDegradedMode) return;
+  hasWarnedDegradedMode = true;
+  console.warn(
+    "[login-security] SUPABASE_SERVICE_ROLE_KEY not set — skipping rate-limit/audit checks, running in degraded local-dev mode",
+  );
 }
 
 async function getSetting(
@@ -12,11 +25,7 @@ async function getSetting(
   key: string,
   fallback: number,
 ): Promise<number> {
-  const { data } = await admin
-    .from("firm_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  const { data } = await admin.from("firm_settings").select("value").eq("key", key).maybeSingle();
   const n = Number(data?.value);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -31,8 +40,13 @@ async function getAdmin() {
  * Returns the remaining cooldown in seconds when locked.
  */
 export const checkLockout = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: normalize(input.email) }))
+  .validator((input: { email: string }) => ({ email: normalize(input.email) }))
   .handler(async ({ data }) => {
+    if (isDegradedLocalDevMode()) {
+      warnDegradedLocalDevMode();
+      return { locked: false as const };
+    }
+
     const admin = await getAdmin();
     const { data: row } = await admin
       .from("login_attempts")
@@ -55,8 +69,16 @@ export const checkLockout = createServerFn({ method: "POST" })
  * once it reaches max_failed_logins, locks the account for lockout_minutes.
  */
 export const recordFailedLogin = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: normalize(input.email) }))
+  .validator((input: { email: string }) => ({ email: normalize(input.email) }))
   .handler(async ({ data }) => {
+    if (isDegradedLocalDevMode()) {
+      warnDegradedLocalDevMode();
+      return {
+        locked: false as const,
+        attemptsRemaining: 999,
+      };
+    }
+
     const admin = await getAdmin();
     const [maxFailed, lockoutMinutes] = await Promise.all([
       getSetting(admin, "max_failed_logins", DEFAULT_MAX_FAILED),
@@ -70,15 +92,15 @@ export const recordFailedLogin = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const now = Date.now();
-    const stillLocked =
-      existing?.locked_until && new Date(existing.locked_until).getTime() > now;
+    const stillLocked = existing?.locked_until && new Date(existing.locked_until).getTime() > now;
 
     // Reset count if a previous lock has expired.
-    const baseCount = stillLocked
-      ? existing!.failed_count
-      : existing && existing.locked_until && new Date(existing.locked_until).getTime() <= now
-        ? 0
-        : existing?.failed_count ?? 0;
+    let baseCount = existing?.failed_count ?? 0;
+    if (stillLocked) {
+      baseCount = existing!.failed_count;
+    } else if (existing?.locked_until && new Date(existing.locked_until).getTime() <= now) {
+      baseCount = 0;
+    }
 
     const nextCount = baseCount + 1;
     const shouldLock = nextCount >= maxFailed;
@@ -116,8 +138,13 @@ export const recordFailedLogin = createServerFn({ method: "POST" })
  * Clear the failure counter after a successful sign-in.
  */
 export const clearFailedLogins = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: normalize(input.email) }))
+  .validator((input: { email: string }) => ({ email: normalize(input.email) }))
   .handler(async ({ data }) => {
+    if (isDegradedLocalDevMode()) {
+      warnDegradedLocalDevMode();
+      return { ok: true as const };
+    }
+
     const admin = await getAdmin();
     await admin.from("login_attempts").delete().eq("email", data.email);
     return { ok: true as const };

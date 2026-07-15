@@ -106,7 +106,7 @@ export interface CreateClientInput {
  */
 export const createClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: CreateClientInput) => {
+  .validator((input: CreateClientInput) => {
     const full_name = (input.full_name ?? "").trim();
     if (!full_name) throw new Error("Full name is required.");
     return {
@@ -183,7 +183,7 @@ export interface ClientDetail {
 
 export const getClientDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => {
+  .validator((input: { id: string }) => {
     if (!input?.id) throw new Error("Client id is required.");
     return { id: input.id };
   })
@@ -296,7 +296,7 @@ export interface UpdateClientInput {
 
 export const updateClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: UpdateClientInput) => {
+  .validator((input: UpdateClientInput) => {
     if (!input?.id) throw new Error("Client id is required.");
     const full_name = (input.full_name ?? "").trim();
     if (!full_name) throw new Error("Full name is required.");

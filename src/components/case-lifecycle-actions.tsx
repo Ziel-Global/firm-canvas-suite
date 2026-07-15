@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { RefreshCw, UserCog, Lock } from "lucide-react";
+import { RefreshCw, UserCog, Lock, Sparkles, Loader2 } from "lucide-react";
 
 import { listProfiles } from "@/lib/users.functions";
 import {
@@ -10,6 +10,7 @@ import {
   reassignLead,
   closeCase,
 } from "@/lib/case-lifecycle.functions";
+import { generateClosureSummary } from "@/lib/knowledge-base.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -50,6 +51,7 @@ export function CaseLifecycleActions({
   const changeStatus = useServerFn(changeCaseStatus);
   const reassign = useServerFn(reassignLead);
   const close = useServerFn(closeCase);
+  const genSummary = useServerFn(generateClosureSummary);
   const fetchProfiles = useServerFn(listProfiles);
 
   const [statusOpen, setStatusOpen] = useState(false);
@@ -60,6 +62,7 @@ export function CaseLifecycleActions({
   const [newLeadId, setNewLeadId] = useState<string>("");
   const [keepReadOnly, setKeepReadOnly] = useState(true);
   const [summary, setSummary] = useState("");
+  const [generatingSummary, setGeneratingSummary] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const isClosed = status === "closed";
@@ -116,7 +119,7 @@ export function CaseLifecycleActions({
     setBusy(true);
     try {
       await close({ data: { caseId, closureSummary: summary } });
-      toast.success("Case closed.");
+      toast.success("Case closed and closure summary saved.");
       setCloseOpen(false);
       setSummary("");
       refresh();
@@ -124,6 +127,19 @@ export function CaseLifecycleActions({
       toast.error(e instanceof Error ? e.message : "Could not close case.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleAutoGenerate() {
+    setGeneratingSummary(true);
+    try {
+      const result = await genSummary({ data: { caseId } });
+      setSummary(result.summary);
+      toast.success("AI summary generated — review and edit before closing.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not generate summary.");
+    } finally {
+      setGeneratingSummary(false);
     }
   }
 
@@ -260,14 +276,31 @@ export function CaseLifecycleActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="summary">Closure summary</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="summary">Closure summary</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAutoGenerate}
+                disabled={generatingSummary || busy}
+                className="h-7 text-xs text-tag-blue border-tag-blue/30 hover:bg-tag-blue/10"
+              >
+                {generatingSummary
+                  ? <><Loader2 className="size-3 mr-1 animate-spin" />Generating…</>
+                  : <><Sparkles className="size-3 mr-1" />Auto-generate with AI</>}
+              </Button>
+            </div>
             <Textarea
               id="summary"
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="Summarise the outcome and final disposition…"
-              rows={5}
+              placeholder="Summarise the outcome and final disposition, or click Auto-generate…"
+              rows={7}
             />
+            <p className="text-xs text-muted-foreground">
+              Review and edit the summary before closing. It will be stored on the case and be searchable in the Knowledge Base.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCloseOpen(false)}>

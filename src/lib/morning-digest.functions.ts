@@ -65,7 +65,7 @@ function startEndOfDay(date: Date) {
  */
 export const getMorningDigest = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { date?: string } | undefined) => input ?? {})
+  .validator((input: { date?: string } | undefined) => input ?? {})
   .handler(async ({ data, context }): Promise<MorningDigest> => {
     const { supabase, userId } = context;
 

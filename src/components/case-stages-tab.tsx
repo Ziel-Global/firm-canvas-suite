@@ -1,7 +1,17 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CircleDot, Clock, FileOutput, Loader2, Lock, StickyNote, Undo2, User } from "lucide-react";
+import {
+  Check,
+  CircleDot,
+  Clock,
+  FileOutput,
+  Loader2,
+  Lock,
+  StickyNote,
+  Undo2,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
@@ -13,8 +23,10 @@ import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-
-const STATUS_TAG: Record<string, { label: string; color: "high" | "medium" | "low" | "purple" | "blue" | "sand" | "green" }> = {
+const STATUS_TAG: Record<
+  string,
+  { label: string; color: "high" | "medium" | "low" | "purple" | "blue" | "sand" | "green" }
+> = {
   pending: { label: "Pending", color: "low" },
   active: { label: "Active", color: "blue" },
   complete: { label: "Complete", color: "green" },
@@ -30,11 +42,20 @@ function formatDate(value: string | null) {
   });
 }
 
+function formatStatus(status: string | null) {
+  if (!status) return "Pending";
+  if (status === "active") return "Active";
+  if (status === "complete") return "Complete";
+  if (status === "returned") return "Returned";
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function StepIcon({ status }: { status: string | null }) {
-  if (status === "complete")
-    return <Check className="size-4 text-primary-foreground" />;
-  if (status === "active")
-    return <CircleDot className="size-4 text-primary-foreground" />;
+  if (status === "complete") return <Check className="size-4 text-primary-foreground" />;
+  if (status === "active") return <CircleDot className="size-4 text-primary-foreground" />;
   return <span className="text-xs font-semibold" />;
 }
 
@@ -59,9 +80,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
   }, [stages]);
 
   if (isLoading) {
-    return (
-      <Card className="p-6 text-sm text-muted-foreground">Loading stages…</Card>
-    );
+    return <Card className="p-6 text-sm text-muted-foreground">Loading stages…</Card>;
   }
 
   if (!stages || stages.length === 0) {
@@ -69,8 +88,8 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
       <Card className="p-6">
         <h3 className="text-sm font-semibold text-foreground">Stages</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          This case has no workflow stages yet. Stages are added when a workflow
-          template is applied.
+          This case has no workflow stages yet. Stages are added when a workflow template is
+          applied.
         </p>
       </Card>
     );
@@ -86,6 +105,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
           {stages.map((stage, idx) => {
             const isActive = stage.status === "active";
             const isComplete = stage.status === "complete";
+            const isReturned = stage.status === "returned";
             const isSelected = stage.id === selected.id;
             return (
               <li key={stage.id} className="flex items-start">
@@ -93,41 +113,46 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
                   type="button"
                   onClick={() => setSelectedId(stage.id)}
                   className={cn(
-                    "flex w-32 flex-col items-center gap-2 rounded-control px-2 py-2 text-center transition-colors",
-                    isSelected ? "bg-frame" : "hover:bg-frame/50",
+                    "flex w-48 flex-col items-center gap-3 rounded-card border px-3 py-3 text-center transition-all",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border bg-surface hover:bg-frame/50",
+                    isActive && "ring-2 ring-primary/20",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex size-9 items-center justify-center rounded-full border-2 text-sm font-semibold",
+                      "flex size-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors",
                       isComplete && "border-primary bg-primary text-primary-foreground",
                       isActive &&
                         "border-primary bg-primary text-primary-foreground ring-4 ring-primary/20",
-                      !isComplete &&
-                        !isActive &&
-                        "border-border bg-surface text-muted-foreground",
+                      isReturned && "border-priority-high bg-priority-high/10 text-priority-high",
+                      !isComplete && !isActive && "border-border bg-surface text-muted-foreground",
                     )}
                   >
-                    {isComplete || isActive ? (
-                      <StepIcon status={stage.status} />
-                    ) : (
-                      idx + 1
-                    )}
+                    {isComplete || isActive ? <StepIcon status={stage.status} /> : idx + 1}
                   </span>
-                  <span
-                    className={cn(
-                      "line-clamp-2 text-xs font-medium",
-                      isSelected ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {stage.name ?? `Stage ${idx + 1}`}
-                  </span>
+                  <div className="space-y-1">
+                    <span
+                      className={cn(
+                        "line-clamp-2 block text-sm font-medium leading-snug",
+                        isSelected ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {stage.name ?? `Stage ${idx + 1}`}
+                    </span>
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <MetaLine label="Assignee" value={stage.assignee_name ?? "Unassigned"} />
+                      <MetaLine label="Status" value={formatStatus(stage.status)} />
+                      <MetaLine label="Deadline" value={formatDate(stage.deadline)} />
+                    </div>
+                  </div>
                 </button>
                 {idx < stages.length - 1 && (
                   <span
                     className={cn(
-                      "mt-[18px] h-0.5 w-6 shrink-0 rounded-full",
-                      isComplete ? "bg-primary" : "bg-border",
+                      "mt-[20px] h-0.5 w-8 shrink-0 rounded-full",
+                      isComplete || isActive ? "bg-primary" : "bg-border",
                     )}
                   />
                 )}
@@ -155,8 +180,15 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
           queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
         }}
       />
+    </div>
+  );
+}
 
-
+function MetaLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 truncate">
+      <span className="font-medium text-foreground/80">{label}:</span>
+      <span className="truncate">{value}</span>
     </div>
   );
 }
@@ -203,8 +235,7 @@ function StageDetail({
   });
 
   const returnMutation = useMutation({
-    mutationFn: () =>
-      sendBack({ data: { caseId, stageId: stage.id, comments } }),
+    mutationFn: () => sendBack({ data: { caseId, stageId: stage.id, comments } }),
     onSuccess: () => {
       toast.success("Stage returned to the previous assignee.");
       setComments("");
@@ -218,14 +249,10 @@ function StageDetail({
   const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
   const principalLocked = isPrincipalApproval && !isSuperAdmin;
 
-
-
   return (
     <Card className="space-y-5 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-foreground">
-          {stage.name ?? "Stage"}
-        </h3>
+        <h3 className="text-lg font-semibold text-foreground">{stage.name ?? "Stage"}</h3>
         <Tag color={tag.color}>{tag.label}</Tag>
       </div>
 
@@ -268,19 +295,16 @@ function StageDetail({
         <div className="flex items-start gap-2 rounded-card border border-priority-high/40 bg-priority-high/10 p-4 text-sm text-foreground">
           <Lock className="mt-0.5 size-4 shrink-0 text-priority-high" />
           <p>
-            This is the <span className="font-medium">Principal Approval</span>{" "}
-            stage. No output can advance past it without the Super Admin's
-            explicit sign-off. Only the Super Admin can mark this stage complete.
+            This is the <span className="font-medium">Principal Approval</span> stage. No output can
+            advance past it without the Super Admin's explicit sign-off. Only the Super Admin can
+            mark this stage complete.
           </p>
         </div>
       )}
 
       {isActive && canAct && !principalLocked && (
-
         <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
-          <h4 className="text-sm font-semibold text-foreground">
-            Stage actions
-          </h4>
+          <h4 className="text-sm font-semibold text-foreground">Stage actions</h4>
           {!returning ? (
             <>
               <div className="space-y-1.5">
@@ -360,19 +384,10 @@ function StageDetail({
         </div>
       )}
     </Card>
-
   );
 }
 
-function Field({
-  icon,
-  label,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">

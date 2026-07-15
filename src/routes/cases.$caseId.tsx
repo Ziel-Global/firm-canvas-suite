@@ -12,6 +12,7 @@ import {
   Plus,
   CheckSquare,
   Activity,
+  Bot,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
@@ -31,6 +32,7 @@ import { CaseTasksTab } from "@/components/case-tasks-tab";
 import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseDocumentsTab } from "@/components/case-documents-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
+import { CaseSummariseModal } from "@/components/case-summarise-modal";
 
 export const Route = createFileRoute("/cases/$caseId")({
   head: () => ({
@@ -104,6 +106,7 @@ function CaseDetailPage() {
   const fetchDetail = useServerFn(getCaseDetail);
   const checkMyAccess = useServerFn(getMyCaseAccess);
   const [tab, setTab] = useState<string>("overview");
+  const [summariseModalOpen, setSummariseModalOpen] = useState(false);
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
 
@@ -254,6 +257,10 @@ function CaseDetailPage() {
                   <Pencil className="size-4" />
                   Edit case
                 </Button>
+                <Button variant="ghost" className="justify-start text-tag-blue hover:text-tag-blue/90 hover:bg-tag-blue/10" onClick={() => setSummariseModalOpen(true)}>
+                  <Bot className="size-4" />
+                  Summarise case
+                </Button>
               </div>
             </Card>
 
@@ -264,6 +271,7 @@ function CaseDetailPage() {
 
           {/* Tabbed main area */}
           <section className="min-w-0">
+            <CaseSummariseModal open={summariseModalOpen} onOpenChange={setSummariseModalOpen} caseId={caseId} />
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex w-full flex-wrap justify-start gap-1">
                 {TABS.map((t) => (

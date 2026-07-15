@@ -31,6 +31,10 @@ DROP POLICY IF EXISTS "Staff can view overrides" ON public.case_access_overrides
 DROP POLICY IF EXISTS "Staff can insert overrides" ON public.case_access_overrides;
 DROP POLICY IF EXISTS "Staff can update overrides" ON public.case_access_overrides;
 DROP POLICY IF EXISTS "Staff can delete overrides" ON public.case_access_overrides;
+DROP POLICY IF EXISTS "overrides_select" ON public.case_access_overrides;
+DROP POLICY IF EXISTS "overrides_insert" ON public.case_access_overrides;
+DROP POLICY IF EXISTS "overrides_update" ON public.case_access_overrides;
+DROP POLICY IF EXISTS "overrides_delete" ON public.case_access_overrides;
 
 CREATE POLICY "overrides_select" ON public.case_access_overrides FOR SELECT TO authenticated
 USING (public.is_active_user() AND (public.current_role() = 'super_admin' OR user_id = auth.uid()));
@@ -50,6 +54,10 @@ DROP POLICY IF EXISTS "Staff can view folders" ON public.document_folders;
 DROP POLICY IF EXISTS "Staff can insert folders" ON public.document_folders;
 DROP POLICY IF EXISTS "Staff can update folders" ON public.document_folders;
 DROP POLICY IF EXISTS "Staff can delete folders" ON public.document_folders;
+DROP POLICY IF EXISTS "folders_select" ON public.document_folders;
+DROP POLICY IF EXISTS "folders_write_insert" ON public.document_folders;
+DROP POLICY IF EXISTS "folders_write_update" ON public.document_folders;
+DROP POLICY IF EXISTS "folders_write_delete" ON public.document_folders;
 
 CREATE POLICY "folders_select" ON public.document_folders FOR SELECT TO authenticated
 USING (public.is_active_user() AND public.can_access_folder(case_id, code));
@@ -69,6 +77,10 @@ DROP POLICY IF EXISTS "Staff can view documents" ON public.documents;
 DROP POLICY IF EXISTS "Staff can insert documents" ON public.documents;
 DROP POLICY IF EXISTS "Staff can update documents" ON public.documents;
 DROP POLICY IF EXISTS "Staff can delete documents" ON public.documents;
+DROP POLICY IF EXISTS "documents_select" ON public.documents;
+DROP POLICY IF EXISTS "documents_insert" ON public.documents;
+DROP POLICY IF EXISTS "documents_update" ON public.documents;
+DROP POLICY IF EXISTS "documents_delete" ON public.documents;
 
 CREATE POLICY "documents_select" ON public.documents FOR SELECT TO authenticated
 USING (

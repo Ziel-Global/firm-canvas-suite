@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MicButton } from "@/components/mic-button";
+import { CleanupButton } from "@/components/cleanup-button";
 import { Switch } from "@/components/ui/switch";
 import { DarkDatePicker } from "@/components/dark-date-picker";
 import { useAuth } from "@/contexts/auth-context";
@@ -252,12 +254,24 @@ export function NewEventSheet({
 
           <div className="space-y-1.5">
             <Label htmlFor="event-desc">Notes</Label>
-            <Textarea
-              id="event-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
+            <div className="relative">
+              <Textarea
+                id="event-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="pr-[4.5rem]"
+              />
+              <div className="absolute right-2 top-2 flex items-center gap-0.5">
+                <CleanupButton
+                  text={description}
+                  onCleaned={setDescription}
+                />
+                <MicButton
+                  onTranscript={(text) => setDescription(prev => prev ? prev + " " + text : text)}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -44,7 +44,7 @@ function normalizeFolderScope(input: string[] | string | null | undefined): stri
  */
 export const setCaseAccessOverride = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: {
+  .validator((input: {
     caseId: string;
     targetUserId: string;
     accessLevel: AccessLevel;
@@ -129,7 +129,7 @@ export const setCaseAccessOverride = createServerFn({ method: "POST" })
  */
 export const clearCaseAccessOverride = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string; targetUserId: string }) => {
+  .validator((input: { caseId: string; targetUserId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     if (!input?.targetUserId) throw new Error("A user is required.");
     return { caseId: input.caseId, targetUserId: input.targetUserId };
@@ -178,7 +178,7 @@ export const clearCaseAccessOverride = createServerFn({ method: "POST" })
  */
 export const getMyCaseAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { caseId: string }) => {
+  .validator((input: { caseId: string }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     return { caseId: input.caseId };
   })

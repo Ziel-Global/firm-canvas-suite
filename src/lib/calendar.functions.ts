@@ -19,7 +19,7 @@ export interface CalendarEvent {
 /** List events within an inclusive ISO date range [from, to]. */
 export const listCalendarEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { from: string; to: string }) => input)
+  .validator((input: { from: string; to: string }) => input)
   .handler(async ({ data, context }): Promise<CalendarEvent[]> => {
     const { supabase } = context;
 
@@ -65,7 +65,7 @@ type ReminderChannel = "email" | "sms" | "in_app";
 
 export const createCalendarEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       title: string;
       description?: string | null;

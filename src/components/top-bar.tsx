@@ -4,7 +4,9 @@ import { useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AvatarStack } from "@/components/ui/avatar-stack";
+import { SmartSearchBar } from "@/components/smart-search-bar";
 import { titleForPath } from "@/lib/nav";
+import { NotificationsDropdown } from "@/components/notifications-dropdown";
 
 const TEAM = [
   { name: "Ava Chen" },
@@ -33,29 +35,15 @@ export function TopBar({ title, className }: TopBarProps) {
         {sectionTitle}
       </h1>
 
-      {/* Center — search */}
+      {/* Center — smart search */}
       <div className="order-last w-full min-w-0 sm:order-none sm:mx-4 sm:flex sm:max-w-md sm:flex-1 sm:justify-center">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.75} />
-          <input
-            type="search"
-            placeholder="Search cases, documents, clients"
-            className="h-9 w-full rounded-control bg-frame pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-1 ring-transparent transition-all focus:bg-surface focus:ring-frame focus:ring-2"
-          />
-        </div>
+        <SmartSearchBar />
       </div>
 
       {/* Right — actions */}
       <div className="ml-auto flex shrink-0 items-center gap-3">
         {/* Notifications */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex size-9 items-center justify-center rounded-control text-muted-foreground transition-colors hover:bg-frame hover:text-foreground"
-        >
-          <Bell className="size-5" strokeWidth={1.75} />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-pill bg-priority-high ring-2 ring-canvas" />
-        </button>
+        <NotificationsDropdown />
 
         {/* Avatar stack */}
         <AvatarStack people={TEAM} max={3} className="hidden sm:flex" />
