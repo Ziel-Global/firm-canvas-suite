@@ -357,9 +357,9 @@ function OperationsDashboard() {
         </Panel>
       </section>
 
-      {/* Attention + workload */}
-      <section className="grid gap-3 lg:grid-cols-2">
-        <Panel>
+      {/* Attention + workload — stack until wide enough (accounts for sidebar) */}
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <Panel className="min-w-0 overflow-hidden">
           <PanelHeader
             title="Needs attention"
             icon={<ShieldAlert className="size-4 text-priority-high/90" />}
@@ -389,63 +389,63 @@ function OperationsDashboard() {
             <ul className="mt-3 divide-y divide-white/[0.06]">
               {d.attention.map((c) => (
                 <li key={c.id}>
-                  <div className="flex items-start justify-between gap-3 py-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCaseSheet({ id: c.id, title: c.title })
-                      }
-                      className="min-w-0 flex-1 text-left transition-colors hover:text-foreground"
-                    >
-                      <p className="truncate text-sm font-medium text-foreground">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCaseSheet({ id: c.id, title: c.title })
+                    }
+                    className="flex w-full flex-col gap-2 py-3 text-left transition-colors hover:text-foreground sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere] sm:line-clamp-2">
                         {c.title}
                       </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                         {c.case_ref && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="font-mono text-[11px] text-muted-foreground">
                             {c.case_ref}
                           </span>
                         )}
                         {c.active_stage && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Layers className="size-3" />
-                            {c.active_stage}
+                          <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                            <Layers className="size-3 shrink-0" />
+                            <span className="break-words [overflow-wrap:anywhere]">
+                              {c.active_stage}
+                            </span>
                           </span>
                         )}
                         {c.responsible_member && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <User className="size-3" />
-                            {c.responsible_member}
+                          <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                            <User className="size-3 shrink-0" />
+                            <span className="break-words [overflow-wrap:anywhere]">
+                              {c.responsible_member}
+                            </span>
                           </span>
                         )}
                       </div>
-                    </button>
-                    <div className="mt-0.5 flex shrink-0 items-center gap-2">
+                    </div>
+                    <div className="flex shrink-0 items-center justify-between gap-2 sm:mt-0.5 sm:justify-end">
                       <StatusDot
                         status={
                           HEALTH_MAP[c.health ?? "on_track"] ?? "ontrack"
                         }
                         label={HEALTH_LABELS[c.health ?? ""] ?? ""}
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCaseSheet({ id: c.id, title: c.title })
-                        }
-                        className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
-                        title="Quick view"
+                      <span
+                        className="rounded-md p-1 text-muted-foreground"
+                        aria-hidden
                       >
                         <ChevronRight className="size-4" />
-                      </button>
+                      </span>
                     </div>
-                  </div>
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </Panel>
 
-        <Panel>
+        <Panel className="min-w-0 overflow-hidden">
           <PanelHeader
             title="Team workload"
             icon={<User className="size-4" />}
@@ -461,8 +461,9 @@ function OperationsDashboard() {
           ) : d.teamWorkload.length === 0 ? (
             <EmptyState>No team members found.</EmptyState>
           ) : (
-            <div className="mt-4 space-y-1.5">
-              <div className="grid grid-cols-[1fr_3.5rem_3.25rem_3.75rem] gap-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mt-4 space-y-2">
+              {/* Desktop / tablet table header */}
+              <div className="hidden grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] gap-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:grid">
                 <span>Member</span>
                 <span className="text-right">Cases</span>
                 <span className="text-right">Tasks</span>
@@ -476,28 +477,43 @@ function OperationsDashboard() {
                     setMemberSheet({ id: m.id, name: m.name })
                   }
                   className={cn(
-                    "grid w-full cursor-pointer grid-cols-[1fr_3.5rem_3.25rem_3.75rem] items-center gap-2 rounded-xl border px-2.5 py-2.5 text-left text-sm transition-all hover:border-white/15 hover:bg-white/[0.03]",
+                    "w-full cursor-pointer rounded-xl border px-3 py-2.5 text-left text-sm transition-all hover:border-white/15 hover:bg-white/[0.03]",
                     heatClass(m.open_tasks, m.overdue_tasks),
+                    // Mobile: stacked card · sm+: table row
+                    "flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] sm:items-center sm:gap-2 sm:px-2.5",
                   )}
                 >
                   <span className="truncate font-medium">{m.name}</span>
-                  <span className="text-right text-xs tabular-nums">
-                    {m.active_cases}
-                  </span>
-                  <span className="text-right text-xs tabular-nums">
-                    {m.open_tasks}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-right text-xs font-semibold tabular-nums",
-                      m.overdue_tasks > 0 && "text-priority-high",
-                    )}
-                  >
-                    {m.overdue_tasks > 0 ? m.overdue_tasks : "—"}
-                  </span>
+                  <div className="grid grid-cols-3 gap-2 sm:contents">
+                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
+                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
+                        Cases
+                      </span>
+                      <span className="text-xs tabular-nums">{m.active_cases}</span>
+                    </div>
+                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
+                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
+                        Tasks
+                      </span>
+                      <span className="text-xs tabular-nums">{m.open_tasks}</span>
+                    </div>
+                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
+                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
+                        Overdue
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold tabular-nums",
+                          m.overdue_tasks > 0 && "text-priority-high",
+                        )}
+                      >
+                        {m.overdue_tasks > 0 ? m.overdue_tasks : "—"}
+                      </span>
+                    </div>
+                  </div>
                 </button>
               ))}
-              <p className="px-1 pt-2 text-[10px] text-muted-foreground">
+              <p className="px-1 pt-2 text-[10px] leading-relaxed text-muted-foreground">
                 Highlighted rows indicate overdue work or high open-task load.
               </p>
             </div>
@@ -550,7 +566,7 @@ function Panel({
   return (
     <Card
       className={cn(
-        "dashboard-panel border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-5 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-6",
+        "dashboard-panel min-w-0 border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-4 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-6",
         className,
       )}
     >

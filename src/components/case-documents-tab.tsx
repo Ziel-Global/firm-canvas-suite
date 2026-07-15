@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Search, X } from "lucide-react";
+import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Search, X, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,6 +11,8 @@ import {
   restoreDocumentVersion,
   uploadDocument,
   submitForApproval,
+  shareDocumentWithClient,
+  unshareDocumentWithClient,
   type CaseDocument,
   type DocumentVersionRow,
 } from "@/lib/documents.functions";
@@ -71,14 +73,18 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const fetchVersions = useServerFn(getDocumentVersions);
   const upload = useServerFn(uploadDocument);
   const submitDoc = useServerFn(submitForApproval);
+  const shareWithClient = useServerFn(shareDocumentWithClient);
+  const unshareWithClient = useServerFn(unshareDocumentWithClient);
   const restoreVersion = useServerFn(restoreDocumentVersion);
   const { role } = useAuth();
   const canManageVersions = role === "super_admin";
+  const canShareWithClient = role === "super_admin" || role === "admin";
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const versionFileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [versionUploading, setVersionUploading] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
@@ -115,6 +121,26 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       queryClient.invalidateQueries({ queryKey: ["folder-documents", caseId, selectedFolderId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit", { id: "ai-proofread" });
+    }
+  }
+
+  async function handleToggleClientShare(documentId: string, currentlyShared: boolean) {
+    setShareBusy(true);
+    try {
+      if (currentlyShared) {
+        const result = await unshareWithClient({ data: { documentId } });
+        toast.success(`Removed from ${result.clientName}'s portal`);
+      } else {
+        const result = await shareWithClient({ data: { documentId } });
+        toast.success(`Shared with ${result.clientName} in the portal`);
+      }
+      queryClient.invalidateQueries({
+        queryKey: ["folder-documents", caseId, selectedFolderId],
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Share update failed");
+    } finally {
+      setShareBusy(false);
     }
   }
 
@@ -292,10 +318,10 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
         {selectedDocument && (
           <div className="space-y-4 mt-6">
             <Card className="p-5 flex flex-col gap-4 border-l-4 border-l-tag-blue">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">{selectedDocument.title}</h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-sm text-muted-foreground">Status:</span>
                     <Pill className={
                       selectedDocument.approval_status === "approved" ? "bg-tag-blue text-white" :
@@ -305,14 +331,49 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       {selectedDocument.approval_status === "approved" ? "Approved" :
                        selectedDocument.approval_status === "in_review" ? "In Review" : "Draft"}
                     </Pill>
+                    {selectedDocument.shared_with_client ? (
+                      <Pill className="bg-status-ontrack/20 text-status-ontrack">
+                        <Share2 className="size-3" />
+                        Shared with client
+                      </Pill>
+                    ) : null}
                   </div>
                 </div>
-                {selectedDocument.approval_status === "draft" && !selectedDocument.is_locked && (
-                  <Button onClick={() => handleSubmit(selectedDocument.id)} className="bg-tag-blue hover:bg-tag-blue/90">
-                    <Bot className="size-4 mr-2" />
-                    Submit for Approval
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {canShareWithClient ? (
+                    <Button
+                      type="button"
+                      variant={selectedDocument.shared_with_client ? "outline" : "default"}
+                      disabled={shareBusy}
+                      onClick={() =>
+                        void handleToggleClientShare(
+                          selectedDocument.id,
+                          selectedDocument.shared_with_client,
+                        )
+                      }
+                      className={
+                        selectedDocument.shared_with_client
+                          ? "border-white/15 bg-white/[0.03]"
+                          : "bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] hover:from-white hover:to-[#d8d8d8]"
+                      }
+                    >
+                      {shareBusy ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Share2 className="size-4" />
+                      )}
+                      {selectedDocument.shared_with_client
+                        ? "Unshare from client"
+                        : "Share with client"}
+                    </Button>
+                  ) : null}
+                  {selectedDocument.approval_status === "draft" && !selectedDocument.is_locked && (
+                    <Button onClick={() => handleSubmit(selectedDocument.id)} className="bg-tag-blue hover:bg-tag-blue/90">
+                      <Bot className="size-4 mr-2" />
+                      Submit for Approval
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
 
@@ -383,6 +444,12 @@ function DocumentRow({
               </Pill>
             )}
             {doc.is_archived && <Pill className="bg-frame text-muted-foreground">Archived</Pill>}
+            {doc.shared_with_client && (
+              <Pill className="bg-status-ontrack/20 text-status-ontrack">
+                <Share2 className="size-3" />
+                Client
+              </Pill>
+            )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}

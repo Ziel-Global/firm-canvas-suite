@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 const BUCKET = "case-documents";
 
@@ -48,6 +50,8 @@ export interface CaseDocument {
   uploaded_by: string | null;
   uploader_name: string | null;
   created_at: string;
+  /** True when this document is shared with the case's linked portal client. */
+  shared_with_client: boolean;
 }
 
 // --- MALWARE SCANNING HOOK ---
@@ -135,6 +139,33 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
       }
     }
 
+    const sharedIds = new Set<string>();
+    const { data: caseRow } = await supabase
+      .from("cases")
+      .select("client_id")
+      .eq("id", data.caseId)
+      .maybeSingle();
+    if (caseRow?.client_id) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("user_id")
+        .eq("id", caseRow.client_id)
+        .maybeSingle();
+      if (client?.user_id) {
+        const { data: shares } = await supabase
+          .from("document_shares")
+          .select("document_id")
+          .eq("shared_with", client.user_id)
+          .in(
+            "document_id",
+            docs.map((d) => d.id),
+          );
+        for (const s of shares ?? []) {
+          if (s.document_id) sharedIds.add(s.document_id);
+        }
+      }
+    }
+
     return docs.map((d) => ({
       id: d.id,
       folder_id: d.folder_id,
@@ -150,6 +181,7 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
       uploaded_by: d.uploaded_by,
       uploader_name: d.uploaded_by ? (nameById.get(d.uploaded_by) ?? null) : null,
       created_at: d.created_at as string,
+      shared_with_client: sharedIds.has(d.id),
     }));
   });
 
@@ -504,12 +536,9 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
       uploaded_by: d.uploaded_by,
       uploader_name: d.uploaded_by ? (nameById.get(d.uploaded_by) ?? null) : null,
       created_at: d.created_at as string,
+      shared_with_client: false,
     }));
   });
-
-/**
- * Submit a document for approval.
- */
 export const submitForApproval = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { documentId: string }) => {
@@ -661,4 +690,209 @@ export const createAiDocument = createServerFn({ method: "POST" })
     if (docError) throw new Error(`Database error: ${docError.message}`);
 
     return { ok: true };
+  });
+
+export interface ClientShareStatus {
+  shared: boolean;
+  canShare: boolean;
+  clientName: string | null;
+  reason: string | null;
+}
+
+async function requireAdminRole(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+) {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (profile?.role !== "super_admin" && profile?.role !== "admin") {
+    throw new Error("Only admins can share documents with clients.");
+  }
+  return profile.role as "super_admin" | "admin";
+}
+
+async function resolveCasePortalClient(
+  supabase: SupabaseClient<Database>,
+  caseId: string,
+): Promise<{ clientId: string; clientName: string; userId: string } | null> {
+  const { data: caseRow, error: caseErr } = await supabase
+    .from("cases")
+    .select("id, client_id")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (caseErr) throw new Error(caseErr.message);
+  if (!caseRow?.client_id) return null;
+
+  const { data: client, error: clientErr } = await supabase
+    .from("clients")
+    .select("id, full_name, user_id")
+    .eq("id", caseRow.client_id)
+    .maybeSingle();
+  if (clientErr) throw new Error(clientErr.message);
+  if (!client?.user_id) return null;
+
+  return {
+    clientId: client.id as string,
+    clientName: (client.full_name as string) ?? "Client",
+    userId: client.user_id as string,
+  };
+}
+
+/**
+ * Whether the document is shared with the case's portal-linked client.
+ */
+export const getDocumentClientShareStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { documentId: string }) => {
+    if (!input?.documentId) throw new Error("A document id is required.");
+    return { documentId: input.documentId };
+  })
+  .handler(async ({ data, context }): Promise<ClientShareStatus> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+
+    const { data: doc, error: docErr } = await supabase
+      .from("documents")
+      .select("id, case_id, title")
+      .eq("id", data.documentId)
+      .maybeSingle();
+    if (docErr) throw new Error(docErr.message);
+    if (!doc?.case_id) throw new Error("Document not found.");
+
+    const portalClient = await resolveCasePortalClient(supabase, doc.case_id);
+    if (!portalClient) {
+      return {
+        shared: false,
+        canShare: false,
+        clientName: null,
+        reason:
+          "This case has no client with a portal login. Link a client user first.",
+      };
+    }
+
+    const { data: share, error: shareErr } = await supabase
+      .from("document_shares")
+      .select("id")
+      .eq("document_id", data.documentId)
+      .eq("shared_with", portalClient.userId)
+      .maybeSingle();
+    if (shareErr) throw new Error(shareErr.message);
+
+    return {
+      shared: Boolean(share),
+      canShare: true,
+      clientName: portalClient.clientName,
+      reason: null,
+    };
+  });
+
+/**
+ * Share a single document with the case’s portal client (admins only).
+ * Visible in the client portal via document_shares RLS.
+ */
+export const shareDocumentWithClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { documentId: string }) => {
+    if (!input?.documentId) throw new Error("A document id is required.");
+    return { documentId: input.documentId };
+  })
+  .handler(async ({ data, context }): Promise<{ ok: true; clientName: string }> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+
+    const { data: doc, error: docErr } = await supabase
+      .from("documents")
+      .select("id, case_id, title")
+      .eq("id", data.documentId)
+      .maybeSingle();
+    if (docErr) throw new Error(docErr.message);
+    if (!doc?.case_id) throw new Error("Document not found.");
+
+    const portalClient = await resolveCasePortalClient(supabase, doc.case_id);
+    if (!portalClient) {
+      throw new Error(
+        "This case has no client with a portal login. Link a client user first.",
+      );
+    }
+
+    const { error: upsertErr } = await supabase.from("document_shares").upsert(
+      {
+        document_id: data.documentId,
+        shared_with: portalClient.userId,
+        shared_by: userId,
+        can_download: true,
+      },
+      { onConflict: "document_id,shared_with" },
+    );
+    if (upsertErr) throw new Error(upsertErr.message);
+
+    const { error: logErr } = await supabase.from("activity_log").insert({
+      case_id: doc.case_id,
+      actor_id: userId,
+      action: "document_shared_with_client",
+      detail: {
+        document_id: data.documentId,
+        document_title: doc.title,
+        client_id: portalClient.clientId,
+        client_name: portalClient.clientName,
+        shared_with: portalClient.userId,
+      },
+    });
+    if (logErr) throw new Error(logErr.message);
+
+    return { ok: true, clientName: portalClient.clientName };
+  });
+
+/**
+ * Remove portal visibility for a document previously shared with the client.
+ */
+export const unshareDocumentWithClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { documentId: string }) => {
+    if (!input?.documentId) throw new Error("A document id is required.");
+    return { documentId: input.documentId };
+  })
+  .handler(async ({ data, context }): Promise<{ ok: true; clientName: string }> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+
+    const { data: doc, error: docErr } = await supabase
+      .from("documents")
+      .select("id, case_id, title")
+      .eq("id", data.documentId)
+      .maybeSingle();
+    if (docErr) throw new Error(docErr.message);
+    if (!doc?.case_id) throw new Error("Document not found.");
+
+    const portalClient = await resolveCasePortalClient(supabase, doc.case_id);
+    if (!portalClient) {
+      throw new Error("No portal client is linked to this case.");
+    }
+
+    const { error: delErr } = await supabase
+      .from("document_shares")
+      .delete()
+      .eq("document_id", data.documentId)
+      .eq("shared_with", portalClient.userId);
+    if (delErr) throw new Error(delErr.message);
+
+    const { error: logErr } = await supabase.from("activity_log").insert({
+      case_id: doc.case_id,
+      actor_id: userId,
+      action: "document_unshared_with_client",
+      detail: {
+        document_id: data.documentId,
+        document_title: doc.title,
+        client_id: portalClient.clientId,
+        client_name: portalClient.clientName,
+        shared_with: portalClient.userId,
+      },
+    });
+    if (logErr) throw new Error(logErr.message);
+
+    return { ok: true, clientName: portalClient.clientName };
   });
