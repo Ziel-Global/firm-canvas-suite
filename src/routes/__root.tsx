@@ -13,7 +13,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar, AppSidebarProvider, AppMain } from "@/components/app-sidebar";
+import { GlobalLoadingBar } from "@/components/global-loading-bar";
+import { PremiumLoaderPanel } from "@/components/premium-loader";
 import { TopBar } from "@/components/top-bar";
 import { AuthProvider } from "@/contexts/auth-context";
 
@@ -78,6 +80,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  pendingComponent: () => (
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-[1440px] pt-10">
+        <PremiumLoaderPanel label="Loading page…" />
+      </div>
+    </main>
+  ),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -149,14 +158,17 @@ function RootComponent() {
         {isAuthRoute ? (
           <Outlet />
         ) : (
-          <div className="min-h-screen bg-canvas">
-            <AppSidebar />
-            <div className="pl-16 lg:pl-64">
-              <TopBar />
-              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-              <Outlet />
+          <AppSidebarProvider>
+            <div className="min-h-screen bg-canvas">
+              <GlobalLoadingBar />
+              <AppSidebar />
+              <AppMain>
+                <TopBar />
+                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                <Outlet />
+              </AppMain>
             </div>
-          </div>
+          </AppSidebarProvider>
         )}
       </AuthProvider>
     </QueryClientProvider>

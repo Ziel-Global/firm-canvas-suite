@@ -1,52 +1,126 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Bot, ShieldAlert, Sparkles, FileText, Search, Activity, Mic, Loader2 } from "lucide-react";
+import {
+  Bot,
+  ShieldAlert,
+  Sparkles,
+  FileText,
+  Search,
+  Activity,
+  Mic,
+  Loader2,
+  FlaskConical,
+  Terminal,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ai-lab")({
   head: () => ({
     meta: [
-      { title: "AI Lab — Law Firm Ops" },
-      { name: "description", content: "Test and debug AI Edge Functions." },
+      { title: "AI Lab — SAS Associates" },
+      {
+        name: "description",
+        content: "Sandboxed AI Edge Function testing environment.",
+      },
     ],
   }),
   component: AILabPage,
 });
 
-type AIJobKind = 'proofread' | 'draft' | 'summarise' | 'search' | 'risk_scan' | 'transcribe';
+type AIJobKind =
+  | "proofread"
+  | "draft"
+  | "summarise"
+  | "search"
+  | "risk_scan"
+  | "transcribe";
+
+const TABS: {
+  id: AIJobKind;
+  label: string;
+  description: string;
+  icon: typeof FileText;
+  placeholder: string;
+}[] = [
+  {
+    id: "summarise",
+    label: "Summarise",
+    description: "Condense long documents",
+    icon: FileText,
+    placeholder: "Paste document text to summarise…",
+  },
+  {
+    id: "proofread",
+    label: "Proofread",
+    description: "Grammar and tone check",
+    icon: Sparkles,
+    placeholder: "Paste text to check for grammar and tone…",
+  },
+  {
+    id: "risk_scan",
+    label: "Risk scan",
+    description: "Clauses and liabilities",
+    icon: ShieldAlert,
+    placeholder:
+      "Paste legal text to scan for missing clauses and liabilities…",
+  },
+  {
+    id: "draft",
+    label: "Draft",
+    description: "Generate clauses",
+    icon: Bot,
+    placeholder: "Describe the document or clause you want to generate…",
+  },
+  {
+    id: "search",
+    label: "Search",
+    description: "Semantic retrieval",
+    icon: Search,
+    placeholder: "Enter semantic search query…",
+  },
+  {
+    id: "transcribe",
+    label: "Transcribe",
+    description: "Audio to text",
+    icon: Mic,
+    placeholder: "Provide audio URL or base64 (mocked)…",
+  },
+];
 
 function AILabPage() {
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
 
-  const [activeTab, setActiveTab] = useState<AIJobKind>('summarise');
+  const [activeTab, setActiveTab] = useState<AIJobKind>("summarise");
   const [inputText, setInputText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [output, setOutput] = useState<any>(null);
+  const [output, setOutput] = useState<{
+    error?: string;
+    success?: boolean;
+    kind?: AIJobKind;
+    result?: string;
+  } | null>(null);
 
   if (!isSuperAdmin) {
     return (
-      <main className="px-4 py-6 sm:px-6">
-        <h2 className="text-2xl font-semibold text-foreground">AI Lab</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Only Super Admins can access the AI Lab.</p>
+      <main className="dashboard-shell px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          AI Lab
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Only Super Admins can access the AI Lab.
+        </p>
       </main>
     );
   }
 
-  const tabs: { id: AIJobKind; label: string; icon: React.ReactNode; placeholder: string }[] = [
-    { id: 'summarise', label: 'Summarise', icon: <FileText className="size-4" />, placeholder: 'Paste document text to summarise...' },
-    { id: 'proofread', label: 'Proofread', icon: <Sparkles className="size-4" />, placeholder: 'Paste text to check for grammar and tone...' },
-    { id: 'risk_scan', label: 'Risk Scan', icon: <ShieldAlert className="size-4" />, placeholder: 'Paste legal text to scan for missing clauses and liabilities...' },
-    { id: 'draft', label: 'Draft', icon: <Bot className="size-4" />, placeholder: 'Describe the document or clause you want to generate...' },
-    { id: 'search', label: 'Search', icon: <Search className="size-4" />, placeholder: 'Enter semantic search query...' },
-    { id: 'transcribe', label: 'Transcribe', icon: <Mic className="size-4" />, placeholder: 'Provide audio URL or base64 (mocked)...' },
-  ];
+  const active = TABS.find((t) => t.id === activeTab) ?? TABS[0];
 
   const handleRunAI = async () => {
     if (!inputText.trim()) {
@@ -57,15 +131,19 @@ function AILabPage() {
     setIsProcessing(true);
     setOutput(null);
 
-    // MOCKING THE EDGE FUNCTION CALL
     setTimeout(() => {
       setIsProcessing(false);
-      
-      // Enforce limits checks (mocked)
+
       const lower = inputText.toLowerCase();
-      if (lower.includes("approve") || lower.includes("send email") || lower.includes("schedule") || lower.includes("bill")) {
+      if (
+        lower.includes("approve") ||
+        lower.includes("send email") ||
+        lower.includes("schedule") ||
+        lower.includes("bill")
+      ) {
         setOutput({
-          error: "Edge Function Blocked: AI operations are strictly sandboxed. The AI is restricted from approving documents, communicating with clients, making scheduling commitments, or accessing billing data."
+          error:
+            "Edge Function Blocked: AI operations are strictly sandboxed. The AI is restricted from approving documents, communicating with clients, making scheduling commitments, or accessing billing data.",
         });
         toast.error("AI execution blocked by safety limits.");
         return;
@@ -74,82 +152,205 @@ function AILabPage() {
       setOutput({
         success: true,
         kind: activeTab,
-        result: `[Mock AI Output for ${activeTab.toUpperCase()}]\n\nProcessed input of ${inputText.length} characters successfully. This represents the structured JSON output that the ai-jobs edge function would save and return.`
+        result: `[Mock AI Output for ${activeTab.toUpperCase()}]\n\nProcessed input of ${inputText.length} characters successfully. This represents the structured JSON output that the ai-jobs edge function would save and return.`,
       });
       toast.success("AI job completed");
     }, 1500);
   };
 
   return (
-    <main className="px-4 py-6 sm:px-6 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-          <Bot className="size-6 text-tag-blue" />
-          AI Lab Sandbox
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground max-w-3xl">
-          Simulated UI for the <code className="bg-muted px-1 py-0.5 rounded text-xs">ai-run</code> Edge Function.
-          The AI assists, flags, summarises, and drafts. It is strictly sandboxed: it never approves, never sends client communication, never modifies records, and has no billing access.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="col-span-1 p-2 flex flex-col gap-1 bg-frame/50">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setOutput(null);
-                setInputText("");
-              }}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "bg-tag-blue text-white shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </Card>
-
-        <div className="col-span-1 md:col-span-3 flex flex-col gap-4 min-h-[400px]">
-          <Card className="p-4 flex flex-col gap-4 flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="size-4 text-muted-foreground" />
-              <h3 className="text-sm font-medium">Input Payload</h3>
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-7 pb-10">
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div className="min-w-0 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1">
+              <FlaskConical className="size-3 text-muted-foreground" />
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Firm · Sandboxed runtime
+              </span>
             </div>
-            
-            <Textarea
-              className="flex-1 min-h-[200px] resize-none font-mono text-sm"
-              placeholder={tabs.find(t => t.id === activeTab)?.placeholder}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+              AI Lab
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Simulated console for the{" "}
+              <code className="rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[11px] text-foreground/85">
+                ai-run
+              </code>{" "}
+              Edge Function. Assists, flags, summarises, and drafts — never
+              approves, never emails clients, never writes records, never
+              touches billing.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-4 py-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-white/[0.05] text-muted-foreground">
+              <ShieldAlert className="size-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Safety
+              </p>
+              <p className="mt-0.5 text-sm font-medium text-foreground">
+                Hard sandbox enforced
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          {/* Tool rail */}
+          <Card className="relative overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-2 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)] lg:col-span-3">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
             />
-
-            <div className="flex justify-between items-center mt-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-amber-500/10 text-amber-600 dark:text-amber-400 px-3 py-1.5 rounded-full border border-amber-500/20">
-                <ShieldAlert className="size-3" />
-                <span>Strict AI Sandboxing Enforced</span>
-              </div>
-              <Button onClick={handleRunAI} disabled={isProcessing} className="w-32 bg-tag-blue hover:bg-tag-blue/90">
-                {isProcessing ? <Loader2 className="size-4 animate-spin" /> : "Run AI Job"}
-              </Button>
+            <div className="px-3 pb-2 pt-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Capabilities
+              </p>
             </div>
+            <nav className="flex flex-col gap-1 p-1">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const selected = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setOutput(null);
+                      setInputText("");
+                    }}
+                    className={cn(
+                      "flex items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                      selected
+                        ? "bg-white/[0.1] text-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border",
+                        selected
+                          ? "border-white/15 bg-white/[0.08] text-foreground"
+                          : "border-white/[0.06] bg-white/[0.03]",
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium tracking-tight">
+                        {tab.label}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        {tab.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
           </Card>
 
-          {output && (
-            <Card className={`p-4 border-l-4 ${output.error ? "border-l-destructive bg-destructive/5" : "border-l-tag-blue bg-tag-blue/5"}`}>
-              <h3 className={`text-sm font-semibold mb-2 ${output.error ? "text-destructive" : "text-tag-blue"}`}>
-                {output.error ? "Execution Blocked" : "Edge Function Output"}
-              </h3>
-              <pre className="whitespace-pre-wrap text-sm font-mono text-foreground/80">
-                {output.error || output.result}
-              </pre>
+          {/* Workspace */}
+          <div className="flex min-h-[480px] flex-col gap-4 lg:col-span-9">
+            <Card className="relative flex flex-1 flex-col overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-0 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
+              />
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
+                    <Activity className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                      Input payload
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold tracking-tight text-foreground">
+                      {active.label}
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {active.id}
+                </span>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-4 p-5">
+                <Textarea
+                  className="min-h-[240px] flex-1 resize-none border-white/[0.08] bg-[#141518] font-mono text-sm leading-relaxed focus-visible:ring-white/10"
+                  placeholder={active.placeholder}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[11px] font-medium text-amber-200/90">
+                    <ShieldAlert className="size-3.5" />
+                    Strict sandboxing enforced
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {inputText.length.toLocaleString()} chars
+                    </span>
+                    <Button
+                      onClick={handleRunAI}
+                      disabled={isProcessing}
+                      className="min-w-[9.5rem] gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {isProcessing ? "Running…" : "Run AI job"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </Card>
-          )}
+
+            {output ? (
+              <Card
+                className={cn(
+                  "relative overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-0 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]",
+                  output.error
+                    ? "border-l-2 border-l-priority-high"
+                    : "border-l-2 border-l-white/40",
+                )}
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="size-3.5 text-muted-foreground" />
+                    <p
+                      className={cn(
+                        "text-[11px] font-medium uppercase tracking-[0.14em]",
+                        output.error
+                          ? "text-priority-high"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {output.error
+                        ? "Execution blocked"
+                        : "Edge function output"}
+                    </p>
+                  </div>
+                  {output.kind ? (
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {output.kind}
+                    </span>
+                  ) : null}
+                </div>
+                <pre className="whitespace-pre-wrap px-5 py-4 font-mono text-sm leading-relaxed text-foreground/85">
+                  {output.error || output.result}
+                </pre>
+              </Card>
+            ) : null}
+          </div>
         </div>
       </div>
     </main>

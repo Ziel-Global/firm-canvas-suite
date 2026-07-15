@@ -699,6 +699,11 @@ export type Database = {
           is_locked: boolean | null
           title: string | null
           uploaded_by: string | null
+          approval_status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          approved_at: string | null
+          approved_by: string | null
         }
         Insert: {
           case_id?: string | null
@@ -712,6 +717,11 @@ export type Database = {
           is_locked?: boolean | null
           title?: string | null
           uploaded_by?: string | null
+          approval_status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
         }
         Update: {
           case_id?: string | null
@@ -725,6 +735,11 @@ export type Database = {
           is_locked?: boolean | null
           title?: string | null
           uploaded_by?: string | null
+          approval_status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
         }
         Relationships: [
           {

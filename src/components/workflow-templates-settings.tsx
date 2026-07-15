@@ -12,10 +12,8 @@ import {
 } from "@/lib/workflow-templates.functions";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill } from "@/components/ui/pill";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +32,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { WorkflowTemplateEditor } from "@/components/workflow-template-editor";
+import { SettingsSection } from "@/components/settings-section";
+import { cn } from "@/lib/utils";
 
 export function WorkflowTemplatesSettings() {
   const { role } = useAuth();
@@ -88,140 +88,180 @@ export function WorkflowTemplatesSettings() {
 
   if (editingId) {
     return (
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">
-          Workflow Templates
-        </h2>
+      <SettingsSection
+        eyebrow="Workflows"
+        title="Workflow templates"
+        description="Editing stages for this reusable workflow."
+        bare
+      >
         <WorkflowTemplateEditor
           templateId={editingId}
           onClose={() => setEditingId(null)}
         />
-      </section>
+      </SettingsSection>
     );
   }
 
   const grouped = groupByCaseType(templates ?? []);
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            Workflow Templates
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Reusable stage workflows applied when creating cases, grouped by
-            case type.
-          </p>
-        </div>
-        <Button onClick={() => setNewOpen(true)}>
-          <Plus className="mr-1 size-4" /> New template
-        </Button>
-      </div>
-
-      {isLoading && (
-        <Card className="p-6 text-sm text-muted-foreground">Loading…</Card>
-      )}
-
-      {!isLoading && (templates?.length ?? 0) === 0 && (
-        <Card className="flex flex-col items-center gap-2 p-10 text-center">
-          <Workflow className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No workflow templates yet.
-          </p>
-        </Card>
-      )}
-
-      {grouped.map(([caseType, items]) => (
-        <div key={caseType} className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {caseType}
-          </h3>
-          <div className="space-y-2">
-            {items.map((t) => (
-              <Card
-                key={t.id}
-                className="flex items-center justify-between gap-3 p-4"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium text-foreground">
-                      {t.name ?? "Untitled"}
-                    </span>
-                    {!t.is_active && (
-                      <Pill className="bg-muted/30 text-muted-foreground">
-                        Inactive
-                      </Pill>
-                    )}
-                  </div>
-                  {t.description && (
-                    <p className="truncate text-sm text-muted-foreground">
-                      {t.description}
-                    </p>
-                  )}
+    <>
+      <SettingsSection
+        eyebrow="Workflows"
+        title="Workflow templates"
+        description="Reusable stage workflows applied when creating cases, grouped by case type."
+        action={
+          <Button
+            onClick={() => setNewOpen(true)}
+            className="h-9 gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] px-3 text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
+          >
+            <Plus className="size-4" />
+            New template
+          </Button>
+        }
+      >
+        {isLoading ? (
+          <div className="px-5 py-14 text-center text-sm text-muted-foreground">
+            Loading templates…
+          </div>
+        ) : (templates?.length ?? 0) === 0 ? (
+          <div className="relative px-6 py-16 text-center">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.05),transparent_55%)]"
+            />
+            <div className="relative mx-auto flex size-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
+              <Workflow className="size-5" />
+            </div>
+            <p className="relative mt-4 text-sm font-medium text-foreground">
+              No workflow templates yet
+            </p>
+            <p className="relative mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Create a reusable stage sequence to speed up new matters.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/[0.06]">
+            {grouped.map(([caseType, items]) => (
+              <div key={caseType}>
+                <div className="border-b border-white/[0.04] bg-white/[0.015] px-4 py-2.5 sm:px-5">
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    {caseType}
+                  </span>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Pill className="bg-tag-blue/40 text-foreground">
-                    {t.stage_count} stage{t.stage_count === 1 ? "" : "s"}
-                  </Pill>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingId(t.id)}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteId(t.id)}
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </div>
-              </Card>
+                <ul className="divide-y divide-white/[0.06]">
+                  {items.map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
+                          <Workflow className="size-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+                              {t.name ?? "Untitled"}
+                            </span>
+                            {!t.is_active ? (
+                              <span className="rounded-md bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Inactive
+                              </span>
+                            ) : null}
+                            <span className="rounded-md bg-white/[0.08] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide tabular-nums text-foreground/85">
+                              {t.stage_count} stage
+                              {t.stage_count === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                          {t.description ? (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {t.description}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2 pl-12 sm:pl-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingId(t.id)}
+                          className="h-8 border border-white/[0.08] bg-white/[0.03] px-2.5 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteId(t.id)}
+                          className="h-8 border border-white/[0.08] bg-white/[0.03] px-2.5 text-muted-foreground hover:border-priority-high/30 hover:bg-priority-high/10 hover:text-priority-high"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
-        </div>
-      ))}
+        )}
+      </SettingsSection>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent>
+        <DialogContent className="border-white/[0.1] bg-[rgba(18,18,20,0.98)]">
           <DialogHeader>
             <DialogTitle>New workflow template</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Template name</Label>
+              <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Template name
+              </Label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Standard Litigation Workflow"
+                className="h-10 border-white/[0.08] bg-[#17191D]"
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Case type</Label>
+              <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Case type
+              </Label>
               <Input
                 value={newCaseType}
                 onChange={(e) => setNewCaseType(e.target.value)}
                 placeholder="e.g. Litigation"
+                className="h-10 border-white/[0.08] bg-[#17191D]"
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Description
+              </Label>
               <Input
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
+                className="h-10 border-white/[0.08] bg-[#17191D]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setNewOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => setNewOpen(false)}
+              className="border border-white/[0.08] bg-white/[0.03]"
+            >
               Cancel
             </Button>
             <Button
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !newName.trim()}
+              className={cn(
+                "border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]",
+              )}
             >
               Create &amp; add stages
             </Button>
@@ -233,25 +273,28 @@ export function WorkflowTemplatesSettings() {
         open={deleteId !== null}
         onOpenChange={(o) => !o && setDeleteId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="border-white/[0.1] bg-[rgba(18,18,20,0.98)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete template?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the template and all its stages. Cases already
-              created from it are unaffected.
+              This removes the template and all its stages. Cases already created
+              from it are unaffected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-white/[0.08] bg-white/[0.03]">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-priority-high text-white hover:bg-priority-high/90"
             >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   );
 }
 

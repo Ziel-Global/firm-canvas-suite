@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { X, Loader2, User, Layers, CalendarDays, Activity, AlertTriangle, Clock, ExternalLink, Tag } from "lucide-react";
+import { X, User, Layers, CalendarDays, Activity, AlertTriangle, Clock, ExternalLink, Tag } from "lucide-react";
 import { getCaseDrillDown } from "@/lib/drilldown.functions";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/premium-loader";
+import { InlineLoaderSkeleton } from "@/components/loading-skeletons";
 
 const HEALTH_MAP: Record<string, "ontrack" | "atrisk" | "overdue"> = {
   on_track: "ontrack",
@@ -68,8 +70,9 @@ export function CaseDrillDownSheet({ caseId, caseTitle, onClose }: CaseDrillDown
         </div>
 
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+            <PremiumLoader size="md" label="Loading case…" />
+            <InlineLoaderSkeleton lines={4} className="w-full max-w-sm" />
           </div>
         ) : !data ? null : (
           <div className="flex-1 overflow-y-auto">

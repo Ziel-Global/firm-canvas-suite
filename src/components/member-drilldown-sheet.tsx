@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { X, Briefcase, CheckSquare, AlertTriangle, Clock, Zap, Loader2, ExternalLink } from "lucide-react";
+import { X, Briefcase, CheckSquare, AlertTriangle, Clock, Zap, ExternalLink } from "lucide-react";
 import { getMemberDrillDown } from "@/lib/drilldown.functions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/premium-loader";
+import { InlineLoaderSkeleton } from "@/components/loading-skeletons";
 
 const BANDWIDTH_CONFIG = {
   available: { label: "Available", className: "bg-tag-green/15 text-tag-green border-tag-green/30" },
@@ -68,8 +70,9 @@ export function MemberDrillDownSheet({ memberId, memberName, onClose }: MemberDr
         </div>
 
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
+            <PremiumLoader size="md" label="Loading member…" />
+            <InlineLoaderSkeleton lines={4} className="w-full max-w-sm" />
           </div>
         ) : !data ? null : (
           <div className="flex-1 overflow-y-auto">

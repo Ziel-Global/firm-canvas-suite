@@ -60,8 +60,8 @@ function startEndOfDay(date: Date) {
 /**
  * Assembles the Super Admin's morning digest: today's schedule (including the
  * principal-private layer), all pending approvals, and overdue tasks across the
- * firm. Restricted to super_admin. Delivery is wired in Part H using
- * firm_settings.morning_digest_time.
+ * firm. Restricted to super_admin. Email delivery runs via the
+ * `send-morning-digest` edge function at firm_settings.morning_digest_time.
  */
 export const getMorningDigest = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

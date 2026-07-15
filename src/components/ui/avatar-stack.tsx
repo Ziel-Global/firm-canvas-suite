@@ -2,13 +2,6 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const TINTS = [
-  "bg-tag-purple",
-  "bg-tag-blue",
-  "bg-tag-sand",
-  "bg-tag-green",
-] as const;
-
 function initials(name: string) {
   return name
     .split(" ")
@@ -35,8 +28,9 @@ const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
             key={`${person.name}-${i}`}
             title={person.name}
             className={cn(
-              "flex size-8 items-center justify-center rounded-pill text-xs font-semibold text-primary-ink ring-2 ring-card",
-              TINTS[i % TINTS.length],
+              "flex size-8 items-center justify-center rounded-full text-[10px] font-semibold tracking-wide text-foreground/90",
+              "border border-white/15 bg-gradient-to-b from-white/[0.14] to-white/[0.04]",
+              "ring-2 ring-[rgba(12,12,14,0.95)]",
               i > 0 && "-ml-2",
             )}
           >
@@ -44,7 +38,7 @@ const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
               <img
                 src={person.src}
                 alt={person.name}
-                className="size-full rounded-pill object-cover"
+                className="size-full rounded-full object-cover"
               />
             ) : (
               initials(person.name)
@@ -52,7 +46,7 @@ const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
           </div>
         ))}
         {overflow > 0 && (
-          <div className="-ml-2 flex size-8 items-center justify-center rounded-pill bg-frame text-xs font-semibold text-muted-foreground ring-2 ring-card">
+          <div className="-ml-2 flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[10px] font-semibold text-muted-foreground ring-2 ring-[rgba(12,12,14,0.95)]">
             +{overflow}
           </div>
         )}

@@ -2,17 +2,23 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, LayoutGrid, Table as TableIcon, CalendarClock, User, Plus } from "lucide-react";
+import {
+  Search,
+  LayoutGrid,
+  Table as TableIcon,
+  CalendarClock,
+  User,
+  Plus,
+  ChevronRight,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { NewCaseSheet } from "@/components/new-case-sheet";
-
 import { useAuth } from "@/contexts/auth-context";
 import { listCases, type CaseRow } from "@/lib/cases.functions";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Input } from "@/components/ui/input";
-import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import {
   Select,
   SelectContent,
@@ -29,24 +35,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { TableSkeleton, CardsSkeleton } from "@/components/loading-skeletons";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases")({
   head: () => ({
     meta: [
-      { title: "Cases — Law Firm Ops" },
-      { name: "description", content: "Cases section for the firm operations system." },
+      { title: "Cases — SAS Associates" },
+      {
+        name: "description",
+        content: "Cases section for the firm operations system.",
+      },
     ],
   }),
   component: CasesPage,
 });
 
 type ViewMode = "table" | "cards";
-
-const HEALTH_MAP: Record<string, NonNullable<StatusDotProps["status"]>> = {
-  on_track: "ontrack",
-  at_risk: "atrisk",
-  overdue: "overdue",
-};
 
 const STATUS_LABELS: Record<string, string> = {
   intake: "Intake",
@@ -70,9 +75,40 @@ function formatDate(value: string | null) {
   });
 }
 
-function healthDot(health: string | null) {
-  const status = health ? HEALTH_MAP[health] : undefined;
-  return <StatusDot status={status ?? "ontrack"} label={health ? HEALTH_LABELS[health] : "—"} />;
+function healthBadge(health: string | null) {
+  const key = health ?? "on_track";
+  const label = HEALTH_LABELS[key] ?? "—";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] whitespace-nowrap",
+        key === "overdue"
+          ? "border-priority-high/25 bg-priority-high/12 text-priority-high"
+          : key === "at_risk"
+            ? "border-amber-500/25 bg-amber-500/12 text-amber-200/90"
+            : "border-white/10 bg-white/[0.06] text-foreground/85",
+      )}
+    >
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          key === "overdue"
+            ? "bg-priority-high shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+            : key === "at_risk"
+              ? "bg-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.12)]"
+              : "bg-emerald-400/90 shadow-[0_0_0_3px_rgba(52,211,153,0.12)]",
+        )}
+      />
+      {label}
+    </span>
+  );
+}
+
+function initials(name: string | null) {
+  if (!name?.trim()) return null;
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 function CasesPage() {
@@ -98,14 +134,22 @@ function CasesPage() {
   const caseTypes = useMemo(
     () =>
       Array.from(
-        new Set((data ?? []).map((c) => c.case_type).filter((v): v is string => Boolean(v))),
+        new Set(
+          (data ?? [])
+            .map((c) => c.case_type)
+            .filter((v): v is string => Boolean(v)),
+        ),
       ).sort(),
     [data],
   );
   const assignees = useMemo(
     () =>
       Array.from(
-        new Set((data ?? []).map((c) => c.lead_name).filter((v): v is string => Boolean(v))),
+        new Set(
+          (data ?? [])
+            .map((c) => c.lead_name)
+            .filter((v): v is string => Boolean(v)),
+        ),
       ).sort(),
     [data],
   );
@@ -124,7 +168,8 @@ function CasesPage() {
         return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       if (typeFilter !== "all" && c.case_type !== typeFilter) return false;
-      if (assigneeFilter !== "all" && c.lead_name !== assigneeFilter) return false;
+      if (assigneeFilter !== "all" && c.lead_name !== assigneeFilter)
+        return false;
       if (healthFilter !== "all" && c.health !== healthFilter) return false;
       return true;
     });
@@ -132,8 +177,10 @@ function CasesPage() {
 
   if (!canView) {
     return (
-      <main className="px-4 py-6 sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Cases</h2>
+      <main className="dashboard-shell px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          Cases
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to view this page.
         </p>
@@ -142,205 +189,379 @@ function CasesPage() {
   }
 
   return (
-    <main className="px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Cases</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Cases you can access based on your role and assignments.
-          </p>
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-[1440px] space-y-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Workspace
+            </p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+              Cases
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Role-scoped matters across the firm portfolio
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(v) => v && setView(v as ViewMode)}
+              className="rounded-xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1"
+            >
+              <ToggleGroupItem
+                value="table"
+                aria-label="Table view"
+                className="gap-1.5 rounded-lg px-3 data-[state=on]:bg-white/[0.08] data-[state=on]:text-foreground"
+              >
+                <TableIcon className="size-3.5" />
+                Table
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="cards"
+                aria-label="Card view"
+                className="gap-1.5 rounded-lg px-3 data-[state=on]:bg-white/[0.08] data-[state=on]:text-foreground"
+              >
+                <LayoutGrid className="size-3.5" />
+                Cards
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            {canCreate && (
+              <Button
+                onClick={() => setNewCaseOpen(true)}
+                className="gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
+              >
+                <Plus className="size-4" />
+                New case
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ToggleGroup
-            type="single"
-            value={view}
-            onValueChange={(v) => v && setView(v as ViewMode)}
-            className="rounded-control border border-border bg-surface p-1"
-          >
-            <ToggleGroupItem value="table" aria-label="Table view" className="gap-1.5">
-              <TableIcon className="size-4" />
-              Table
-            </ToggleGroupItem>
-            <ToggleGroupItem value="cards" aria-label="Card view" className="gap-1.5">
-              <LayoutGrid className="size-4" />
-              Cards
-            </ToggleGroupItem>
-          </ToggleGroup>
-          {canCreate && (
-            <Button onClick={() => setNewCaseOpen(true)} className="gap-1.5">
-              <Plus className="size-4" />
-              New case
-            </Button>
-          )}
-        </div>
-      </div>
 
-      {canCreate && <NewCaseSheet open={newCaseOpen} onOpenChange={setNewCaseOpen} />}
+        {canCreate && (
+          <NewCaseSheet open={newCaseOpen} onOpenChange={setNewCaseOpen} />
+        )}
 
+        {/* Filters */}
+        <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+            <div className="relative w-full lg:max-w-sm lg:flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search ref, title, or client"
+                className="h-10 border-white/[0.08] bg-[#17191D] pl-9 focus-visible:ring-white/10"
+              />
+            </div>
 
-      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
-        <div className="relative w-full lg:max-w-xs">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search ref, title, or client"
-            className="pl-9"
-          />
-        </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="intake">Intake</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="on_hold">On hold</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="intake">Intake</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="on_hold">On hold</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full lg:w-44">
-            <SelectValue placeholder="Case type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            {caseTypes.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-          <SelectTrigger className="w-full lg:w-44">
-            <SelectValue placeholder="Assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All assignees</SelectItem>
-            {assignees.map((a) => (
-              <SelectItem key={a} value={a}>
-                {a}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={healthFilter} onValueChange={setHealthFilter}>
-          <SelectTrigger className="w-full lg:w-40">
-            <SelectValue placeholder="Health" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All health</SelectItem>
-            <SelectItem value="on_track">On track</SelectItem>
-            <SelectItem value="at_risk">At risk</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isLoading && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">Loading cases…</p>
-      )}
-      {error && !isLoading && (
-        <p className="mt-8 text-center text-sm text-destructive">Could not load cases.</p>
-      )}
-      {!isLoading && !error && rows.length === 0 && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">No cases found.</p>
-      )}
-
-      {!isLoading && !error && rows.length > 0 && view === "table" && (
-        <Card className="mt-6 overflow-hidden p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Current stage</TableHead>
-                  <TableHead>Lead</TableHead>
-                  <TableHead>Next deadline</TableHead>
-                  <TableHead>Health</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((c: CaseRow) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        to="/cases/$caseId"
-                        params={{ caseId: c.id }}
-                        className="hover:underline"
-                      >
-                        {c.case_ref ?? "—"}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        to="/cases/$caseId"
-                        params={{ caseId: c.id }}
-                        className="hover:underline"
-                      >
-                        {c.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{c.client_name ?? "—"}</TableCell>
-                    <TableCell>{c.case_type ?? "—"}</TableCell>
-                    <TableCell>{c.current_stage_name ?? "—"}</TableCell>
-                    <TableCell>{c.lead_name ?? "—"}</TableCell>
-                    <TableCell>{formatDate(c.next_deadline)}</TableCell>
-                    <TableCell>{healthDot(c.health)}</TableCell>
-                  </TableRow>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-44">
+                <SelectValue placeholder="Case type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {caseTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
                 ))}
-              </TableBody>
-            </Table>
+              </SelectContent>
+            </Select>
+
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-44">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                {assignees.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={healthFilter} onValueChange={setHealthFilter}>
+              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-40">
+                <SelectValue placeholder="Health" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All health</SelectItem>
+                <SelectItem value="on_track">On track</SelectItem>
+                <SelectItem value="at_risk">At risk</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </Card>
-      )}
 
-      {!isLoading && !error && rows.length > 0 && view === "cards" && (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((c: CaseRow) => (
-            <Card key={c.id} className="flex flex-col gap-4 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <Link
-                  to="/cases/$caseId"
-                  params={{ caseId: c.id }}
-                  className="min-w-0"
-                >
-                  <p className="text-xs text-muted-foreground">{c.case_ref ?? "—"}</p>
-                  <h3 className="truncate text-base font-semibold text-foreground hover:underline">{c.title}</h3>
-                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                    {c.client_name ?? "—"}
-                  </p>
-                </Link>
-                {healthDot(c.health)}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {c.case_type && <Tag color="blue">{c.case_type}</Tag>}
-                {c.status && <Tag color="sand">{STATUS_LABELS[c.status] ?? c.status}</Tag>}
-                {c.current_stage_name && <Tag color="purple">{c.current_stage_name}</Tag>}
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <User className="size-4" />
-                  <span>Lead: {c.lead_name ?? "—"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <CalendarClock className="size-4" />
-                  <span>Next deadline: {formatDate(c.next_deadline)}</span>
-                </div>
-              </div>
-            </Card>
+        {isLoading &&
+          (view === "cards" ? (
+            <CardsSkeleton />
+          ) : (
+            <TableSkeleton rows={7} cols={6} />
           ))}
-        </div>
-      )}
+        {error && !isLoading && (
+          <p className="py-10 text-center text-sm text-destructive">
+            Could not load cases.
+          </p>
+        )}
+        {!isLoading && !error && rows.length === 0 && (
+          <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-6 py-14 text-center">
+            <p className="text-sm font-medium text-foreground">No cases found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Adjust filters or create a new matter to get started.
+            </p>
+          </Card>
+        )}
+
+        {!isLoading && !error && rows.length > 0 && view === "table" && (
+          <Card className="relative overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-0 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
+            />
+
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Case register
+                </span>
+                <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">
+                  {rows.length}
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                Click a matter to open
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/[0.06] hover:bg-transparent">
+                    {[
+                      "Reference",
+                      "Title",
+                      "Client",
+                      "Type",
+                      "Current stage",
+                      "Lead",
+                      "Next deadline",
+                      "Health",
+                      "",
+                    ].map((label) => (
+                      <TableHead
+                        key={label || "action"}
+                        className={cn(
+                          "sticky top-0 z-[1] h-12 bg-[rgba(16,16,18,0.92)] px-4 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground backdrop-blur-md first:pl-5 last:pr-5",
+                          label === "Health" && "text-right",
+                        )}
+                      >
+                        {label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((c: CaseRow) => {
+                    const overdue = c.health === "overdue";
+                    const leadInitials = initials(c.lead_name);
+                    return (
+                      <TableRow
+                        key={c.id}
+                        className={cn(
+                          "group border-white/[0.05] transition-colors hover:bg-white/[0.035]",
+                          overdue && "bg-priority-high/[0.03]",
+                        )}
+                      >
+                        <TableCell className="relative px-4 py-4 first:pl-5">
+                          {overdue ? (
+                            <span
+                              aria-hidden
+                              className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-priority-high/70"
+                            />
+                          ) : null}
+                          <Link
+                            to="/cases/$caseId"
+                            params={{ caseId: c.id }}
+                            className="inline-flex rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-1 font-mono text-[11px] font-semibold tracking-wide text-foreground/90 transition-colors hover:border-white/20 hover:bg-white/[0.08]"
+                          >
+                            {c.case_ref ?? "—"}
+                          </Link>
+                        </TableCell>
+
+                        <TableCell className="max-w-[260px] px-4 py-4">
+                          <Link
+                            to="/cases/$caseId"
+                            params={{ caseId: c.id }}
+                            className="block min-w-0"
+                          >
+                            <span className="block truncate text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:underline">
+                              {c.title}
+                            </span>
+                            {c.status ? (
+                              <span className="mt-1 block text-[11px] text-muted-foreground">
+                                {STATUS_LABELS[c.status] ?? c.status}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4 text-sm text-muted-foreground">
+                          <span className="truncate">
+                            {c.client_name ?? "—"}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4">
+                          {c.case_type ? (
+                            <span className="inline-flex rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground/85">
+                              {c.case_type}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4 text-sm text-muted-foreground">
+                          {c.current_stage_name ? (
+                            <span className="inline-flex max-w-[160px] truncate rounded-md bg-white/[0.03] px-2 py-1 text-xs text-foreground/80">
+                              {c.current_stage_name}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4">
+                          {c.lead_name ? (
+                            <div className="flex items-center gap-2.5">
+                              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-[10px] font-semibold tracking-wide text-foreground/85">
+                                {leadInitials}
+                              </span>
+                              <span className="truncate text-sm text-foreground/85">
+                                {c.lead_name}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Unassigned
+                            </span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1.5 text-sm tabular-nums",
+                              overdue
+                                ? "font-medium text-priority-high"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarClock className="size-3.5 opacity-70" />
+                            {formatDate(c.next_deadline)}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4 text-right">
+                          {healthBadge(c.health)}
+                        </TableCell>
+
+                        <TableCell className="px-4 py-4 pr-5">
+                          <Link
+                            to="/cases/$caseId"
+                            params={{ caseId: c.id }}
+                            className="inline-flex size-8 items-center justify-center rounded-lg border border-transparent text-muted-foreground/50 transition-all group-hover:border-white/[0.08] group-hover:bg-white/[0.04] group-hover:text-foreground"
+                            aria-label={`Open ${c.title}`}
+                          >
+                            <ChevronRight className="size-4" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+
+        {!isLoading && !error && rows.length > 0 && view === "cards" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {rows.map((c: CaseRow) => (
+              <Card
+                key={c.id}
+                className="group flex flex-col gap-4 border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-5 shadow-[0_12px_32px_-20px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/15 hover:bg-[rgba(22,22,25,0.85)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    to="/cases/$caseId"
+                    params={{ caseId: c.id }}
+                    className="min-w-0"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {c.case_ref ?? "—"}
+                    </p>
+                    <h3 className="mt-1 truncate text-base font-semibold tracking-tight text-foreground group-hover:underline">
+                      {c.title}
+                    </h3>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
+                      {c.client_name ?? "—"}
+                    </p>
+                  </Link>
+                  {healthBadge(c.health)}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {c.case_type && <Tag color="blue">{c.case_type}</Tag>}
+                  {c.status && (
+                    <Tag color="sand">
+                      {STATUS_LABELS[c.status] ?? c.status}
+                    </Tag>
+                  )}
+                  {c.current_stage_name && (
+                    <Tag color="purple">{c.current_stage_name}</Tag>
+                  )}
+                </div>
+
+                <div className="mt-auto space-y-2 border-t border-white/[0.06] pt-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <User className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      Lead: {c.lead_name ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CalendarClock className="size-3.5 shrink-0" />
+                    <span>Deadline: {formatDate(c.next_deadline)}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

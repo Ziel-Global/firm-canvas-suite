@@ -48,11 +48,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { BoardSkeleton, ListSkeleton } from "@/components/loading-skeletons";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({
     meta: [
-      { title: "Tasks — Law Firm Ops" },
+      { title: "Tasks — SAS Associates" },
       { name: "description", content: "Task board for the firm operations system." },
     ],
   }),
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/tasks")({
 });
 
 const COLUMNS: { key: TaskStatus; label: string; accent: string }[] = [
-  { key: "todo", label: "To Do", accent: "bg-priority-low" },
+  { key: "todo", label: "To Do", accent: "bg-white/60" },
   { key: "in_progress", label: "In Progress", accent: "bg-priority-med" },
   { key: "in_review", label: "In Review", accent: "bg-priority-high" },
   { key: "done", label: "Done", accent: "bg-status-ontrack" },
@@ -120,14 +121,20 @@ function TaskCardBody({ task }: { task: TaskRow }) {
         {task.assignee_name ? (
           <AvatarStack people={[{ name: task.assignee_name }]} />
         ) : (
-          <span className="size-8" />
+          <span className="flex size-8 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-[10px] text-muted-foreground">
+            —
+          </span>
         )}
         {priority ? <Tag color={priority.color}>{priority.label}</Tag> : <span />}
       </div>
 
-      <p className="mt-3 text-sm font-semibold leading-snug text-foreground">{task.title}</p>
+      <p className="mt-3 text-sm font-semibold leading-snug tracking-tight text-foreground">
+        {task.title}
+      </p>
       {task.description ? (
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
+        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {task.description}
+        </p>
       ) : null}
 
       {tags.length ? (
@@ -141,15 +148,18 @@ function TaskCardBody({ task }: { task: TaskRow }) {
       ) : null}
 
       {range ? (
-        <div className="mt-4 flex items-center gap-1.5 border-t border-border pt-3">
+        <div className="mt-4 flex items-center gap-1.5 border-t border-white/[0.06] pt-3">
           <CalendarClock
-            className={"size-3.5 " + (overdue ? "text-priority-high" : "text-muted-foreground")}
+            className={cn(
+              "size-3.5",
+              overdue ? "text-priority-high" : "text-muted-foreground",
+            )}
           />
           <span
-            className={
-              "text-xs font-medium " +
-              (overdue ? "text-priority-high" : "text-muted-foreground")
-            }
+            className={cn(
+              "text-xs font-medium tabular-nums",
+              overdue ? "text-priority-high" : "text-muted-foreground",
+            )}
           >
             {range}
           </span>
@@ -160,7 +170,7 @@ function TaskCardBody({ task }: { task: TaskRow }) {
 }
 
 const CARD_SHADOW =
-  "shadow-[0_1px_3px_rgba(26,26,26,0.06),0_4px_12px_rgba(26,26,26,0.05)] hover:shadow-[0_2px_6px_rgba(26,26,26,0.08),0_8px_20px_rgba(26,26,26,0.08)]";
+  "shadow-[0_8px_24px_-16px_rgba(0,0,0,0.55)] hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.65)]";
 
 function SortableTaskCard({ task }: { task: TaskRow }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -172,11 +182,11 @@ function SortableTaskCard({ task }: { task: TaskRow }) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
-      className={
-        "cursor-grab touch-none rounded-card border-0 bg-card p-4 transition-shadow active:cursor-grabbing " +
-        CARD_SHADOW +
-        (isDragging ? " opacity-40" : "")
-      }
+      className={cn(
+        "cursor-grab touch-none rounded-xl border border-white/[0.08] bg-[rgba(22,22,25,0.95)] p-4 transition-all active:cursor-grabbing",
+        CARD_SHADOW,
+        isDragging && "opacity-40",
+      )}
     >
       <TaskCardBody task={task} />
     </Card>
@@ -199,17 +209,19 @@ function Column({
   const { setNodeRef, isOver } = useDroppable({ id: columnKey });
 
   return (
-    <div className="flex min-w-72 flex-1 flex-col">
+    <div className="flex min-w-[17.5rem] flex-1 flex-col">
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className={"size-2.5 rounded-pill " + accent} />
-          <h2 className="text-sm font-semibold text-foreground">{label}</h2>
-          <span className="rounded-pill bg-frame px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+          <span className={cn("size-2 rounded-full", accent)} />
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            {label}
+          </h2>
+          <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
             {tasks.length}
           </span>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger className="rounded-control p-1 text-muted-foreground transition-colors hover:bg-frame hover:text-foreground">
+          <DropdownMenuTrigger className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground">
             <MoreHorizontal className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -222,24 +234,28 @@ function Column({
 
       <div
         ref={setNodeRef}
-        className={
-          "flex flex-1 flex-col gap-3 rounded-card p-3 transition-colors " +
-          (isOver ? "bg-frame" : "bg-frame/50")
-        }
+        className={cn(
+          "flex flex-1 flex-col gap-2.5 rounded-2xl border border-white/[0.06] p-2.5 transition-colors",
+          isOver
+            ? "border-white/20 bg-white/[0.05]"
+            : "bg-white/[0.02]",
+        )}
       >
-        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={tasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {tasks.map((task) => (
             <SortableTaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
         <button
           onClick={onAddTask}
-          className="flex items-center justify-center gap-1.5 rounded-control bg-foreground/5 py-2.5 text-xs font-semibold tracking-wide text-foreground/90 transition-all hover:bg-foreground/10 hover:shadow-sm hover:text-foreground"
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/[0.1] bg-transparent py-2.5 text-xs font-medium tracking-wide text-muted-foreground transition-all hover:border-white/20 hover:bg-white/[0.04] hover:text-foreground"
         >
           <Plus className="size-3.5" />
           Add task
         </button>
-
       </div>
     </div>
   );
@@ -301,7 +317,13 @@ function TimeframeFilter({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant={active ? "dark" : "ghost"} className="gap-1.5">
+        <Button
+          variant="ghost"
+          className={cn(
+            "gap-1.5 border border-white/[0.08] bg-white/[0.03]",
+            active && "text-foreground",
+          )}
+        >
           <CalendarRange className="size-4" />
           {active
             ? `${date!.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${
@@ -321,16 +343,16 @@ function TimeframeFilter({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-auto rounded-card border-0 bg-surface-dark p-3 text-white shadow-xl"
+        className="w-auto rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.98)] p-3 text-foreground shadow-xl"
       >
         <Calendar
           mode="single"
           selected={date}
           onSelect={onDateChange}
           initialFocus
-          className="pointer-events-auto p-0 text-white [&_.rdp-weekday]:text-muted [&_button]:text-white"
+          className="pointer-events-auto p-0"
         />
-        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/10 pt-3">
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/[0.08] pt-3">
           {TOLERANCE_CHIPS.map((chip) => {
             const selected = tolerance === chip.days;
             return (
@@ -339,10 +361,10 @@ function TimeframeFilter({
                 type="button"
                 onClick={() => onToleranceChange(chip.days)}
                 className={cn(
-                  "rounded-pill px-3 py-1 text-xs font-medium transition-colors",
+                  "rounded-lg px-3 py-1 text-xs font-medium transition-colors",
                   selected
-                    ? "bg-primary text-primary-ink"
-                    : "bg-white/10 text-white/80 hover:bg-white/20",
+                    ? "bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20]"
+                    : "bg-white/[0.06] text-muted-foreground hover:bg-white/[0.1] hover:text-foreground",
                 )}
               >
                 {chip.label}
@@ -464,101 +486,121 @@ function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
-          <p className="text-sm text-foreground/70 tracking-wide mt-1">
-            Track work across every case. Drag cards to update status.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-control border border-border bg-card p-0.5">
-            <button
-              type="button"
-              onClick={() => setView("board")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
-                view === "board"
-                  ? "bg-surface-dark text-white"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <LayoutGrid className="size-3.5" />
-              Board
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium transition-colors",
-                view === "list"
-                  ? "bg-surface-dark text-white"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <List className="size-3.5" />
-              List
-            </button>
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Workspace
+            </p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+              Tasks
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track work across every case · drag cards to update status
+            </p>
           </div>
-          <TimeframeFilter
-            date={filterDate}
-            tolerance={tolerance}
-            onDateChange={setFilterDate}
-            onToleranceChange={setTolerance}
-            onClear={() => {
-              setFilterDate(undefined);
-              setTolerance(0);
-            }}
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="inline-flex rounded-xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1">
+              <button
+                type="button"
+                onClick={() => setView("board")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  view === "board"
+                    ? "bg-white/[0.1] text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <LayoutGrid className="size-3.5" />
+                Board
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("list")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  view === "list"
+                    ? "bg-white/[0.1] text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <List className="size-3.5" />
+                List
+              </button>
+            </div>
+
+            <TimeframeFilter
+              date={filterDate}
+              tolerance={tolerance}
+              onDateChange={setFilterDate}
+              onToleranceChange={setTolerance}
+              onClear={() => {
+                setFilterDate(undefined);
+                setTolerance(0);
+              }}
+            />
+
+            <Button
+              onClick={() => setSheetOpen(true)}
+              className="gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
+            >
+              <Plus className="size-4" />
+              Add task
+            </Button>
+          </div>
+        </div>
+
+        {isLoading ? (
+          view === "list" ? (
+            <ListSkeleton rows={6} />
+          ) : (
+            <BoardSkeleton />
+          )
+        ) : view === "list" ? (
+          <TaskListView
+            tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
+              (col) => displayBoard[col],
+            )}
           />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex flex-col gap-4 overflow-x-auto pb-2 lg:flex-row lg:items-stretch">
+              {COLUMNS.map((col) => (
+                <Column
+                  key={col.key}
+                  columnKey={col.key}
+                  label={col.label}
+                  accent={col.accent}
+                  tasks={displayBoard[col.key]}
+                  onAddTask={() => setSheetOpen(true)}
+                />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeTask ? (
+                <Card
+                  className={cn(
+                    "rounded-xl border border-white/[0.08] bg-[rgba(22,22,25,0.98)] p-4",
+                    CARD_SHADOW,
+                  )}
+                >
+                  <TaskCardBody task={activeTask} />
+                </Card>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
 
-          <Button onClick={() => setSheetOpen(true)}>
-            <Plus className="mr-1.5 size-4" />
-            Add new task
-          </Button>
-        </div>
+        <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
       </div>
-
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading tasks…</p>
-      ) : view === "list" ? (
-        <TaskListView
-          tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
-            (col) => displayBoard[col],
-          )}
-        />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex flex-col gap-4 overflow-x-auto pb-4 lg:flex-row">
-            {COLUMNS.map((col) => (
-              <Column
-                key={col.key}
-                columnKey={col.key}
-                label={col.label}
-                accent={col.accent}
-                tasks={displayBoard[col.key]}
-                onAddTask={() => setSheetOpen(true)}
-              />
-            ))}
-          </div>
-          <DragOverlay>
-            {activeTask ? (
-              <Card className={"rounded-card border-0 bg-card p-4 " + CARD_SHADOW}>
-                <TaskCardBody task={activeTask} />
-              </Card>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
-
-
-      <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
-    </div>
+    </main>
   );
 }

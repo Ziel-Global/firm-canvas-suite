@@ -469,7 +469,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
 
     let query = supabase.from("documents").select(`
       id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
-      cases!inner(id, title)
+      cases(id, title)
     `);
 
     if (data.q) query = query.ilike("title", `%${data.q}%`);

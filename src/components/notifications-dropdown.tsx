@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Check, ExternalLink, Loader2 } from "lucide-react";
+import { Bell, Check, ExternalLink } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import {
@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/notifications.functions";
 import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/premium-loader";
+import { InlineLoaderSkeleton } from "@/components/loading-skeletons";
 
 export function NotificationsDropdown() {
   const [open, setOpen] = useState(false);
@@ -49,21 +51,29 @@ export function NotificationsDropdown() {
         <button
           type="button"
           aria-label="Notifications"
-          className="relative flex size-9 items-center justify-center rounded-control text-muted-foreground transition-colors hover:bg-frame hover:text-foreground"
+          className={cn(
+            "relative flex size-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-muted-foreground",
+            "transition-colors hover:border-white/15 hover:bg-white/[0.07] hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+          )}
         >
-          <Bell className="size-5" strokeWidth={1.75} />
+          <Bell className="size-[18px]" strokeWidth={1.75} />
           {unreadCount > 0 && (
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-pill bg-priority-high ring-2 ring-canvas" />
+            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-priority-high shadow-[0_0_0_2px_rgba(12,12,14,0.95)]" />
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 border-border bg-canvas shadow-lg" sideOffset={8}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-sm">Notifications</h3>
+      <PopoverContent
+        align="end"
+        className="w-80 border-white/[0.1] bg-[rgba(16,16,18,0.98)] p-0 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.75)] backdrop-blur-xl"
+        sideOffset={8}
+      >
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+          <h3 className="text-sm font-semibold tracking-tight">Notifications</h3>
           {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
               onClick={() => markAllAsRead.mutate()}
               disabled={markAllAsRead.isPending}
@@ -74,8 +84,11 @@ export function NotificationsDropdown() {
         </div>
         <div className="max-h-[400px] overflow-y-auto p-1">
           {isLoading ? (
-            <div className="flex justify-center p-4">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <div className="space-y-2 p-3">
+              <div className="flex justify-center py-2">
+                <PremiumLoader size="sm" />
+              </div>
+              <InlineLoaderSkeleton lines={3} className="p-0" />
             </div>
           ) : !notifications || notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">

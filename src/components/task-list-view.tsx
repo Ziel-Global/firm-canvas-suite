@@ -63,23 +63,40 @@ interface TaskListViewProps {
 export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
   if (!tasks.length) {
     return (
-      <div className="rounded-card border border-border bg-card p-8 text-center">
-        <p className="text-sm text-muted-foreground">No tasks to show.</p>
+      <div className="rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-6 py-14 text-center">
+        <p className="text-sm font-medium text-foreground">No tasks to show</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Adjust filters or add a new task to get started.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-card">
+    <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Task</TableHead>
-            <TableHead>Status</TableHead>
-            {showCase ? <TableHead>Case</TableHead> : null}
-            <TableHead>Assignee</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Dates</TableHead>
+          <TableRow className="border-white/[0.06] hover:bg-transparent">
+            <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Task
+            </TableHead>
+            <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Status
+            </TableHead>
+            {showCase ? (
+              <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                Case
+              </TableHead>
+            ) : null}
+            <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Assignee
+            </TableHead>
+            <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Priority
+            </TableHead>
+            <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Dates
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -88,9 +105,12 @@ export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
             const range = dateRange(task.start_date, task.due_date);
             const overdue = isOverdue(task.due_date) && task.status !== "done";
             return (
-              <TableRow key={task.id}>
+              <TableRow
+                key={task.id}
+                className="border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+              >
                 <TableCell className="max-w-[280px]">
-                  <p className="font-medium text-foreground">{task.title}</p>
+                  <p className="font-medium tracking-tight text-foreground">{task.title}</p>
                   {task.description ? (
                     <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                       {task.description}
@@ -100,7 +120,7 @@ export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
                 <TableCell>
                   <span className="inline-flex items-center gap-2 text-sm text-foreground">
                     <span
-                      className={`inline-block size-2 shrink-0 rounded-pill ${STATUS_ACCENT[task.status]}`}
+                      className={`inline-block size-2 shrink-0 rounded-full ${STATUS_ACCENT[task.status]}`}
                     />
                     {STATUS_LABELS[task.status]}
                   </span>
@@ -127,7 +147,7 @@ export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
                   {range ? (
                     <span
                       className={
-                        "inline-flex items-center gap-1.5 text-xs font-medium " +
+                        "inline-flex items-center gap-1.5 text-xs font-medium tabular-nums " +
                         (overdue ? "text-priority-high" : "text-muted-foreground")
                       }
                     >

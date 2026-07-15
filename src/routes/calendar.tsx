@@ -16,21 +16,31 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, MapPin, Eye, EyeOff, Lock } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  MapPin,
+  Eye,
+  EyeOff,
+  Lock,
+} from "lucide-react";
 
 import {
   listCalendarEvents,
   type CalendarEvent,
 } from "@/lib/calendar.functions";
 import { cn } from "@/lib/utils";
+import { CalendarSkeleton } from "@/components/loading-skeletons";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { NewEventSheet } from "@/components/new-event-sheet";
 
 export const Route = createFileRoute("/calendar")({
   head: () => ({
     meta: [
-      { title: "Calendar — Law Firm Ops" },
+      { title: "Calendar — SAS Associates" },
       {
         name: "description",
         content: "Firm calendar with day, week, and month views.",
@@ -50,15 +60,15 @@ const HOURS = Array.from(
 );
 
 const TYPE_STYLES: Record<string, string> = {
-  meeting: "bg-tag-blue/40 border-l-priority-med",
-  hearing: "bg-priority-high/20 border-l-priority-high",
-  deadline: "bg-priority-high/20 border-l-priority-high",
-  call: "bg-tag-green/40 border-l-status-ontrack",
-  internal: "bg-tag-purple/40 border-l-tag-purple",
+  meeting: "bg-white/[0.06] border-l-white/50",
+  hearing: "bg-priority-high/15 border-l-priority-high",
+  deadline: "bg-priority-high/12 border-l-priority-high/80",
+  call: "bg-white/[0.05] border-l-white/35",
+  internal: "bg-white/[0.04] border-l-white/25",
 };
 
 function typeStyle(type: string | null) {
-  return TYPE_STYLES[type ?? "meeting"] ?? "bg-frame border-l-muted";
+  return TYPE_STYLES[type ?? "meeting"] ?? "bg-white/[0.04] border-l-white/30";
 }
 
 function rangeFor(view: ViewMode, anchor: Date) {
@@ -97,8 +107,6 @@ function CalendarPage() {
       }),
   });
 
-  // Super Admin can overlay or hide his private layer. Other roles never
-  // receive private events from RLS, so this only affects the super_admin view.
   const events = useMemo(
     () =>
       isSuperAdmin && !showPrivate
@@ -120,92 +128,134 @@ function CalendarPage() {
         ? `${format(range.from, "MMM d")} – ${format(range.to, "MMM d, yyyy")}`
         : format(anchor, "EEEE, MMMM d, yyyy");
 
+  const privateCount = useMemo(
+    () => allEvents.filter((e) => e.is_private).length,
+    [allEvents],
+  );
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Calendar</h1>
-          <p className="text-sm text-muted-foreground">
-            Day, week, and month views of firm commitments.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isSuperAdmin && (
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Workspace
+            </p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+              Calendar
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hearings, deadlines, and firm commitments
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPrivate((s) => !s)}
+                className={cn(
+                  "gap-1.5 border border-white/[0.08] bg-white/[0.03]",
+                  showPrivate
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {showPrivate ? (
+                  <Eye className="size-3.5" />
+                ) : (
+                  <EyeOff className="size-3.5" />
+                )}
+                Private layer
+                {privateCount > 0 && (
+                  <span className="rounded-md bg-white/[0.08] px-1.5 py-0.5 text-[10px] tabular-nums">
+                    {privateCount}
+                  </span>
+                )}
+              </Button>
+            )}
             <Button
-              variant={showPrivate ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowPrivate((s) => !s)}
+              onClick={() => setSheetOpen(true)}
+              className="gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
             >
-              {showPrivate ? (
-                <Eye className="mr-1.5 size-4" />
-              ) : (
-                <EyeOff className="mr-1.5 size-4" />
-              )}
-              Private layer
+              <Plus className="size-4" />
+              New event
             </Button>
-          )}
-          <Button onClick={() => setSheetOpen(true)}>
-            <Plus className="mr-1.5 size-4" />
-            New event
-          </Button>
+          </div>
         </div>
+
+        {/* Toolbar */}
+        <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => shift(-1)}
+                className="size-9 border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06]"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAnchor(new Date())}
+                className="h-9 border border-white/[0.08] bg-white/[0.03] px-3 hover:bg-white/[0.06]"
+              >
+                Today
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => shift(1)}
+                className="size-9 border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06]"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+              <span className="ml-2 text-sm font-semibold tracking-tight text-foreground">
+                {heading}
+              </span>
+            </div>
+
+            <div className="inline-flex rounded-xl border border-white/[0.08] bg-[#17191D] p-1">
+              {(["day", "week", "month"] as ViewMode[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={cn(
+                    "rounded-lg px-3.5 py-1.5 text-xs font-medium capitalize transition-colors",
+                    view === v
+                      ? "bg-white/[0.1] text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {isLoading ? (
+          <CalendarSkeleton />
+        ) : view === "month" ? (
+          <MonthView anchor={anchor} events={events} />
+        ) : view === "week" ? (
+          <WeekView range={range} events={events} />
+        ) : (
+          <DayView anchor={anchor} events={events} />
+        )}
+
+        <NewEventSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          defaultDate={anchor}
+        />
       </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => shift(-1)}>
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAnchor(new Date())}
-          >
-            Today
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => shift(1)}>
-            <ChevronRight className="size-4" />
-          </Button>
-          <span className="ml-2 text-sm font-medium text-foreground">
-            {heading}
-          </span>
-        </div>
-
-        <div className="inline-flex rounded-control border border-border bg-card p-0.5">
-          {(["day", "week", "month"] as ViewMode[]).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={cn(
-                "rounded-[10px] px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-                view === v
-                  ? "bg-surface-dark text-white"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading calendar…</p>
-      ) : view === "month" ? (
-        <MonthView anchor={anchor} events={events} />
-      ) : view === "week" ? (
-        <WeekView range={range} events={events} />
-      ) : (
-        <DayView anchor={anchor} events={events} />
-      )}
-
-      <NewEventSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        defaultDate={anchor}
-      />
-    </div>
+    </main>
   );
 }
 
@@ -213,7 +263,6 @@ function eventTime(e: CalendarEvent) {
   return e.starts_at ? format(new Date(e.starts_at), "h:mm a") : "";
 }
 
-/* ---------------- Day view: time-blocked schedule ---------------- */
 function DayView({
   anchor,
   events,
@@ -226,7 +275,7 @@ function DayView({
   );
 
   return (
-    <div className="rounded-card border border-border bg-card">
+    <Card className="overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-0 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
       {HOURS.map((hour) => {
         const slotEvents = dayEvents.filter(
           (e) => e.starts_at && new Date(e.starts_at).getHours() === hour,
@@ -234,12 +283,12 @@ function DayView({
         return (
           <div
             key={hour}
-            className="grid grid-cols-[64px_1fr] border-b border-border/60 last:border-b-0"
+            className="grid grid-cols-[4.5rem_1fr] border-b border-white/[0.06] last:border-b-0"
           >
-            <div className="px-3 py-3 text-right text-xs text-muted-foreground">
+            <div className="px-3 py-3.5 text-right text-[11px] tabular-nums text-muted-foreground">
               {format(new Date().setHours(hour, 0, 0, 0), "h a")}
             </div>
-            <div className="space-y-2 border-l border-border/60 p-2">
+            <div className="min-h-[3.25rem] space-y-2 border-l border-white/[0.06] p-2">
               {slotEvents.map((e) => (
                 <EventBlock key={e.id} event={e} detailed />
               ))}
@@ -247,11 +296,10 @@ function DayView({
           </div>
         );
       })}
-    </div>
+    </Card>
   );
 }
 
-/* ---------------- Week view ---------------- */
 function WeekView({
   range,
   events,
@@ -268,19 +316,22 @@ function WeekView({
           .sort((a, b) => (a.starts_at! < b.starts_at! ? -1 : 1));
         const isToday = isSameDay(day, new Date());
         return (
-          <div
+          <Card
             key={day.toISOString()}
-            className="rounded-card border border-border bg-card p-2"
+            className={cn(
+              "min-h-[12rem] border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-2.5 shadow-[0_12px_32px_-20px_rgba(0,0,0,0.5)] transition-colors",
+              isToday && "border-white/20 ring-1 ring-white/10",
+            )}
           >
-            <div className="mb-2 flex items-baseline justify-between px-1">
-              <span className="text-xs font-medium uppercase text-muted-foreground">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 {format(day, "EEE")}
               </span>
               <span
                 className={cn(
-                  "flex size-6 items-center justify-center rounded-pill text-sm font-semibold",
+                  "flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
                   isToday
-                    ? "bg-primary text-primary-ink"
+                    ? "bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20]"
                     : "text-foreground",
                 )}
               >
@@ -289,21 +340,20 @@ function WeekView({
             </div>
             <div className="space-y-1.5">
               {dayEvents.length === 0 ? (
-                <p className="px-1 py-2 text-xs text-muted-foreground/60">
-                  —
+                <p className="px-1 py-6 text-center text-[11px] text-muted-foreground/50">
+                  No events
                 </p>
               ) : (
                 dayEvents.map((e) => <EventBlock key={e.id} event={e} />)
               )}
             </div>
-          </div>
+          </Card>
         );
       })}
     </div>
   );
 }
 
-/* ---------------- Month view ---------------- */
 function MonthView({
   anchor,
   events,
@@ -316,12 +366,12 @@ function MonthView({
   const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-card">
-      <div className="grid grid-cols-7 border-b border-border">
+    <Card className="overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-0 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
+      <div className="grid grid-cols-7 border-b border-white/[0.06] bg-white/[0.02]">
         {weekdays.map((d) => (
           <div
             key={d}
-            className="px-2 py-2 text-center text-xs font-medium uppercase text-muted-foreground"
+            className="px-2 py-2.5 text-center text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
           >
             {d}
           </div>
@@ -338,19 +388,19 @@ function MonthView({
             <div
               key={day.toISOString()}
               className={cn(
-                "min-h-24 border-b border-r border-border/60 p-1.5",
-                !inMonth && "bg-frame/40",
+                "min-h-[6.5rem] border-b border-r border-white/[0.05] p-1.5",
+                !inMonth && "bg-black/20",
               )}
             >
-              <div className="mb-1 flex justify-end">
+              <div className="mb-1.5 flex justify-end">
                 <span
                   className={cn(
-                    "flex size-6 items-center justify-center rounded-pill text-xs font-semibold",
+                    "flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
                     isToday
-                      ? "bg-primary text-primary-ink"
+                      ? "bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20]"
                       : inMonth
                         ? "text-foreground"
-                        : "text-muted-foreground/60",
+                        : "text-muted-foreground/50",
                   )}
                 >
                   {format(day, "d")}
@@ -361,7 +411,7 @@ function MonthView({
                   <div
                     key={e.id}
                     className={cn(
-                      "truncate rounded-control border-l-2 px-1.5 py-0.5 text-[11px] text-foreground",
+                      "truncate rounded-md border-l-2 px-1.5 py-0.5 text-[11px] text-foreground/90",
                       typeStyle(e.event_type),
                     )}
                     title={e.title ?? ""}
@@ -370,7 +420,7 @@ function MonthView({
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <p className="px-1 text-[11px] text-muted-foreground">
+                  <p className="px-1 text-[10px] text-muted-foreground">
                     +{dayEvents.length - 3} more
                   </p>
                 )}
@@ -379,7 +429,7 @@ function MonthView({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -394,20 +444,22 @@ function EventBlock({
   return (
     <div
       className={cn(
-        "rounded-control border-l-2 px-2 py-1.5 text-foreground",
+        "rounded-lg border-l-2 px-2 py-1.5 text-foreground transition-colors hover:bg-white/[0.04]",
         typeStyle(event.event_type),
       )}
     >
       <p className="flex items-center gap-1 truncate text-sm font-medium">
-        {event.is_private && <Lock className="size-3 shrink-0 text-muted-foreground" />}
+        {event.is_private && (
+          <Lock className="size-3 shrink-0 text-muted-foreground" />
+        )}
         <span className="truncate">{event.title}</span>
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[11px] tabular-nums text-muted-foreground">
         {eventTime(event)}
         {end && ` – ${end}`}
       </p>
       {detailed && (
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           {event.case_ref && <span>{event.case_ref}</span>}
           {event.location && (
             <span className="inline-flex items-center gap-1">

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Pill } from "@/components/ui/pill";
 import { Tag } from "@/components/ui/tag";
+import { SettingsSection } from "@/components/settings-section";
+import { cn } from "@/lib/utils";
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -56,46 +58,44 @@ export function MorningDigestPreview() {
 
   if (role !== "super_admin") {
     return (
-      <Card className="p-5">
-        <p className="text-sm text-muted-foreground">
+      <SettingsSection
+        eyebrow="Delivery"
+        title="Morning digest"
+        description="Daily operations briefing for the Super Admin."
+      >
+        <div className="px-5 py-10 text-center text-sm text-muted-foreground">
           The morning digest is available to the Super Admin only.
-        </p>
-      </Card>
+        </div>
+      </SettingsSection>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            Morning digest
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Daily summary delivered at{" "}
-            <span className="font-medium text-foreground">
-              {data?.morning_digest_time ?? "—"}
-            </span>
-            . Preview of what goes out.
-          </p>
-        </div>
+    <SettingsSection
+      eyebrow="Delivery"
+      title="Morning digest"
+      description={`Daily summary delivered at ${data?.morning_digest_time ?? "—"}. Preview of what goes out.`}
+      action={
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5"
+          className="h-9 gap-1.5 border border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
           onClick={() => refetch()}
           disabled={isFetching}
         >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={cn("h-4 w-4", isFetching && "animate-spin")}
+          />
           Refresh
         </Button>
-      </div>
-
+      }
+      bare
+    >
       {isLoading && (
         <p className="text-sm text-muted-foreground">Assembling digest…</p>
       )}
       {isError && (
-        <Card className="p-5">
+        <Card className="border-priority-high/25 bg-[rgba(18,18,20,0.72)] p-5">
           <p className="text-sm text-priority-high">
             {(error as Error).message}
           </p>
@@ -103,32 +103,36 @@ export function MorningDigestPreview() {
       )}
 
       {data && (
-        <Card className="overflow-hidden p-0">
-          <div className="border-b border-border bg-surface-dark p-5 text-surface">
-            <p className="text-xs uppercase tracking-wide text-surface/60">
-              Good morning{data.recipient_name ? `, ${data.recipient_name}` : ""}
+        <Card className="relative overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-0 shadow-[0_20px_50px_-28px_rgba(0,0,0,0.65)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          />
+          <div className="border-b border-white/[0.06] bg-white/[0.03] p-5">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Good morning
+              {data.recipient_name ? `, ${data.recipient_name}` : ""}
             </p>
-            <p className="mt-1 text-base font-semibold">
+            <p className="mt-1.5 text-base font-semibold tracking-tight text-foreground">
               {fmtDate(data.digest_date)}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-pill bg-surface/10 px-2.5 py-1">
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-md bg-white/[0.08] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/85">
                 {data.totals.schedule} events
               </span>
-              <span className="rounded-pill bg-surface/10 px-2.5 py-1">
+              <span className="rounded-md bg-white/[0.08] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/85">
                 {data.totals.pending_approvals} approvals
               </span>
-              <span className="rounded-pill bg-surface/10 px-2.5 py-1">
+              <span className="rounded-md bg-white/[0.08] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/85">
                 {data.totals.overdue_tasks} overdue
               </span>
             </div>
           </div>
 
           <div className="space-y-6 p-5">
-            {/* Schedule */}
             <section>
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <CalendarClock className="h-4 w-4 text-priority-med" />
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <CalendarClock className="h-3.5 w-3.5" />
                 Today&apos;s schedule
               </div>
               {data.schedule.length === 0 ? (
@@ -140,9 +144,9 @@ export function MorningDigestPreview() {
                   {data.schedule.map((e) => (
                     <li
                       key={e.id}
-                      className="flex items-start gap-3 rounded-control border border-border p-3"
+                      className="flex items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3"
                     >
-                      <div className="w-20 shrink-0 text-xs font-medium text-muted-foreground">
+                      <div className="w-20 shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
                         {fmtTime(e.starts_at)}
                         {e.ends_at ? `–${fmtTime(e.ends_at)}` : ""}
                       </div>
@@ -171,10 +175,9 @@ export function MorningDigestPreview() {
               )}
             </section>
 
-            {/* Pending approvals */}
             <section>
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <FileCheck2 className="h-4 w-4 text-status-atrisk" />
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <FileCheck2 className="h-3.5 w-3.5" />
                 Pending approvals
               </div>
               {data.pending_approvals.length === 0 ? (
@@ -186,7 +189,7 @@ export function MorningDigestPreview() {
                   {data.pending_approvals.map((a) => (
                     <li
                       key={a.id}
-                      className="flex items-start justify-between gap-3 rounded-control border border-border p-3"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">
@@ -214,10 +217,9 @@ export function MorningDigestPreview() {
               )}
             </section>
 
-            {/* Overdue tasks */}
             <section>
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <AlertTriangle className="h-4 w-4 text-priority-high" />
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5" />
                 Overdue tasks
               </div>
               {data.overdue_tasks.length === 0 ? (
@@ -229,7 +231,7 @@ export function MorningDigestPreview() {
                   {data.overdue_tasks.map((t) => (
                     <li
                       key={t.id}
-                      className="flex items-start justify-between gap-3 rounded-control border border-border p-3"
+                      className="flex items-start justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -262,6 +264,6 @@ export function MorningDigestPreview() {
           </div>
         </Card>
       )}
-    </div>
+    </SettingsSection>
   );
 }

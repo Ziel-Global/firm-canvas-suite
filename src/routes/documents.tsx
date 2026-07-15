@@ -1,25 +1,32 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, FileText, Lock, Filter } from "lucide-react";
+import { Search, FileText, Lock, Filter, Archive } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { searchGlobalDocuments } from "@/lib/documents.functions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tag } from "@/components/ui/tag";
-import { Pill } from "@/components/ui/pill";
+import { cn } from "@/lib/utils";
+import { ListSkeleton } from "@/components/loading-skeletons";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({
     meta: [
-      { title: "Global Documents — Law Firm Ops" },
-      { name: "description", content: "Global search across all documents." },
+      { title: "Documents — SAS Associates" },
+      { name: "description", content: "Global search across all firm documents." },
     ],
   }),
   component: GlobalDocumentsPage,
 });
+
+const STATUS_STYLES = {
+  draft: "bg-white/[0.06] text-muted-foreground",
+  in_review: "bg-amber-500/15 text-amber-200/90",
+  approved: "bg-white/[0.1] text-foreground",
+} as const;
 
 function GlobalDocumentsPage() {
   const { role } = useAuth();
@@ -35,14 +42,14 @@ function GlobalDocumentsPage() {
     queryKey: ["global-documents", query, caseId, type],
     queryFn: () => searchDocs({ data: { q: query, caseId, type } }),
     enabled: isAdmin,
-    // Add a slight debounce effect by relying on react-query's default behaviors 
-    // or just letting it fetch as typing happens (for simplicity we just pass state).
   });
 
   if (!isAdmin) {
     return (
-      <main className="px-4 py-6 sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Global Documents</h2>
+      <main className="dashboard-shell px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          Documents
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to access the global documents search.
         </p>
@@ -51,117 +58,168 @@ function GlobalDocumentsPage() {
   }
 
   return (
-    <main className="px-4 py-6 sm:px-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Global Documents</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Search across all documents in the firm. Results are automatically filtered to show only documents you have permission to view.
-        </p>
-      </div>
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            Workspace
+          </p>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+            Documents
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Firm-wide document search · permission-aware results
+          </p>
+        </div>
 
-      <Card className="p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by document title..."
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <div className="relative w-48">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Case ID filter..."
-                className="pl-9"
+                placeholder="Search by document title…"
+                className="h-10 border-white/[0.08] bg-[#17191D] pl-9"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="relative w-full lg:w-52">
+              <Filter className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Case ID filter…"
+                className="h-10 border-white/[0.08] bg-[#17191D] pl-9"
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value)}
               />
             </div>
             <select
-              className="flex h-10 w-40 items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 w-full rounded-md border border-white/[0.08] bg-[#17191D] px-3 text-sm text-foreground outline-none focus:border-white/20 lg:w-40"
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
-              <option value="">All Types</option>
+              <option value="">All types</option>
               <option value="PDF">PDF</option>
               <option value="Word">Word</option>
               <option value="Excel">Excel</option>
               <option value="Image">Image</option>
             </select>
           </div>
-        </div>
-      </Card>
-
-      {isLoading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Searching documents...</p>
-      ) : error ? (
-        <Card className="p-6 border-destructive/50">
-          <p className="text-sm text-destructive text-center">Failed to search documents: {error.message}</p>
         </Card>
-      ) : documents && documents.length > 0 ? (
-        <Card className="overflow-hidden p-0">
-          <ul className="divide-y divide-border">
-            {documents.map((doc) => {
-              const statusConfig = {
-                draft: { label: 'Draft', className: 'bg-frame text-muted-foreground' },
-                in_review: { label: 'In Review', className: 'bg-tag-sand/60 text-foreground' },
-                approved: { label: 'Approved', className: 'bg-priority-low/20 text-foreground' },
-              } as const;
 
-              const status = statusConfig[doc.approval_status as keyof typeof statusConfig] ?? statusConfig.draft;
-
-              return (
-                <li key={doc.id} className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-frame/50">
-                  <FileText className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">{doc.title}</span>
-                      <Pill className={status.className}>{status.label}</Pill>
-                      {doc.is_locked && (
-                        <Pill className="bg-priority-high/20 text-foreground">
-                          <Lock className="size-3" />
-                          Locked
-                        </Pill>
-                      )}
-                      {doc.is_archived && <Pill className="bg-frame text-muted-foreground">Archived</Pill>}
-                      {doc.case_title && <Tag color="gray">{doc.case_title}</Tag>}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}
-                      <span>v{doc.current_version ?? 1}</span>
-                      <span>·</span>
-                      <span>Uploaded by {doc.uploader_name ?? "Unknown"}</span>
-                      <span>·</span>
-                      <span>
-                        {new Date(doc.created_at).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      ) : (
-        <Card className="p-12">
-          <div className="flex flex-col items-center justify-center text-center">
-            <FileText className="size-10 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium text-foreground">No documents found</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-              Try adjusting your search query or filters to find what you're looking for. Note that you can only see documents you have permission to view.
+        {isLoading ? (
+          <ListSkeleton rows={6} />
+        ) : error ? (
+          <Card className="border-priority-high/25 bg-[rgba(18,18,20,0.72)] p-6">
+            <p className="text-center text-sm text-priority-high">
+              Failed to search documents: {error.message}
             </p>
-          </div>
-        </Card>
-      )}
+          </Card>
+        ) : documents && documents.length > 0 ? (
+          <Card className="overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-0 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
+            <ul className="divide-y divide-white/[0.06]">
+              {documents.map((doc) => {
+                const status =
+                  STATUS_STYLES[
+                    doc.approval_status as keyof typeof STATUS_STYLES
+                  ] ?? STATUS_STYLES.draft;
+                const statusLabel =
+                  doc.approval_status === "in_review"
+                    ? "In Review"
+                    : doc.approval_status === "approved"
+                      ? "Approved"
+                      : "Draft";
+
+                return (
+                  <li
+                    key={doc.id}
+                    className="flex w-full items-start gap-3.5 px-4 py-3.5 transition-colors hover:bg-white/[0.03] sm:px-5"
+                  >
+                    <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-muted-foreground">
+                      <FileText className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+                          {doc.title}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                            status,
+                          )}
+                        >
+                          {statusLabel}
+                        </span>
+                        {doc.is_locked && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-priority-high/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-priority-high">
+                            <Lock className="size-3" />
+                            Locked
+                          </span>
+                        )}
+                        {doc.is_archived && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <Archive className="size-3" />
+                            Archived
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}
+                        {doc.case_title && doc.case_title !== "Unknown Case" ? (
+                          <span className="truncate">{doc.case_title}</span>
+                        ) : null}
+                        <span className="tabular-nums">
+                          v{doc.current_version ?? 1}
+                        </span>
+                        <span>·</span>
+                        <span>
+                          Uploaded by {doc.uploader_name ?? "Unknown"}
+                        </span>
+                        <span>·</span>
+                        <span className="tabular-nums">
+                          {new Date(doc.created_at).toLocaleDateString(
+                            undefined,
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        ) : (
+          <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-6 py-16 text-center shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white/[0.04] text-muted-foreground">
+              <FileText className="size-5" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold tracking-tight text-foreground">
+              No documents found
+            </h3>
+            <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+              Adjust search or filters. Results only include documents you are
+              permitted to view.
+            </p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Tip: open a{" "}
+              <Link
+                to="/cases"
+                className="text-foreground/80 underline-offset-2 hover:underline"
+              >
+                case
+              </Link>{" "}
+              and upload documents from its Documents tab.
+            </p>
+          </Card>
+        )}
+      </div>
     </main>
   );
 }

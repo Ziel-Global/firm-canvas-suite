@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Sparkles, Loader2, Briefcase, User, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Briefcase,
+  User,
+  ChevronRight,
+  Command,
+} from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
-import { performSmartSearch, type SmartSearchResult } from "@/lib/search.functions";
+import {
+  performSmartSearch,
+  type SmartSearchResult,
+} from "@/lib/search.functions";
+import { PremiumLoader } from "@/components/premium-loader";
 
 export function SmartSearchBar() {
   const [query, setQuery] = useState("");
@@ -37,10 +47,12 @@ export function SmartSearchBar() {
     doSearch();
   }, [debouncedQuery, runSearch]);
 
-  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -49,37 +61,64 @@ export function SmartSearchBar() {
   }, []);
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
-      <div className="relative w-full group">
-        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/50 group-focus-within:text-foreground transition-colors" strokeWidth={1.75} />
+    <div ref={wrapperRef} className="relative w-full max-w-xl">
+      <div className="group relative w-full">
+        <Search
+          className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground"
+          strokeWidth={1.75}
+        />
         <input
           type="search"
-          placeholder="Smart search: 'land dispute involving Malik...'"
+          placeholder="Search matters, clients, topics…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          className="h-10 w-full rounded-full bg-foreground/5 border border-foreground/10 pl-10 pr-10 text-sm font-medium tracking-wide text-foreground placeholder:text-foreground/50 outline-none transition-all hover:bg-foreground/10 focus:bg-surface focus:border-foreground/20 focus:shadow-sm focus:ring-0"
+          className={cn(
+            "h-10 w-full rounded-xl border border-white/[0.08] bg-[#17191D]/90 pl-10 pr-16 text-sm font-medium tracking-wide text-foreground",
+            "placeholder:text-muted-foreground/70 outline-none transition-all",
+            "hover:border-white/15 hover:bg-[#1a1c20]",
+            "focus:border-white/20 focus:bg-[#1a1c20] focus:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]",
+          )}
         />
-        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-foreground/40">
-          <Sparkles className="size-4" />
+        <div className="pointer-events-none absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+          {isSearching ? (
+            <PremiumLoader size="sm" className="mr-1" />
+          ) : (
+            <kbd className="hidden items-center gap-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline-flex">
+              <Command className="size-2.5" />K
+            </kbd>
+          )}
         </div>
       </div>
 
-      {isOpen && query.trim() && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-canvas border border-border rounded-[var(--radius-control)] shadow-xl z-50 overflow-hidden flex flex-col max-h-[400px]">
-          <div className="px-3 py-2 bg-muted/30 border-b border-border flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="size-3 text-tag-blue" />
-            <span>AI Intent Search</span>
-            {isSearching && <Loader2 className="size-3 animate-spin ml-auto" />}
+      {isOpen && query.trim() ? (
+        <div className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-xl border border-white/[0.1] bg-[rgba(16,16,18,0.98)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.75)] backdrop-blur-xl">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          />
+          <div className="flex items-center gap-2 border-b border-white/[0.06] px-3.5 py-2.5">
+            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Smart search
+            </span>
+            {isSearching ? (
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                Searching…
+              </span>
+            ) : results.length > 0 ? (
+              <span className="ml-auto rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">
+                {results.length}
+              </span>
+            ) : null}
           </div>
-          
-          <div className="overflow-y-auto p-1">
+
+          <div className="max-h-[400px] overflow-y-auto p-1.5">
             {!isSearching && results.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No matching cases found for your query.
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                No matching cases for your query.
               </div>
             ) : (
               results.map((res) => (
@@ -88,33 +127,35 @@ export function SmartSearchBar() {
                   to="/cases/$caseId"
                   params={{ caseId: res.id }}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded-md transition-colors text-left w-full group"
+                  className="group flex w-full items-start gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-white/[0.05]"
                 >
-                  <div className="mt-0.5 size-8 shrink-0 rounded-full bg-tag-blue/10 text-tag-blue flex items-center justify-center">
+                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
                     <Briefcase className="size-4" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground truncate">{res.title}</p>
-                      <span className="text-[10px] font-medium text-tag-green bg-tag-green/10 px-1.5 py-0.5 rounded shrink-0">
-                        {Math.round(res.relevance * 100)}% match
+                      <p className="truncate text-sm font-semibold tracking-tight text-foreground">
+                        {res.title}
+                      </p>
+                      <span className="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">
+                        {Math.round(res.relevance * 100)}%
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="truncate">{res.case_type}</span>
-                      <span className="flex items-center gap-1 truncate">
+                      <span className="inline-flex items-center gap-1 truncate">
                         <User className="size-3" />
                         {res.client_name}
                       </span>
                     </div>
                   </div>
-                  <ChevronRight className="size-4 text-muted-foreground mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ChevronRight className="mt-2 size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </Link>
               ))
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

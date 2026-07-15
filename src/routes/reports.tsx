@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Download, FileText, Table as TableIcon, Loader2, RefreshCw, Activity, Users } from "lucide-react";
+import {
+  FileText,
+  Table as TableIcon,
+  RefreshCw,
+  Activity,
+  Users,
+} from "lucide-react";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
@@ -10,8 +16,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { getTeamProductivityData, getWorkloadDistributionData, getApprovalQueueReportData, getClientFollowUpReportData } from "@/lib/reports.functions";
+import {
+  getTeamProductivityData,
+  getWorkloadDistributionData,
+  getApprovalQueueReportData,
+  getClientFollowUpReportData,
+} from "@/lib/reports.functions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/premium-loader";
+import { TableSkeleton } from "@/components/loading-skeletons";
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 
@@ -99,12 +113,59 @@ export const getReportData = createServerFn({ method: "GET" })
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [
-      { title: "Reports — Law Firm Ops" },
-      { name: "description", content: "Reports and exports" },
+      { title: "Reports — SAS Associates" },
+      {
+        name: "description",
+        content: "Firm operations reports and exports.",
+      },
     ],
   }),
   component: ReportsPage,
 });
+
+const PANEL =
+  "overflow-hidden border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-0 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]";
+const TH =
+  "px-4 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground";
+const TD = "px-4 py-3 text-sm";
+const ROW = "border-b border-white/[0.06] last:border-b-0 transition-colors hover:bg-white/[0.03]";
+
+function PanelHeader({
+  title,
+  meta,
+}: {
+  title: string;
+  meta: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
+      <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {title}
+      </span>
+      <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">
+        {meta}
+      </span>
+    </div>
+  );
+}
+
+function healthBadge(health: string, stalled: boolean) {
+  const label = `${health.replace("_", " ")}${stalled ? " · stalled" : ""}`;
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap",
+        health === "overdue"
+          ? "bg-priority-high/15 text-priority-high"
+          : health === "at_risk"
+            ? "bg-amber-500/15 text-amber-200/90"
+            : "bg-white/[0.1] text-foreground",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
 
 function ReportsPage() {
   const { role } = useAuth();
@@ -204,418 +265,236 @@ function ReportsPage() {
     }
   };
 
+  const isSyncing =
+    fetchingCases ||
+    fetchingProd ||
+    fetchingWorkload ||
+    fetchingQueue ||
+    fetchingFollowup;
+
+  const canExport = Boolean(
+    casesData || prodData || workloadData || queueData || followupData,
+  );
+
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Firm Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Generate and export dynamic operations reports. Updates in real time.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (activeTab === "productivity") refetchProd();
-              else if (activeTab === "workload") refetchWorkload();
-              else if (activeTab === "queue") refetchQueue();
-              else if (activeTab === "followup") refetchFollowup();
-              else refetchCases();
-            }}
-            disabled={fetchingCases || fetchingProd || fetchingWorkload || fetchingQueue || fetchingFollowup}
-            className="text-muted-foreground"
-          >
-            <RefreshCw className={`size-4 mr-2 ${(fetchingCases || fetchingProd || fetchingWorkload || fetchingQueue || fetchingFollowup) ? "animate-spin" : ""}`} />
-            Sync
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport("excel")}
-            disabled={(!casesData && !prodData && !workloadData && !queueData && !followupData) || !!exporting}
-            className="border-tag-green/30 text-tag-green hover:bg-tag-green/10 hover:text-tag-green"
-          >
-            {exporting === "excel" ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <TableIcon className="size-4 mr-2" />
-            )}
-            Export Excel (CSV)
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport("pdf")}
-            disabled={(!casesData && !prodData && !workloadData && !queueData && !followupData) || !!exporting}
-            className="border-priority-high/30 text-priority-high hover:bg-priority-high/10 hover:text-priority-high"
-          >
-            {exporting === "pdf" ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <FileText className="size-4 mr-2" />
-            )}
-            Export PDF
-          </Button>
-        </div>
-      </div>
+    <main className="dashboard-shell min-h-[calc(100vh-3.5rem)] px-5 py-6 sm:px-7 lg:px-8 xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Firm
+            </p>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+              Reports
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Operations exports · live data · auto-sync every 30s
+            </p>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="cases" className="gap-2"><Activity className="size-4" /> Case Progress</TabsTrigger>
-          {(role === "super_admin" || role === "admin") && (
-            <TabsTrigger value="workload" className="gap-2"><TableIcon className="size-4" /> Workload Distribution</TabsTrigger>
-          )}
-          {(role === "super_admin" || role === "admin") && (
-            <TabsTrigger value="followup" className="gap-2"><Users className="size-4" /> Client Follow-up</TabsTrigger>
-          )}
-          {role === "super_admin" && (
-            <TabsTrigger value="productivity" className="gap-2"><Activity className="size-4" /> Team Productivity</TabsTrigger>
-          )}
-          {role === "super_admin" && (
-            <TabsTrigger value="queue" className="gap-2"><FileText className="size-4" /> Approval Queue</TabsTrigger>
-          )}
-        </TabsList>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (activeTab === "productivity") refetchProd();
+                else if (activeTab === "workload") refetchWorkload();
+                else if (activeTab === "queue") refetchQueue();
+                else if (activeTab === "followup") refetchFollowup();
+                else refetchCases();
+              }}
+              disabled={isSyncing}
+              className="h-9 border border-white/[0.08] bg-white/[0.03] px-3 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+            >
+              <RefreshCw
+                className={cn("mr-2 size-4", isSyncing && "animate-spin")}
+              />
+              Sync
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleExport("excel")}
+              disabled={!canExport || !!exporting}
+              className="h-9 border border-white/[0.08] bg-white/[0.03] px-3 text-foreground hover:bg-white/[0.06]"
+            >
+              {exporting === "excel" ? (
+                <PremiumLoader size="sm" className="mr-2" />
+              ) : (
+                <TableIcon className="mr-2 size-4" />
+              )}
+              Export CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleExport("pdf")}
+              disabled={!canExport || !!exporting}
+              className="h-9 gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] px-3 text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
+            >
+              {exporting === "pdf" ? (
+                <PremiumLoader size="sm" className="mr-2" />
+              ) : (
+                <FileText className="mr-2 size-4" />
+              )}
+              Export PDF
+            </Button>
+          </div>
+        </div>
 
-        <TabsContent value="cases" className="mt-0">
-          <Card className="overflow-hidden border-border bg-canvas">
-            <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-              <h2 className="font-semibold text-sm">Case Progress Report</h2>
-              <span className="text-xs text-muted-foreground">
-                {casesData ? `${casesData.length} active cases` : "Loading..."}
-              </span>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Ref</th>
-                    <th className="px-4 py-3 font-medium">Case Title</th>
-                    <th className="px-4 py-3 font-medium">Current Stage</th>
-                    <th className="px-4 py-3 font-medium">Assigned</th>
-                    <th className="px-4 py-3 font-medium">Next Deadline</th>
-                    <th className="px-4 py-3 font-medium text-right">Last Activity</th>
-                    <th className="px-4 py-3 font-medium text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {loadingCases ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                        <Loader2 className="size-5 animate-spin mx-auto mb-2" />
-                        Loading case progress...
-                      </td>
-                    </tr>
-                  ) : !casesData || casesData.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                        No active cases found.
-                      </td>
-                    </tr>
-                  ) : (
-                    casesData.map((row) => (
-                      <tr key={row.case_id} className={`transition-colors ${row.isStalled ? 'bg-amber-500/5 hover:bg-amber-500/10' : row.health === 'overdue' ? 'bg-priority-high/5 hover:bg-priority-high/10' : 'hover:bg-muted/20'}`}>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{row.case_ref}</td>
-                        <td className="px-4 py-3 font-medium text-foreground">{row.title}</td>
-                        <td className="px-4 py-3 text-xs">{row.stageName}</td>
-                        <td className="px-4 py-3 text-xs">{row.assignedMember}</td>
-                        <td className="px-4 py-3 text-xs tabular-nums">
-                          {row.nextDeadline ? new Date(row.nextDeadline).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          {row.daysSinceActivity === -1 ? '—' : 
-                            <span className={row.isStalled ? 'text-amber-500 font-semibold' : 'text-muted-foreground'}>
-                              {row.daysSinceActivity === 0 ? 'Today' : `${row.daysSinceActivity}d ago`}
-                            </span>
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase whitespace-nowrap inline-flex ${
-                            row.health === "overdue" ? "bg-priority-high/15 text-priority-high" :
-                            row.health === "at_risk" ? "bg-tag-sand/20 text-amber-700 dark:text-amber-400" :
-                            "bg-tag-green/15 text-tag-green"
-                          }`}>
-                            {row.health.replace("_", " ")}
-                            {row.isStalled && " (STALLED)"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1.5 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
+            <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+              <TabsTrigger
+                value="cases"
+                className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <Activity className="size-3.5" />
+                Case progress
+              </TabsTrigger>
+              {(role === "super_admin" || role === "admin") && (
+                <TabsTrigger
+                  value="workload"
+                  className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <TableIcon className="size-3.5" />
+                  Workload
+                </TabsTrigger>
+              )}
+              {(role === "super_admin" || role === "admin") && (
+                <TabsTrigger
+                  value="followup"
+                  className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Users className="size-3.5" />
+                  Client follow-up
+                </TabsTrigger>
+              )}
+              {role === "super_admin" && (
+                <TabsTrigger
+                  value="productivity"
+                  className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Activity className="size-3.5" />
+                  Team productivity
+                </TabsTrigger>
+              )}
+              {role === "super_admin" && (
+                <TabsTrigger
+                  value="queue"
+                  className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <FileText className="size-3.5" />
+                  Approval queue
+                </TabsTrigger>
+              )}
+            </TabsList>
           </Card>
-        </TabsContent>
 
-        {role === "super_admin" && (
-          <TabsContent value="productivity" className="mt-0 space-y-4">
-            <div className="flex justify-end">
-              <div className="bg-muted p-1 rounded-md inline-flex text-sm">
-                {(["daily", "weekly", "monthly"] as const).map(tr => (
-                  <button
-                    key={tr}
-                    onClick={() => setTimeRange(tr)}
-                    className={`px-3 py-1 rounded-sm capitalize ${timeRange === tr ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {tr}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <Card className="overflow-hidden border-border bg-canvas">
-              <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-                <h2 className="font-semibold text-sm">Team Productivity ({timeRange})</h2>
-                <span className="text-xs text-muted-foreground">
-                  {prodData ? `${prodData.length} team members` : "Loading..."}
-                </span>
-              </div>
-              
+          <TabsContent value="cases" className="mt-4">
+            <Card className={PANEL}>
+              <PanelHeader
+                title="Case progress report"
+                meta={
+                  casesData
+                    ? `${casesData.length} active cases`
+                    : "Loading…"
+                }
+              />
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Member</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Tasks completed in range">Completed</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Average task time (hrs)">Avg Time (h)</th>
-                      <th className="px-4 py-3 font-medium text-right text-priority-high" title="Currently overdue">Overdue</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Currently active">Active</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Docs submitted">Docs Sub</th>
-                      <th className="px-4 py-3 font-medium text-right text-tag-green" title="Docs approved">Approved</th>
-                      <th className="px-4 py-3 font-medium text-right text-amber-500" title="Revisions requested">Revisions</th>
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      <th className={TH}>Ref</th>
+                      <th className={TH}>Case title</th>
+                      <th className={TH}>Current stage</th>
+                      <th className={TH}>Assigned</th>
+                      <th className={TH}>Next deadline</th>
+                      <th className={cn(TH, "text-right")}>Last activity</th>
+                      <th className={cn(TH, "text-right")}>Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
-                    {loadingProd ? (
+                  <tbody>
+                    {loadingCases ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                          <Loader2 className="size-5 animate-spin mx-auto mb-2" />
-                          Loading productivity data...
+                        <td colSpan={7} className="p-0">
+                          <TableSkeleton
+                            rows={6}
+                            cols={7}
+                            className="rounded-none border-0 shadow-none"
+                          />
                         </td>
                       </tr>
-                    ) : !prodData || prodData.length === 0 ? (
+                    ) : !casesData || casesData.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                          No team data available.
+                        <td
+                          colSpan={7}
+                          className="px-4 py-12 text-center text-sm text-muted-foreground"
+                        >
+                          No active cases found.
                         </td>
                       </tr>
                     ) : (
-                      prodData.map((row) => (
-                        <tr key={row.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2.5 font-medium text-foreground whitespace-nowrap">{row.name}</td>
-                          <td className="px-4 py-2.5 text-xs capitalize text-muted-foreground">{row.role.replace(/_/g, " ")}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{row.tasksCompleted}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.avgTaskTimeHrs}</td>
-                          <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${row.overdueTasks > 0 ? 'text-priority-high' : ''}`}>
-                            {row.overdueTasks}
+                      casesData.map((row) => (
+                        <tr
+                          key={row.case_id}
+                          className={cn(
+                            ROW,
+                            row.isStalled && "bg-amber-500/[0.04]",
+                            row.health === "overdue" &&
+                              "bg-priority-high/[0.04]",
+                          )}
+                        >
+                          <td
+                            className={cn(
+                              TD,
+                              "whitespace-nowrap text-xs tabular-nums text-muted-foreground",
+                            )}
+                          >
+                            {row.case_ref}
                           </td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.activeTasks}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.docsSubmitted}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-tag-green">{row.docsApproved}</td>
-                          <td className={`px-4 py-2.5 text-right tabular-nums ${row.docsReturned > 0 ? 'text-amber-500 font-medium' : ''}`}>
-                            {row.docsReturned}
+                          <td
+                            className={cn(
+                              TD,
+                              "max-w-[220px] truncate font-medium tracking-tight text-foreground",
+                            )}
+                          >
+                            {row.title}
                           </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </TabsContent>
-        )}
-
-        {(role === "super_admin" || role === "admin") && (
-          <TabsContent value="workload" className="mt-0 space-y-4">
-            <Card className="overflow-hidden border-border bg-canvas">
-              <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-                <h2 className="font-semibold text-sm">Workload Distribution</h2>
-                <span className="text-xs text-muted-foreground">
-                  {workloadData ? `${workloadData.length} team members` : "Loading..."}
-                </span>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Member</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
-                      <th className="px-4 py-3 font-medium text-right">Active Cases</th>
-                      <th className="px-4 py-3 font-medium text-right">Active Tasks</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Estimated hours based on task priority averages">Est. Hours Remaining</th>
-                      <th className="px-4 py-3 font-medium text-right">Bandwidth</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {loadingWorkload ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                          <Loader2 className="size-5 animate-spin mx-auto mb-2" />
-                          Loading workload data...
-                        </td>
-                      </tr>
-                    ) : !workloadData || workloadData.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                          No team data available.
-                        </td>
-                      </tr>
-                    ) : (
-                      workloadData.map((row) => (
-                        <tr key={row.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2.5 font-medium text-foreground whitespace-nowrap">{row.name}</td>
-                          <td className="px-4 py-2.5 text-xs capitalize text-muted-foreground">{row.role.replace(/_/g, " ")}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.activeCases}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.activeTasks}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums">{row.estHoursRemaining} hrs</td>
-                          <td className="px-4 py-2.5 text-right">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase inline-flex whitespace-nowrap ${
-                              row.bandwidth === "Available" ? "bg-tag-green/15 text-tag-green" :
-                              row.bandwidth === "Moderate" ? "bg-tag-blue/15 text-tag-blue" :
-                              row.bandwidth === "High Load" ? "bg-tag-sand/20 text-amber-700 dark:text-amber-400" :
-                              "bg-priority-high/15 text-priority-high"
-                            }`}>
-                              {row.bandwidth}
-                            </span>
+                          <td className={cn(TD, "text-xs text-muted-foreground")}>
+                            {row.stageName}
                           </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </TabsContent>
-        )}
-
-        {role === "super_admin" && (
-          <TabsContent value="queue" className="mt-0 space-y-4">
-            <Card className="overflow-hidden border-border bg-canvas">
-              <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-                <h2 className="font-semibold text-sm">Approval Queue Report</h2>
-                <span className="text-xs text-muted-foreground">
-                  {queueData ? `${queueData.length} documents pending` : "Loading..."}
-                </span>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Document</th>
-                      <th className="px-4 py-3 font-medium">Case Ref</th>
-                      <th className="px-4 py-3 font-medium">Case Title</th>
-                      <th className="px-4 py-3 font-medium">Submitted By</th>
-                      <th className="px-4 py-3 font-medium">Submitted At</th>
-                      <th className="px-4 py-3 font-medium text-right text-priority-high" title="Days waiting for approval">Wait Time (Days)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {loadingQueue ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                          <Loader2 className="size-5 animate-spin mx-auto mb-2" />
-                          Loading approval queue...
-                        </td>
-                      </tr>
-                    ) : !queueData || queueData.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                          No pending approvals!
-                        </td>
-                      </tr>
-                    ) : (
-                      queueData.map((row) => (
-                        <tr key={row.id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-2.5 font-medium text-foreground whitespace-nowrap">{row.documentName}</td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">{row.caseRef}</td>
-                          <td className="px-4 py-2.5 text-xs">{row.caseTitle}</td>
-                          <td className="px-4 py-2.5 text-xs">{row.submittedBy}</td>
-                          <td className="px-4 py-2.5 text-xs tabular-nums text-muted-foreground">
-                            {new Date(row.submittedAt).toLocaleDateString()}
+                          <td className={cn(TD, "text-xs text-muted-foreground")}>
+                            {row.assignedMember}
                           </td>
-                          <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${row.waitedDays > 2 ? 'text-priority-high' : 'text-foreground'}`}>
-                            {row.waitedDays}
+                          <td
+                            className={cn(
+                              TD,
+                              "text-xs tabular-nums text-muted-foreground",
+                            )}
+                          >
+                            {row.nextDeadline
+                              ? new Date(row.nextDeadline).toLocaleDateString()
+                              : "—"}
                           </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </TabsContent>
-        )}
-
-        {(role === "super_admin" || role === "admin") && (
-          <TabsContent value="followup" className="mt-0 space-y-4">
-            <Card className="overflow-hidden border-border bg-canvas">
-              <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-                <h2 className="font-semibold text-sm">Client Follow-up Report</h2>
-                <span className="text-xs text-muted-foreground">
-                  {followupData ? `${followupData.length} active clients` : "Loading..."}
-                </span>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Client Name</th>
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium text-right">Active Cases</th>
-                      <th className="px-4 py-3 font-medium text-right" title="Last logged activity">Last Comm.</th>
-                      <th className="px-4 py-3 font-medium text-right">Next Hearing</th>
-                      <th className="px-4 py-3 font-medium text-right">Outstanding Billing</th>
-                      <th className="px-4 py-3 font-medium text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {loadingFollowup ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                          <Loader2 className="size-5 animate-spin mx-auto mb-2" />
-                          Loading client list...
-                        </td>
-                      </tr>
-                    ) : !followupData || followupData.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                          No active clients.
-                        </td>
-                      </tr>
-                    ) : (
-                      followupData.map((row) => (
-                        <tr key={row.clientId} className={`transition-colors ${row.isOverdue ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/20'}`}>
-                          <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{row.clientName}</td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">{row.email}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">{row.activeCases}</td>
-                          <td className="px-4 py-3 text-right tabular-nums">
-                            {row.lastCommunicationDate ? (
-                              <span className={row.isOverdue ? 'text-amber-500 font-semibold' : 'text-muted-foreground'}>
-                                {new Date(row.lastCommunicationDate).toLocaleDateString()}
-                              </span>
+                          <td className={cn(TD, "text-right tabular-nums")}>
+                            {row.daysSinceActivity === -1 ? (
+                              "—"
                             ) : (
-                              <span className="text-amber-500 font-semibold">—</span>
+                              <span
+                                className={
+                                  row.isStalled
+                                    ? "font-semibold text-amber-200/90"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {row.daysSinceActivity === 0
+                                  ? "Today"
+                                  : `${row.daysSinceActivity}d ago`}
+                              </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums">
-                            {row.upcomingHearingDate ? new Date(row.upcomingHearingDate).toLocaleDateString() : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums">
-                            ${row.outstandingBilling.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase inline-flex whitespace-nowrap ${
-                              row.isOverdue ? "bg-tag-sand/20 text-amber-700 dark:text-amber-400" : "bg-tag-green/15 text-tag-green"
-                            }`}>
-                              {row.isOverdue ? "OVERDUE CONTACT" : "ON TRACK"}
-                            </span>
+                          <td className={cn(TD, "text-right")}>
+                            {healthBadge(row.health, row.isStalled)}
                           </td>
                         </tr>
                       ))
@@ -625,8 +504,503 @@ function ReportsPage() {
               </div>
             </Card>
           </TabsContent>
-        )}
-      </Tabs>
-    </div>
+
+          {role === "super_admin" && (
+            <TabsContent value="productivity" className="mt-4 space-y-4">
+              <div className="flex justify-end">
+                <div className="inline-flex rounded-xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1">
+                  {(["daily", "weekly", "monthly"] as const).map((tr) => (
+                    <button
+                      key={tr}
+                      type="button"
+                      onClick={() => setTimeRange(tr)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+                        timeRange === tr
+                          ? "bg-white/[0.1] text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Card className={PANEL}>
+                <PanelHeader
+                  title={`Team productivity · ${timeRange}`}
+                  meta={
+                    prodData ? `${prodData.length} members` : "Loading…"
+                  }
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className={TH}>Member</th>
+                        <th className={TH}>Role</th>
+                        <th className={cn(TH, "text-right")}>Completed</th>
+                        <th className={cn(TH, "text-right")}>Avg time (h)</th>
+                        <th className={cn(TH, "text-right")}>Overdue</th>
+                        <th className={cn(TH, "text-right")}>Active</th>
+                        <th className={cn(TH, "text-right")}>Docs sub</th>
+                        <th className={cn(TH, "text-right")}>Approved</th>
+                        <th className={cn(TH, "text-right")}>Revisions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingProd ? (
+                        <tr>
+                          <td colSpan={9} className="p-0">
+                            <TableSkeleton
+                              rows={5}
+                              cols={9}
+                              className="rounded-none border-0 shadow-none"
+                            />
+                          </td>
+                        </tr>
+                      ) : !prodData || prodData.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={9}
+                            className="px-4 py-12 text-center text-sm text-muted-foreground"
+                          >
+                            No team data available.
+                          </td>
+                        </tr>
+                      ) : (
+                        prodData.map((row) => (
+                          <tr key={row.id} className={ROW}>
+                            <td
+                              className={cn(
+                                TD,
+                                "whitespace-nowrap font-medium tracking-tight text-foreground",
+                              )}
+                            >
+                              {row.name}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-xs capitalize text-muted-foreground",
+                              )}
+                            >
+                              {row.role.replace(/_/g, " ")}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums font-semibold",
+                              )}
+                            >
+                              {row.tasksCompleted}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.avgTaskTimeHrs}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums font-medium",
+                                row.overdueTasks > 0 && "text-priority-high",
+                              )}
+                            >
+                              {row.overdueTasks}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.activeTasks}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.docsSubmitted}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-foreground",
+                              )}
+                            >
+                              {row.docsApproved}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums",
+                                row.docsReturned > 0 &&
+                                  "font-medium text-amber-200/90",
+                              )}
+                            >
+                              {row.docsReturned}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
+
+          {(role === "super_admin" || role === "admin") && (
+            <TabsContent value="workload" className="mt-4">
+              <Card className={PANEL}>
+                <PanelHeader
+                  title="Workload distribution"
+                  meta={
+                    workloadData
+                      ? `${workloadData.length} members`
+                      : "Loading…"
+                  }
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className={TH}>Member</th>
+                        <th className={TH}>Role</th>
+                        <th className={cn(TH, "text-right")}>Active cases</th>
+                        <th className={cn(TH, "text-right")}>Active tasks</th>
+                        <th className={cn(TH, "text-right")}>Est. hours</th>
+                        <th className={cn(TH, "text-right")}>Bandwidth</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingWorkload ? (
+                        <tr>
+                          <td colSpan={6} className="p-0">
+                            <TableSkeleton
+                              rows={5}
+                              cols={6}
+                              className="rounded-none border-0 shadow-none"
+                            />
+                          </td>
+                        </tr>
+                      ) : !workloadData || workloadData.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-4 py-12 text-center text-sm text-muted-foreground"
+                          >
+                            No team data available.
+                          </td>
+                        </tr>
+                      ) : (
+                        workloadData.map((row) => (
+                          <tr key={row.id} className={ROW}>
+                            <td
+                              className={cn(
+                                TD,
+                                "whitespace-nowrap font-medium tracking-tight text-foreground",
+                              )}
+                            >
+                              {row.name}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-xs capitalize text-muted-foreground",
+                              )}
+                            >
+                              {row.role.replace(/_/g, " ")}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.activeCases}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.activeTasks}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.estHoursRemaining} hrs
+                            </td>
+                            <td className={cn(TD, "text-right")}>
+                              <span
+                                className={cn(
+                                  "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap",
+                                  row.bandwidth === "Available"
+                                    ? "bg-white/[0.1] text-foreground"
+                                    : row.bandwidth === "Moderate"
+                                      ? "bg-white/[0.06] text-foreground/80"
+                                      : row.bandwidth === "High Load"
+                                        ? "bg-amber-500/15 text-amber-200/90"
+                                        : "bg-priority-high/15 text-priority-high",
+                                )}
+                              >
+                                {row.bandwidth}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
+
+          {role === "super_admin" && (
+            <TabsContent value="queue" className="mt-4">
+              <Card className={PANEL}>
+                <PanelHeader
+                  title="Approval queue report"
+                  meta={
+                    queueData
+                      ? `${queueData.length} pending`
+                      : "Loading…"
+                  }
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className={TH}>Document</th>
+                        <th className={TH}>Case ref</th>
+                        <th className={TH}>Case title</th>
+                        <th className={TH}>Submitted by</th>
+                        <th className={TH}>Submitted at</th>
+                        <th className={cn(TH, "text-right")}>Wait (days)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingQueue ? (
+                        <tr>
+                          <td colSpan={6} className="p-0">
+                            <TableSkeleton
+                              rows={4}
+                              cols={6}
+                              className="rounded-none border-0 shadow-none"
+                            />
+                          </td>
+                        </tr>
+                      ) : !queueData || queueData.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-4 py-12 text-center text-sm text-muted-foreground"
+                          >
+                            No pending approvals.
+                          </td>
+                        </tr>
+                      ) : (
+                        queueData.map((row) => (
+                          <tr key={row.id} className={ROW}>
+                            <td
+                              className={cn(
+                                TD,
+                                "whitespace-nowrap font-medium tracking-tight text-foreground",
+                              )}
+                            >
+                              {row.documentName}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-xs tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.caseRef}
+                            </td>
+                            <td className={cn(TD, "text-xs text-muted-foreground")}>
+                              {row.caseTitle}
+                            </td>
+                            <td className={cn(TD, "text-xs text-muted-foreground")}>
+                              {row.submittedBy}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-xs tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {new Date(row.submittedAt).toLocaleDateString()}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums font-medium",
+                                row.waitedDays > 2
+                                  ? "text-priority-high"
+                                  : "text-foreground",
+                              )}
+                            >
+                              {row.waitedDays}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
+
+          {(role === "super_admin" || role === "admin") && (
+            <TabsContent value="followup" className="mt-4">
+              <Card className={PANEL}>
+                <PanelHeader
+                  title="Client follow-up report"
+                  meta={
+                    followupData
+                      ? `${followupData.length} clients`
+                      : "Loading…"
+                  }
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-white/[0.06]">
+                        <th className={TH}>Client</th>
+                        <th className={TH}>Email</th>
+                        <th className={cn(TH, "text-right")}>Active cases</th>
+                        <th className={cn(TH, "text-right")}>Last comm.</th>
+                        <th className={cn(TH, "text-right")}>Next hearing</th>
+                        <th className={cn(TH, "text-right")}>Billing</th>
+                        <th className={cn(TH, "text-right")}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingFollowup ? (
+                        <tr>
+                          <td colSpan={7} className="p-0">
+                            <TableSkeleton
+                              rows={5}
+                              cols={7}
+                              className="rounded-none border-0 shadow-none"
+                            />
+                          </td>
+                        </tr>
+                      ) : !followupData || followupData.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="px-4 py-12 text-center text-sm text-muted-foreground"
+                          >
+                            No active clients.
+                          </td>
+                        </tr>
+                      ) : (
+                        followupData.map((row) => (
+                          <tr
+                            key={row.clientId}
+                            className={cn(
+                              ROW,
+                              row.isOverdue && "bg-amber-500/[0.04]",
+                            )}
+                          >
+                            <td
+                              className={cn(
+                                TD,
+                                "whitespace-nowrap font-medium tracking-tight text-foreground",
+                              )}
+                            >
+                              {row.clientName}
+                            </td>
+                            <td className={cn(TD, "text-xs text-muted-foreground")}>
+                              {row.email}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.activeCases}
+                            </td>
+                            <td className={cn(TD, "text-right tabular-nums")}>
+                              {row.lastCommunicationDate ? (
+                                <span
+                                  className={
+                                    row.isOverdue
+                                      ? "font-semibold text-amber-200/90"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {new Date(
+                                    row.lastCommunicationDate,
+                                  ).toLocaleDateString()}
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-amber-200/90">
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              {row.upcomingHearingDate
+                                ? new Date(
+                                    row.upcomingHearingDate,
+                                  ).toLocaleDateString()
+                                : "—"}
+                            </td>
+                            <td
+                              className={cn(
+                                TD,
+                                "text-right tabular-nums text-muted-foreground",
+                              )}
+                            >
+                              ${row.outstandingBilling.toFixed(2)}
+                            </td>
+                            <td className={cn(TD, "text-right")}>
+                              <span
+                                className={cn(
+                                  "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap",
+                                  row.isOverdue
+                                    ? "bg-amber-500/15 text-amber-200/90"
+                                    : "bg-white/[0.1] text-foreground",
+                                )}
+                              >
+                                {row.isOverdue ? "Overdue contact" : "On track"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+    </main>
   );
 }
+

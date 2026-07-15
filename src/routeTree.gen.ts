@@ -26,6 +26,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
 import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
 import { Route as ApprovalsApprovalIdRouteImport } from './routes/approvals.$approvalId'
+import { Route as ApiPublicHooksSendMorningDigestRouteImport } from './routes/api/public/hooks/send-morning-digest'
+import { Route as ApiPublicHooksProcessRemindersRouteImport } from './routes/api/public/hooks/process-reminders'
 import { Route as ApiPublicHooksEscalateOverdueStagesRouteImport } from './routes/api/public/hooks/escalate-overdue-stages'
 
 const UsersRoute = UsersRouteImport.update({
@@ -113,6 +115,18 @@ const ApprovalsApprovalIdRoute = ApprovalsApprovalIdRouteImport.update({
   path: '/$approvalId',
   getParentRoute: () => ApprovalsRoute,
 } as any)
+const ApiPublicHooksSendMorningDigestRoute =
+  ApiPublicHooksSendMorningDigestRouteImport.update({
+    id: '/api/public/hooks/send-morning-digest',
+    path: '/api/public/hooks/send-morning-digest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessRemindersRoute =
+  ApiPublicHooksProcessRemindersRouteImport.update({
+    id: '/api/public/hooks/process-reminders',
+    path: '/api/public/hooks/process-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksEscalateOverdueStagesRoute =
   ApiPublicHooksEscalateOverdueStagesRouteImport.update({
     id: '/api/public/hooks/escalate-overdue-stages',
@@ -139,6 +153,8 @@ export interface FileRoutesByFullPath {
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
+  '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
+  '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -159,6 +175,8 @@ export interface FileRoutesByTo {
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
+  '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
+  '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -180,6 +198,8 @@ export interface FileRoutesById {
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
+  '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
+  '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -202,6 +222,8 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
+    | '/api/public/hooks/process-reminders'
+    | '/api/public/hooks/send-morning-digest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -222,6 +244,8 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
+    | '/api/public/hooks/process-reminders'
+    | '/api/public/hooks/send-morning-digest'
   id:
     | '__root__'
     | '/'
@@ -242,6 +266,8 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/clients/$clientId'
     | '/api/public/hooks/escalate-overdue-stages'
+    | '/api/public/hooks/process-reminders'
+    | '/api/public/hooks/send-morning-digest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -260,6 +286,8 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   UsersRoute: typeof UsersRoute
   ApiPublicHooksEscalateOverdueStagesRoute: typeof ApiPublicHooksEscalateOverdueStagesRoute
+  ApiPublicHooksProcessRemindersRoute: typeof ApiPublicHooksProcessRemindersRoute
+  ApiPublicHooksSendMorningDigestRoute: typeof ApiPublicHooksSendMorningDigestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -383,6 +411,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsApprovalIdRouteImport
       parentRoute: typeof ApprovalsRoute
     }
+    '/api/public/hooks/send-morning-digest': {
+      id: '/api/public/hooks/send-morning-digest'
+      path: '/api/public/hooks/send-morning-digest'
+      fullPath: '/api/public/hooks/send-morning-digest'
+      preLoaderRoute: typeof ApiPublicHooksSendMorningDigestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-reminders': {
+      id: '/api/public/hooks/process-reminders'
+      path: '/api/public/hooks/process-reminders'
+      fullPath: '/api/public/hooks/process-reminders'
+      preLoaderRoute: typeof ApiPublicHooksProcessRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/escalate-overdue-stages': {
       id: '/api/public/hooks/escalate-overdue-stages'
       path: '/api/public/hooks/escalate-overdue-stages'
@@ -443,6 +485,8 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRoute: UsersRoute,
   ApiPublicHooksEscalateOverdueStagesRoute:
     ApiPublicHooksEscalateOverdueStagesRoute,
+  ApiPublicHooksProcessRemindersRoute: ApiPublicHooksProcessRemindersRoute,
+  ApiPublicHooksSendMorningDigestRoute: ApiPublicHooksSendMorningDigestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

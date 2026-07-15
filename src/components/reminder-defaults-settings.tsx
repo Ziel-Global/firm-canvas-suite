@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SettingsSection } from "@/components/settings-section";
 import { cn } from "@/lib/utils";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -113,16 +114,17 @@ function TypeCard({
   }
 
   return (
-    <Card className="p-5">
-      <h3 className="text-sm font-semibold text-foreground">
+    <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-5 shadow-[0_12px_32px_-20px_rgba(0,0,0,0.5)]">
+      <h3 className="text-sm font-semibold tracking-tight text-foreground">
         {TYPE_LABELS[eventType] ?? eventType}
       </h3>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Default reminders applied to new {TYPE_LABELS[eventType]?.toLowerCase() ?? eventType} events.
+        Default reminders applied to new{" "}
+        {TYPE_LABELS[eventType]?.toLowerCase() ?? eventType} events.
       </p>
 
       <div className="mt-4 space-y-2">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
           Offsets before the event
         </Label>
         {draft.offsets.length === 0 && (
@@ -140,14 +142,16 @@ function TypeCard({
                   value: Math.max(1, Number(e.target.value) || 1),
                 })
               }
-              className="w-20"
+              className="h-9 w-20 border-white/[0.08] bg-[#17191D]"
             />
             <Select
               value={o.unit}
-              onValueChange={(v) => updateOffset(o.id, { unit: v as ReminderUnit })}
+              onValueChange={(v) =>
+                updateOffset(o.id, { unit: v as ReminderUnit })
+              }
               disabled={!canEdit}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="h-9 w-32 border-white/[0.08] bg-[#17191D]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -162,7 +166,7 @@ function TypeCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="ml-auto h-8 w-8"
+                className="ml-auto h-8 w-8 border border-white/[0.08] bg-white/[0.03]"
                 onClick={() =>
                   setDraft((d) => ({
                     ...d,
@@ -181,11 +185,14 @@ function TypeCard({
             type="button"
             variant="ghost"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06]"
             onClick={() =>
               setDraft((d) => ({
                 ...d,
-                offsets: [...d.offsets, { id: makeId(), value: 1, unit: "hours" }],
+                offsets: [
+                  ...d.offsets,
+                  { id: makeId(), value: 1, unit: "hours" },
+                ],
               }))
             }
           >
@@ -196,7 +203,7 @@ function TypeCard({
       </div>
 
       <div className="mt-4 space-y-2">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
           Channels
         </Label>
         <div className="flex flex-wrap gap-1.5">
@@ -209,10 +216,10 @@ function TypeCard({
                 disabled={!canEdit}
                 onClick={() => toggleChannel(channel)}
                 className={cn(
-                  "rounded-pill border px-3 py-1 text-xs font-medium transition-colors",
+                  "rounded-md border px-3 py-1 text-xs font-medium transition-colors",
                   active
-                    ? "border-primary bg-primary text-primary-ink"
-                    : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                    ? "border-white/15 bg-white/[0.12] text-foreground"
+                    : "border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:text-foreground",
                 )}
               >
                 {CHANNEL_LABELS[channel]}
@@ -228,6 +235,7 @@ function TypeCard({
             size="sm"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
+            className="border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
           >
             {mutation.isPending ? "Saving…" : "Save"}
           </Button>
@@ -248,17 +256,12 @@ export function ReminderDefaultsSettings() {
   });
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">
-          Event reminders
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Configure default reminder offsets and channels per event type. New
-          events inherit these and can be adjusted individually.
-        </p>
-      </div>
-
+    <SettingsSection
+      eyebrow="Delivery"
+      title="Event reminders"
+      description="Configure default reminder offsets and channels per event type. New events inherit these and can be adjusted individually."
+      bare
+    >
       {isLoading && (
         <p className="text-sm text-muted-foreground">Loading defaults…</p>
       )}
@@ -273,6 +276,6 @@ export function ReminderDefaultsSettings() {
           />
         ))}
       </div>
-    </div>
+    </SettingsSection>
   );
 }

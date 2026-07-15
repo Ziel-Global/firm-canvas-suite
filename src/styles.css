@@ -465,3 +465,406 @@ tbody tr:hover {
 .badge-pulse {
   animation: badgePulse 2.5s ease-in-out infinite;
 }
+
+/* Dashboard page shell — premium atmosphere + clear of scrollbar edge */
+.dashboard-shell {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+}
+
+.dashboard-shell::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 0;
+  height: min(460px, 55vh);
+  background:
+    radial-gradient(
+      ellipse 90% 70% at 18% 0%,
+      rgba(255, 255, 255, 0.07),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 70% 60% at 85% 8%,
+      rgba(255, 255, 255, 0.035),
+      transparent 48%
+    );
+}
+
+.dashboard-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-panel {
+  border-radius: 18px;
+}
+
+@keyframes loader-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes load-bar {
+  0% {
+    transform: translateX(-100%) scaleX(0.35);
+  }
+  50% {
+    transform: translateX(20%) scaleX(0.55);
+  }
+  100% {
+    transform: translateX(120%) scaleX(0.35);
+  }
+}
+
+
+/* ─── Auth Portal (Premium Enterprise Login) ─────────────────────────────── */
+
+.auth-portal {
+  position: relative;
+  display: flex;
+  height: 100dvh;
+  max-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% 0%,
+    oklch(0.22 0.008 250) 0%,
+    oklch(0.14 0.006 250) 45%,
+    oklch(0.10 0.004 250) 100%
+  );
+  font-family: var(--font-sans);
+}
+
+.auth-portal__backdrop {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.auth-portal__spotlight {
+  position: absolute;
+  top: -8%;
+  left: 50%;
+  height: 520px;
+  width: 720px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    oklch(1 0 0 / 0.07) 0%,
+    oklch(1 0 0 / 0.025) 35%,
+    transparent 70%
+  );
+}
+
+.auth-portal__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 90% 80% at 50% 50%,
+    transparent 40%,
+    oklch(0 0 0 / 0.45) 100%
+  );
+}
+
+.auth-portal__noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.auth-portal__main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem 0.25rem;
+}
+
+.auth-portal__stack {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-portal__logo {
+  height: auto;
+  width: min(300px, 62vw);
+  max-height: 34vh;
+  object-fit: contain;
+  filter: contrast(1.1) brightness(1.06);
+  margin-bottom: 0.35rem;
+  margin-top: -0.5rem;
+}
+
+.auth-portal__header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.auth-portal__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: oklch(0.97 0.005 250);
+}
+
+.auth-portal__subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.auth-portal__card {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 18, 20, 0.88);
+  padding: 1.5rem 1.5rem 1.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.auth-portal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-portal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-portal__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.auth-portal__input {
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #17191d;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.95);
+  outline: none;
+  transition:
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-portal__input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.auth-portal__input:focus-visible {
+  border-color: rgba(180, 190, 200, 0.55);
+  box-shadow: 0 0 0 3px rgba(180, 190, 200, 0.08);
+}
+
+.auth-portal__error {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.875rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.auth-portal__submit {
+  margin-top: 0.15rem;
+  height: 42px;
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8f8f8 0%, #cfcfcf 100%);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #1a1c20;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-portal__submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.auth-portal__submit:focus-visible {
+  outline: 2px solid rgba(180, 190, 200, 0.6);
+  outline-offset: 3px;
+}
+
+.auth-portal__submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-portal__submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.auth-portal__footer {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-portal__footer p {
+  margin: 0;
+}
+
+/* Staggered entrance animations */
+.auth-portal__reveal {
+  animation: authPortalReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.auth-portal__reveal--logo {
+  animation-name: authPortalLogoReveal;
+  animation-duration: 0.85s;
+}
+
+.auth-portal__reveal--title {
+  animation-delay: 0.12s;
+}
+
+.auth-portal__reveal--subtitle {
+  animation-delay: 0.2s;
+}
+
+.auth-portal__reveal--card {
+  animation-delay: 0.15s;
+}
+
+.auth-portal__reveal--field {
+  animation-delay: 0.28s;
+}
+
+.auth-portal__reveal--field-delay {
+  animation-delay: 0.36s;
+}
+
+.auth-portal__reveal--submit {
+  animation-delay: 0.44s;
+}
+
+@keyframes authPortalLogoReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes authPortalReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-portal__card {
+    padding: 1.25rem 1.125rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  .auth-portal__logo {
+    width: min(260px, 58vw);
+    max-height: 30vh;
+    margin-bottom: 0.25rem;
+    margin-top: -0.25rem;
+  }
+
+  .auth-portal__header {
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-portal__title {
+    font-size: 1.375rem;
+  }
+}
+
+@media (max-height: 780px) {
+  .auth-portal__logo {
+    width: min(250px, 56vw);
+    max-height: 28vh;
+    margin-bottom: 0.2rem;
+    margin-top: -0.35rem;
+  }
+
+  .auth-portal__header {
+    margin-bottom: 1rem;
+  }
+
+  .auth-portal__title {
+    font-size: 1.5rem;
+  }
+
+  .auth-portal__card {
+    padding: 1.25rem 1.25rem 1.4rem;
+  }
+
+  .auth-portal__form {
+    gap: 0.875rem;
+  }
+
+  .auth-portal__submit {
+    height: 40px;
+  }
+
+  .auth-portal__footer {
+    padding: 0.5rem 1rem 0.75rem;
+  }
+}
