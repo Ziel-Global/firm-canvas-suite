@@ -461,59 +461,100 @@ function OperationsDashboard() {
           ) : d.teamWorkload.length === 0 ? (
             <EmptyState>No team members found.</EmptyState>
           ) : (
-            <div className="mt-4 space-y-2">
-              {/* Desktop / tablet table header */}
-              <div className="hidden grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] gap-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:grid">
-                <span>Member</span>
-                <span className="text-right">Cases</span>
-                <span className="text-right">Tasks</span>
-                <span className="text-right">Overdue</span>
+            <div className="mt-4 w-full min-w-0">
+              {/* Mobile — full-width stacked cards */}
+              <ul className="flex w-full min-w-0 flex-col gap-2 md:hidden">
+                {d.teamWorkload.map((m) => (
+                  <li key={m.id} className="w-full min-w-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMemberSheet({ id: m.id, name: m.name })
+                      }
+                      className={cn(
+                        "box-border flex w-full min-w-0 max-w-full flex-col items-stretch gap-2.5 rounded-xl border px-3 py-3 text-left text-sm transition-all hover:border-white/15 hover:bg-white/[0.03]",
+                        heatClass(m.open_tasks, m.overdue_tasks),
+                      )}
+                    >
+                      <span className="block w-full truncate font-medium">
+                        {m.name}
+                      </span>
+                      <div className="grid w-full min-w-0 grid-cols-3 gap-2">
+                        <div className="min-w-0 rounded-lg bg-black/25 px-1.5 py-2 text-center">
+                          <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Cases
+                          </span>
+                          <span className="mt-0.5 block text-xs tabular-nums">
+                            {m.active_cases}
+                          </span>
+                        </div>
+                        <div className="min-w-0 rounded-lg bg-black/25 px-1.5 py-2 text-center">
+                          <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Tasks
+                          </span>
+                          <span className="mt-0.5 block text-xs tabular-nums">
+                            {m.open_tasks}
+                          </span>
+                        </div>
+                        <div className="min-w-0 rounded-lg bg-black/25 px-1.5 py-2 text-center">
+                          <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Overdue
+                          </span>
+                          <span
+                            className={cn(
+                              "mt-0.5 block text-xs font-semibold tabular-nums",
+                              m.overdue_tasks > 0 && "text-priority-high",
+                            )}
+                          >
+                            {m.overdue_tasks > 0 ? m.overdue_tasks : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Desktop / tablet — table rows */}
+              <div className="hidden w-full min-w-0 space-y-1.5 md:block">
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] gap-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <span>Member</span>
+                  <span className="text-right">Cases</span>
+                  <span className="text-right">Tasks</span>
+                  <span className="text-right">Overdue</span>
+                </div>
+                {d.teamWorkload.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() =>
+                      setMemberSheet({ id: m.id, name: m.name })
+                    }
+                    className={cn(
+                      "grid w-full min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] items-center gap-2 rounded-xl border px-2.5 py-2.5 text-left text-sm transition-all hover:border-white/15 hover:bg-white/[0.03]",
+                      heatClass(m.open_tasks, m.overdue_tasks),
+                    )}
+                  >
+                    <span className="truncate font-medium">{m.name}</span>
+                    <span className="text-right text-xs tabular-nums">
+                      {m.active_cases}
+                    </span>
+                    <span className="text-right text-xs tabular-nums">
+                      {m.open_tasks}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-right text-xs font-semibold tabular-nums",
+                        m.overdue_tasks > 0 && "text-priority-high",
+                      )}
+                    >
+                      {m.overdue_tasks > 0 ? m.overdue_tasks : "—"}
+                    </span>
+                  </button>
+                ))}
               </div>
-              {d.teamWorkload.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() =>
-                    setMemberSheet({ id: m.id, name: m.name })
-                  }
-                  className={cn(
-                    "w-full cursor-pointer rounded-xl border px-3 py-2.5 text-left text-sm transition-all hover:border-white/15 hover:bg-white/[0.03]",
-                    heatClass(m.open_tasks, m.overdue_tasks),
-                    // Mobile: stacked card · sm+: table row
-                    "flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] sm:items-center sm:gap-2 sm:px-2.5",
-                  )}
-                >
-                  <span className="truncate font-medium">{m.name}</span>
-                  <div className="grid grid-cols-3 gap-2 sm:contents">
-                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
-                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
-                        Cases
-                      </span>
-                      <span className="text-xs tabular-nums">{m.active_cases}</span>
-                    </div>
-                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
-                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
-                        Tasks
-                      </span>
-                      <span className="text-xs tabular-nums">{m.open_tasks}</span>
-                    </div>
-                    <div className="rounded-lg bg-black/20 px-2 py-1.5 text-center sm:bg-transparent sm:p-0 sm:text-right">
-                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground sm:hidden">
-                        Overdue
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs font-semibold tabular-nums",
-                          m.overdue_tasks > 0 && "text-priority-high",
-                        )}
-                      >
-                        {m.overdue_tasks > 0 ? m.overdue_tasks : "—"}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-              <p className="px-1 pt-2 text-[10px] leading-relaxed text-muted-foreground">
+
+              <p className="px-1 pt-3 text-[10px] leading-relaxed text-muted-foreground">
                 Highlighted rows indicate overdue work or high open-task load.
               </p>
             </div>
