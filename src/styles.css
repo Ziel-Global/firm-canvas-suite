@@ -14,64 +14,77 @@
  */
 
 :root {
-  /* ---- Core Surfaces ---- */
-  /* A very deep, almost black blue for the main canvas */
-  --canvas: oklch(0.18 0.02 260);          
-  /* Slightly elevated surfaces */
-  --frame: oklch(0.22 0.03 260);           
-  --surface: oklch(0.25 0.03 260);         
-  --surface-raised: oklch(0.28 0.04 260);  
+  /* ---- Core Surfaces (Premium Slate) ---- */
+  --canvas: oklch(0.15 0.01 250);
+  /* Deepest Slate / Background */
+  --frame: oklch(0.18 0.01 250);
+  /* Sidebar / Secondary Panel */
+  --surface: oklch(0.22 0.01 250);
+  /* Cards / Main Surfaces */
+  --surface-raised: oklch(0.26 0.01 250);
+  /* Popovers / Hovered Cards */
 
-  /* ---- Brand (Vibrant Accents) ---- */
-  --brand-primary: oklch(0.70 0.16 280);    /* Vibrant Purple/Indigo */
-  --brand-primary-hover: oklch(0.75 0.16 280);
-  --brand-primary-ink: oklch(1 0 0);
-  
-  --brand-secondary: oklch(0.75 0.15 210);  /* Cyan */
-  --brand-tertiary: oklch(0.75 0.18 340);   /* Pink/Magenta */
+  /* ---- Brand (Monochrome Excellence) ---- */
+  --brand-primary: oklch(0.95 0.005 250);
+  /* Crisp White/Light Slate */
+  --brand-primary-hover: oklch(0.85 0.005 250);
+  --brand-primary-ink: oklch(0.15 0.01 250);
+  /* Dark text on primary buttons */
+
+  --brand-secondary: oklch(0.65 0.01 250);
+  /* Mid Slate Accent */
+  --brand-tertiary: oklch(0.45 0.01 250);
+  /* Darker Slate Accent */
 
   /* ---- Text ---- */
-  --text: oklch(0.98 0.01 260);
-  --text-secondary: oklch(0.80 0.02 260);
-  --muted-color: oklch(0.65 0.02 260);
+  --text: oklch(0.95 0.005 250);
+  --text-secondary: oklch(0.70 0.01 250);
+  --muted-color: oklch(0.50 0.01 250);
 
   /* ---- Borders ---- */
-  --border-subtle: oklch(1 0 0 / 0.08);
-  --border-default: oklch(1 0 0 / 0.12);
+  --border-subtle: oklch(1 0 0 / 0.05);
+  --border-default: oklch(1 0 0 / 0.10);
   --border-strong: oklch(1 0 0 / 0.20);
-  
-  --border-glass: oklch(1 0 0 / 0.15);
 
-  /* ---- Status / Priority (Neon-ish) ---- */
-  --priority-high: oklch(0.70 0.22 25);     /* Neon Orange/Red */
-  --priority-med: oklch(0.85 0.18 80);      /* Bright Yellow/Gold */
-  --priority-low: oklch(0.75 0.15 210);     /* Cyan */
+  --border-glass: oklch(1 0 0 / 0.12);
 
-  --status-ontrack: oklch(0.75 0.20 150);   /* Emerald Green */
-  --status-atrisk: oklch(0.85 0.18 80);     /* Bright Yellow */
-  --status-overdue: oklch(0.70 0.22 25);    /* Neon Orange/Red */
+  /* ---- Status / Priority (Muted elegance) ---- */
+  --priority-high: oklch(0.65 0.12 30);
+  /* Muted Rust/Coral */
+  --priority-med: oklch(0.75 0.10 80);
+  /* Muted Gold */
+  --priority-low: oklch(0.70 0.05 220);
+  /* Muted Steel Blue */
+
+  --status-ontrack: oklch(0.70 0.10 160);
+  /* Muted Sage Green */
+  --status-atrisk: oklch(0.75 0.10 80);
+  /* Muted Gold */
+  --status-overdue: oklch(0.65 0.12 30);
+  /* Muted Rust */
 
   /* ---- Tags ---- */
-  --tag-purple: oklch(0.75 0.16 300);
-  --tag-blue: oklch(0.80 0.15 240);
-  --tag-sand: oklch(0.85 0.12 85);
-  --tag-green: oklch(0.80 0.18 150);
+  --tag-purple: oklch(0.70 0.08 300);
+  --tag-blue: oklch(0.70 0.08 240);
+  --tag-sand: oklch(0.75 0.05 85);
+  --tag-green: oklch(0.70 0.08 150);
 
   /* ---- Radii ---- */
-  --radius: 0.75rem;
-  --radius-card: 1.25rem;
-  --radius-control: 0.75rem;
+  --radius: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
   --radius-pill: 9999px;
 
   /* ---- Typography ---- */
   --font-sans: "Inter", "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-size-base: 0.9375rem; /* 15px */
+  --font-size-base: 0.9375rem;
+  /* 15px */
 
   /* ---- Shadows ---- */
-  --shadow-card: 0 4px 20px -2px oklch(0 0 0 / 0.4), inset 0 1px 1px oklch(1 0 0 / 0.1);
-  --shadow-elevated: 0 10px 40px -10px oklch(0 0 0 / 0.6), inset 0 1px 1px oklch(1 0 0 / 0.15);
-  --shadow-glow-primary: 0 0 25px oklch(0.70 0.16 280 / 0.4);
-  --shadow-glow-secondary: 0 0 25px oklch(0.75 0.15 210 / 0.4);
+  --shadow-card: 0 4px 15px -3px oklch(0 0 0 / 0.3), inset 0 1px 1px oklch(1 0 0 / 0.05);
+  --shadow-elevated: 0 10px 30px -10px oklch(0 0 0 / 0.5), inset 0 1px 1px oklch(1 0 0 / 0.1);
+  --shadow-glow-primary: 0 0 20px oklch(1 0 0 / 0.15);
+  --shadow-glow-secondary: 0 0 20px oklch(0.65 0.01 250 / 0.2);
 
   /* ---- shadcn semantic tokens ---- */
   --background: var(--canvas);
@@ -86,7 +99,7 @@
   --secondary-foreground: var(--text);
   --muted: var(--frame);
   --muted-foreground: var(--muted-color);
-  --accent: oklch(0.70 0.16 280 / 0.15);
+  --accent: oklch(1 0 0 / 0.05);
   --accent-foreground: var(--brand-primary);
   --destructive: var(--status-overdue);
   --destructive-foreground: oklch(1 0 0);
@@ -111,18 +124,23 @@
 /* Light mode override - Keeping it similar but optimized for light */
 @media (prefers-color-scheme: light) {
   :root:not(.dark) {
-    --canvas: oklch(0.98 0.01 260);
-    --frame: oklch(0.95 0.02 260);
+    --canvas: oklch(0.98 0.002 250);
+    --frame: oklch(0.95 0.005 250);
     --surface: oklch(1 0 0);
-    --surface-raised: oklch(0.99 0.01 260);
-    --text: oklch(0.20 0.02 260);
-    --text-secondary: oklch(0.40 0.02 260);
-    --muted-color: oklch(0.55 0.02 260);
+    --surface-raised: oklch(0.99 0.002 250);
+    --text: oklch(0.20 0.01 250);
+    --text-secondary: oklch(0.40 0.01 250);
+    --muted-color: oklch(0.55 0.01 250);
+
+    --brand-primary: oklch(0.15 0.01 250);
+    --brand-primary-hover: oklch(0.25 0.01 250);
+    --brand-primary-ink: oklch(1 0 0);
+
     --border-subtle: oklch(0 0 0 / 0.05);
     --border-default: oklch(0 0 0 / 0.10);
     --border-strong: oklch(0 0 0 / 0.18);
-    --shadow-card: 0 4px 20px -2px oklch(0 0 0 / 0.08), inset 0 1px 1px oklch(1 0 0 / 0.5);
-    --shadow-elevated: 0 10px 40px -10px oklch(0 0 0 / 0.15), inset 0 1px 1px oklch(1 0 0 / 0.8);
+    --shadow-card: 0 4px 20px -2px oklch(0 0 0 / 0.05), inset 0 1px 1px oklch(1 0 0 / 0.5);
+    --shadow-elevated: 0 10px 40px -10px oklch(0 0 0 / 0.10), inset 0 1px 1px oklch(1 0 0 / 0.8);
   }
 }
 
@@ -139,7 +157,7 @@
   --secondary-foreground: var(--text);
   --muted: var(--frame);
   --muted-foreground: var(--muted-color);
-  --accent: oklch(0.70 0.16 280 / 0.15);
+  --accent: oklch(1 0 0 / 0.05);
   --accent-foreground: var(--brand-primary);
   --destructive: var(--status-overdue);
   --destructive-foreground: oklch(1 0 0);
@@ -251,11 +269,11 @@
   }
 
   body {
-    /* Premium dark background with a very subtle radial glow */
+    /* Premium slate background */
     background-color: var(--color-canvas);
-    background-image: 
-      radial-gradient(circle at 15% 50%, oklch(0.70 0.16 280 / 0.05), transparent 25%),
-      radial-gradient(circle at 85% 30%, oklch(0.75 0.15 210 / 0.05), transparent 25%);
+    background-image:
+      radial-gradient(circle at 15% 0%, oklch(1 0 0 / 0.03), transparent 35%),
+      radial-gradient(circle at 85% 100%, oklch(1 0 0 / 0.02), transparent 35%);
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -270,13 +288,16 @@
     width: 6px;
     height: 6px;
   }
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
+
   ::-webkit-scrollbar-thumb {
     background: oklch(1 0 0 / 0.15);
     border-radius: 9999px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
     background: oklch(1 0 0 / 0.25);
   }
@@ -306,14 +327,14 @@
 /* ─── Typography Enhancements ────────────────────────────────────────────── */
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  background: linear-gradient(135deg, oklch(0.98 0 0), oklch(0.7 0.01 250));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-text-warm {
-  background: linear-gradient(135deg, var(--brand-tertiary), var(--priority-high));
+  background: linear-gradient(135deg, oklch(0.9 0.01 250), oklch(0.6 0.01 250));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -326,8 +347,15 @@
 }
 
 @keyframes pageEnter {
-  from { opacity: 0; transform: translateY(12px) scale(0.99); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .stat-card {
@@ -339,7 +367,10 @@
 .stat-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   border-radius: inherit;
   box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1);
   pointer-events: none;
@@ -358,31 +389,31 @@
 /* ─── Sidebar & Navigation ────────────────────────────────────────────────── */
 
 .nav-item-active {
-  background: linear-gradient(90deg, oklch(0.70 0.16 280 / 0.2) 0%, transparent 100%);
+  background: linear-gradient(90deg, oklch(1 0 0 / 0.08) 0%, transparent 100%);
   border-left: 3px solid var(--brand-primary);
   color: oklch(1 0 0);
-  text-shadow: 0 0 10px oklch(0.70 0.16 280 / 0.5);
 }
 
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
 
 .btn-premium {
-  background: linear-gradient(135deg, var(--brand-primary), oklch(0.60 0.16 280));
-  color: white;
-  border: none;
-  box-shadow: 0 4px 15px oklch(0.70 0.16 280 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.3);
+  background: linear-gradient(135deg, oklch(0.95 0 0), oklch(0.75 0.01 250));
+  color: oklch(0.15 0.01 250);
+  border: 1px solid oklch(1 0 0 / 0.2);
+  box-shadow: 0 4px 15px oklch(0 0 0 / 0.2), inset 0 1px 0 oklch(1 0 0 / 0.8);
   transition: all 0.2s ease;
+  font-weight: 600;
 }
 
 .btn-premium:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px oklch(0.70 0.16 280 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.4);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px oklch(0 0 0 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.9);
+  filter: brightness(1.05);
 }
 
 .btn-premium:active {
   transform: translateY(1px);
-  box-shadow: 0 2px 10px oklch(0.70 0.16 280 / 0.3);
+  box-shadow: 0 2px 10px oklch(0 0 0 / 0.2);
 }
 
 /* ─── Tables ──────────────────────────────────────────────────────────────── */
@@ -408,17 +439,29 @@ tbody tr:hover {
 .badge-glow-high {
   box-shadow: 0 0 12px var(--priority-high);
 }
+
 .badge-glow-med {
   box-shadow: 0 0 12px var(--priority-med);
 }
+
 .badge-glow-low {
   box-shadow: 0 0 12px var(--priority-low);
 }
 
 @keyframes badgePulse {
-  0%, 100% { filter: drop-shadow(0 0 4px currentColor); opacity: 1; }
-  50% { filter: drop-shadow(0 0 1px currentColor); opacity: 0.7; }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px currentColor);
+    opacity: 1;
+  }
+
+  50% {
+    filter: drop-shadow(0 0 1px currentColor);
+    opacity: 0.7;
+  }
 }
+
 .badge-pulse {
   animation: badgePulse 2.5s ease-in-out infinite;
 }

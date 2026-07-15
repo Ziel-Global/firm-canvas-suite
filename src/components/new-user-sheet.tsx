@@ -50,6 +50,7 @@ interface NewUserSheetProps {
 const EMPTY: CreateUserInput = {
   fullName: "",
   email: "",
+  password: "",
   role: "junior_lawyer",
   phone: "",
   requireTwoFactor: false,
@@ -64,7 +65,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
     mutationFn: (input: CreateUserInput) => submit({ data: input }),
     onSuccess: (res) => {
       toast.success(`User created — ${res.email}`, {
-        description: "A welcome email with a temporary password has been queued.",
+        description: "An email notification has been queued.",
       });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       setForm(EMPTY);
@@ -79,8 +80,12 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName.trim() || !form.email.trim()) {
-      toast.error("Full name and email are required.");
+    if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
+      toast.error("Full name, email, and password are required.");
+      return;
+    }
+    if (form.password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
       return;
     }
     mutation.mutate(form);
@@ -92,7 +97,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
         <SheetHeader>
           <SheetTitle>New user</SheetTitle>
           <SheetDescription>
-            Create an account. The user receives a temporary password by email.
+            Create an account and assign a password manually.
           </SheetDescription>
         </SheetHeader>
 
@@ -117,6 +122,18 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="jane@marlowevance.com"
               autoComplete="off"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              placeholder="••••••••"
+              autoComplete="new-password"
             />
           </div>
 

@@ -15,6 +15,7 @@ const APP_ROLES = [
 const createUserSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required").max(120),
   email: z.string().trim().email("A valid email is required").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(APP_ROLES),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   requireTwoFactor: z.boolean(),
@@ -22,26 +23,10 @@ const createUserSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
-function generateTempPassword(): string {
-  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const lower = "abcdefghijkmnpqrstuvwxyz";
-  const digits = "23456789";
-  const symbols = "!@#$%&*";
-  const all = upper + lower + digits + symbols;
-  const pick = (set: string) => set[Math.floor(Math.random() * set.length)];
-  let pwd = pick(upper) + pick(lower) + pick(digits) + pick(symbols);
-  for (let i = 0; i < 12; i++) pwd += pick(all);
-  // shuffle
-  return pwd
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
-}
-
 /**
  * Create a new user. Super Admin only. Uses the service role to create the
- * auth user with a generated temporary password, insert the profile (with
- * created_by = caller), queue a welcome notification with the temp password,
+ * auth user with a manually provided password, insert the profile (with
+ * created_by = caller), queue a welcome notification,
  * and write to the immutable audit_log. No self-registration anywhere else.
  */
 export const createUser = createServerFn({ method: "POST" })
@@ -64,12 +49,10 @@ export const createUser = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const tempPassword = generateTempPassword();
-
     // Create the auth user (email pre-confirmed so they can sign in immediately).
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
-      password: tempPassword,
+      password: data.password,
       email_confirm: true,
     });
 
@@ -95,14 +78,14 @@ export const createUser = createServerFn({ method: "POST" })
       throw new Error(`Could not create profile: ${profileError.message}`);
     }
 
-    // Queue the welcome email with the temporary password via notifications.
+    // Queue the welcome email via notifications.
     await supabaseAdmin.from("notifications").insert({
       user_id: newUserId,
       type: "welcome_email",
       title: "Welcome to Marlowe & Vance",
       body:
         `Your account has been created. Sign in with your email (${data.email}) and ` +
-        `this temporary password: ${tempPassword}. You will be asked to change it after signing in.`,
+        `the password provided to you by your administrator.`,
       link: "/auth",
     });
 
@@ -110,8 +93,8 @@ export const createUser = createServerFn({ method: "POST" })
     supabaseAdmin.functions.invoke("send-email", {
       body: {
         to: data.email,
-        subject: "Welcome to Firm Canvas - Your Temporary Password",
-        html: `<p>Hi ${data.fullName},</p><p>Your account has been created. Sign in with your email (<strong>${data.email}</strong>) and this temporary password: <strong>${tempPassword}</strong>.</p><p>You will be asked to change it upon first login.</p><p><a href="https://firmcanvas.app/auth">Login to Firm Canvas</a></p>`
+        subject: "Welcome to Firm Canvas - Account Created",
+        html: `<p>Hi ${data.fullName},</p><p>Your account has been created by your administrator.</p><p>Sign in with your email (<strong>${data.email}</strong>) and the password provided to you.</p><p><a href="https://firmcanvas.app/auth">Login to Firm Canvas</a></p>`
       }
     }).catch(err => console.error("Failed to send welcome email:", err));
 

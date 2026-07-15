@@ -175,12 +175,12 @@ function ClientsPage() {
                 </Tag>
               </div>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="size-4" />
+                <div className="flex items-center gap-2 text-foreground/80 font-medium tracking-wide">
+                  <Clock className="size-4 opacity-70" />
                   <span>Last contact: {formatDate(c.last_contact_at)}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <CalendarClock className="size-4" />
+                <div className="flex items-center gap-2 text-foreground/80 font-medium tabular-nums tracking-wide">
+                  <CalendarClock className="size-4 opacity-70" />
                   <span>Next hearing: {formatDate(c.next_hearing_at)}</span>
                 </div>
               </div>

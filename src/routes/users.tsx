@@ -203,14 +203,14 @@ function UsersPage() {
                         {ROLE_LABELS[u.role] ?? u.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{u.phone ?? "—"}</TableCell>
+                    <TableCell className="text-foreground/80 font-medium tracking-wide tabular-nums">{u.phone ?? "—"}</TableCell>
                     <TableCell>
                       <StatusDot
                         status={u.is_active ? "ontrack" : "overdue"}
                         label={u.is_active ? "Active" : "Inactive"}
                       />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-foreground/80 font-medium tabular-nums">
                       {formatDate(u.created_at)}
                     </TableCell>
                     <TableCell>

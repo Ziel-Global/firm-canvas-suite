@@ -51,7 +51,7 @@ export function SmartSearchBar() {
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative w-full group">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-tag-blue transition-colors" strokeWidth={1.75} />
+        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/50 group-focus-within:text-foreground transition-colors" strokeWidth={1.75} />
         <input
           type="search"
           placeholder="Smart search: 'land dispute involving Malik...'"
@@ -61,9 +61,9 @@ export function SmartSearchBar() {
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          className="h-9 w-full rounded-control bg-frame pl-9 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-1 ring-transparent transition-all focus:bg-surface focus:ring-tag-blue/50 focus:ring-2"
+          className="h-10 w-full rounded-full bg-foreground/5 border border-foreground/10 pl-10 pr-10 text-sm font-medium tracking-wide text-foreground placeholder:text-foreground/50 outline-none transition-all hover:bg-foreground/10 focus:bg-surface focus:border-foreground/20 focus:shadow-sm focus:ring-0"
         />
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground opacity-50">
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-foreground/40">
           <Sparkles className="size-4" />
         </div>
       </div>

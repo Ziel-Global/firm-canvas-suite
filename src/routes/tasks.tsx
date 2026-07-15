@@ -234,7 +234,7 @@ function Column({
         </SortableContext>
         <button
           onClick={onAddTask}
-          className="flex items-center justify-center gap-1.5 rounded-control border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+          className="flex items-center justify-center gap-1.5 rounded-control bg-foreground/5 py-2.5 text-xs font-semibold tracking-wide text-foreground/90 transition-all hover:bg-foreground/10 hover:shadow-sm hover:text-foreground"
         >
           <Plus className="size-3.5" />
           Add task
@@ -468,7 +468,7 @@ function TasksPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-foreground/70 tracking-wide mt-1">
             Track work across every case. Drag cards to update status.
           </p>
         </div>

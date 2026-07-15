@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Plus, Scale } from "lucide-react";
+import { Plus, Scale, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { role } = useAuth();
+  const { role, signOut } = useAuth();
   const navGroups = navGroupsForRole(role);
 
 
@@ -69,6 +69,18 @@ export function AppSidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Sign out */}
+      <div className="border-t border-frame p-3 lg:p-4">
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="flex w-full items-center justify-center gap-3 rounded-control px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive lg:justify-start"
+        >
+          <LogOut className="size-[18px] shrink-0" strokeWidth={1.75} />
+          <span className="hidden lg:inline">Sign out</span>
+        </button>
+      </div>
     </aside>
   );
 }
