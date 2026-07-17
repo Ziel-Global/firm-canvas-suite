@@ -14,9 +14,13 @@ import {
   TrendingUp,
   RefreshCw,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 
-import { getOperationsDashboard } from "@/lib/dashboard.functions";
+import {
+  getMyDashboard,
+  getOperationsDashboard,
+} from "@/lib/dashboard.functions";
 import { Card } from "@/components/ui/card";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Button } from "@/components/ui/button";
@@ -30,10 +34,10 @@ import { ListSkeleton } from "@/components/loading-skeletons";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Operations Dashboard — SAS Associates" },
+      { title: "Dashboard — SAS Associates" },
       {
         name: "description",
-        content: "Firm-wide operations overview for the Super Admin.",
+        content: "Workspace overview for firm operations.",
       },
     ],
   }),
@@ -52,6 +56,12 @@ const HEALTH_LABELS: Record<string, string> = {
   overdue: "Overdue",
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  senior_lawyer: "Senior Lawyer",
+  junior_lawyer: "Junior Lawyer",
+  support: "Support",
+};
+
 function heatClass(open: number, overdue: number): string {
   if (overdue > 0)
     return "bg-priority-high/10 text-priority-high border-priority-high/25";
@@ -61,15 +71,47 @@ function heatClass(open: number, overdue: number): string {
   return "bg-transparent text-muted-foreground border-white/[0.06]";
 }
 
+function formatWhen(iso: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatDue(iso: string | null) {
+  if (!iso) return "No due date";
+  try {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 function DashboardPage() {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
+
+  if (loading || !role) return null;
+
+  if (role === "client") {
+    return <Navigate to="/portal" replace />;
+  }
 
   if (
     role === "senior_lawyer" ||
     role === "junior_lawyer" ||
     role === "support"
   ) {
-    return <Navigate to="/tasks" replace />;
+    return <MyWorkspaceDashboard />;
   }
 
   if (role === "super_admin") return <OperationsDashboard />;
@@ -82,6 +124,319 @@ function DashboardShell({ children }: { children: ReactNode }) {
     <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto w-full max-w-[1440px] space-y-7">{children}</div>
     </main>
+  );
+}
+
+function MyWorkspaceDashboard() {
+  const { profile, role } = useAuth();
+  const fetchMine = useServerFn(getMyDashboard);
+  const [caseSheet, setCaseSheet] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["my-dashboard"],
+    queryFn: () => fetchMine(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const d = data ?? {
+    displayName: profile?.full_name ?? null,
+    role: role,
+    activeCases: 0,
+    healthCounts: { on_track: 0, at_risk: 0, overdue: 0 },
+    openTasks: 0,
+    tasksDueToday: 0,
+    tasksOverdue: 0,
+    attention: [],
+    myCases: [],
+    myTasks: [],
+    upcomingHearings: [],
+  };
+
+  const firstName =
+    (d.displayName ?? profile?.full_name ?? "there").trim().split(/\s+/)[0] ||
+    "there";
+
+  return (
+    <DashboardShell>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            {ROLE_LABELS[d.role ?? role ?? ""] ?? "Workspace"}
+          </p>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+            Welcome back, {firstName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your cases, tasks, and hearings · refreshes every 60 seconds
+          </p>
+        </div>
+        <RefreshButton onClick={() => refetch()} busy={isFetching} />
+      </div>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          label="My cases"
+          value={d.activeCases}
+          icon={<Briefcase className="size-4" />}
+          linkTo="/cases"
+        />
+        <KpiCard
+          label="Open tasks"
+          value={d.openTasks}
+          icon={<CheckSquare className="size-4" />}
+          linkTo="/tasks"
+        />
+        <KpiCard
+          label="Due today"
+          value={d.tasksDueToday}
+          icon={<Calendar className="size-4" />}
+          linkTo="/tasks"
+        />
+        <KpiCard
+          label="Overdue"
+          value={d.tasksOverdue}
+          icon={<AlertTriangle className="size-4" />}
+          alert={d.tasksOverdue > 0}
+          linkTo="/tasks"
+        />
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <KpiCard
+          label="On track"
+          value={d.healthCounts.on_track}
+          icon={<StatusDot status="ontrack" label="" />}
+        />
+        <KpiCard
+          label="At risk"
+          value={d.healthCounts.at_risk}
+          icon={<StatusDot status="atrisk" label="" />}
+          alert={d.healthCounts.at_risk > 0}
+        />
+        <KpiCard
+          label="Case overdue"
+          value={d.healthCounts.overdue}
+          icon={<AlertTriangle className="size-4" />}
+          alert={d.healthCounts.overdue > 0}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <Panel className="min-w-0 overflow-hidden">
+          <PanelHeader
+            title="Needs attention"
+            icon={<ShieldAlert className="size-4 text-priority-high/90" />}
+            trailing={
+              d.attention.length > 0 ? (
+                <span className="rounded-full bg-priority-high/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-priority-high">
+                  {d.attention.length}
+                </span>
+              ) : null
+            }
+          />
+          {isLoading ? (
+            <div className="mt-4 space-y-3">
+              <Skeleton className="h-10 w-full rounded-xl" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          ) : d.attention.length === 0 ? (
+            <div className="mt-6 flex flex-col items-center py-8 text-center">
+              <StatusDot status="ontrack" label="" />
+              <p className="mt-3 text-sm text-muted-foreground">
+                Your matters look healthy.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-3 divide-y divide-white/[0.06]">
+              {d.attention.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => setCaseSheet({ id: c.id, title: c.title })}
+                    className="flex w-full flex-col gap-2 py-3 text-left transition-colors hover:text-foreground sm:flex-row sm:items-start sm:justify-between"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {c.title}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {c.case_ref ? (
+                          <span className="font-mono">{c.case_ref}</span>
+                        ) : null}
+                        {c.active_stage ? (
+                          <span className="flex items-center gap-1">
+                            <Layers className="size-3" />
+                            {c.active_stage}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <StatusDot
+                      status={HEALTH_MAP[c.health ?? "on_track"] ?? "ontrack"}
+                      label={HEALTH_LABELS[c.health ?? ""] ?? ""}
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel className="min-w-0 overflow-hidden">
+          <PanelHeader
+            title="My open tasks"
+            icon={<CheckSquare className="size-4" />}
+            trailing={
+              <Button asChild variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+                <Link to="/tasks">
+                  Board
+                  <ChevronRight className="size-3.5" />
+                </Link>
+              </Button>
+            }
+          />
+          {isLoading ? (
+            <ListSkeleton rows={4} className="mt-4" />
+          ) : d.myTasks.length === 0 ? (
+            <EmptyState>No open tasks assigned to you.</EmptyState>
+          ) : (
+            <ul className="mt-3 divide-y divide-white/[0.06]">
+              {d.myTasks.map((t) => {
+                const overdue =
+                  t.due_date != null &&
+                  t.due_date < new Date().toISOString().slice(0, 10);
+                return (
+                  <li
+                    key={t.id}
+                    className="flex items-start justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {t.title}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {[t.case_ref, t.case_title].filter(Boolean).join(" · ") ||
+                          "No case"}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 text-xs tabular-nums",
+                        overdue
+                          ? "font-semibold text-priority-high"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {formatDue(t.due_date)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <Panel className="min-w-0 overflow-hidden">
+          <PanelHeader
+            title="My cases"
+            icon={<Briefcase className="size-4" />}
+            trailing={
+              <Button asChild variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+                <Link to="/cases">
+                  All cases
+                  <ChevronRight className="size-3.5" />
+                </Link>
+              </Button>
+            }
+          />
+          {isLoading ? (
+            <ListSkeleton rows={4} className="mt-4" />
+          ) : d.myCases.length === 0 ? (
+            <EmptyState>No active cases on your desk.</EmptyState>
+          ) : (
+            <ul className="mt-3 divide-y divide-white/[0.06]">
+              {d.myCases.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    to="/cases/$caseId"
+                    params={{ caseId: c.id }}
+                    className="flex items-center justify-between gap-3 py-3 transition-colors hover:text-foreground"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {c.title}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {[c.case_ref, c.active_stage].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <StatusDot
+                        status={HEALTH_MAP[c.health ?? "on_track"] ?? "ontrack"}
+                        label=""
+                        className="gap-0"
+                      />
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel className="min-w-0 overflow-hidden">
+          <PanelHeader
+            title="Upcoming hearings"
+            icon={<Calendar className="size-4" />}
+            trailing={
+              <Button asChild variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+                <Link to="/calendar">
+                  Calendar
+                  <ChevronRight className="size-3.5" />
+                </Link>
+              </Button>
+            }
+          />
+          {isLoading ? (
+            <ListSkeleton rows={3} className="mt-4" />
+          ) : d.upcomingHearings.length === 0 ? (
+            <EmptyState>No upcoming hearings on your matters.</EmptyState>
+          ) : (
+            <ul className="mt-3 divide-y divide-white/[0.06]">
+              {d.upcomingHearings.map((h) => (
+                <li key={h.id} className="py-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {h.title ?? "Hearing"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatWhen(h.starts_at)}
+                    {h.location ? ` · ${h.location}` : ""}
+                  </p>
+                  {(h.case_ref || h.case_title) && (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {[h.case_ref, h.case_title].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </section>
+
+      <CaseDrillDownSheet
+        caseId={caseSheet?.id ?? null}
+        caseTitle={caseSheet?.title ?? ""}
+        onClose={() => setCaseSheet(null)}
+      />
+    </DashboardShell>
   );
 }
 

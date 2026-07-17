@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -39,6 +39,12 @@ import { TableSkeleton, CardsSkeleton } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases")({
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } => ({
+    new:
+      search.new === true || search.new === "true" || search.new === "1"
+        ? true
+        : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Cases — SAS Associates" },
@@ -113,6 +119,8 @@ function initials(name: string | null) {
 
 function CasesPage() {
   const { role } = useAuth();
+  const navigate = useNavigate({ from: "/cases" });
+  const { new: openNewFromNav } = Route.useSearch();
   const fetchCases = useServerFn(listCases);
   const [view, setView] = useState<ViewMode>("table");
   const [search, setSearch] = useState("");
@@ -121,6 +129,9 @@ function CasesPage() {
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
   const [newCaseOpen, setNewCaseOpen] = useState(false);
+
+  const canView = role != null;
+  const canCreate = role === "super_admin" || role === "admin";
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -132,8 +143,22 @@ function CasesPage() {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
-  const canView = role != null;
-  const canCreate = role === "super_admin" || role === "admin";
+  useEffect(() => {
+    if (openNewFromNav && canCreate) {
+      setNewCaseOpen(true);
+    }
+  }, [openNewFromNav, canCreate]);
+
+  function handleNewCaseOpenChange(open: boolean) {
+    setNewCaseOpen(open);
+    if (!open && openNewFromNav) {
+      void navigate({
+        to: "/cases",
+        search: { new: undefined },
+        replace: true,
+      });
+    }
+  }
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["cases"],
@@ -253,7 +278,7 @@ function CasesPage() {
         </div>
 
         {canCreate && (
-          <NewCaseSheet open={newCaseOpen} onOpenChange={setNewCaseOpen} />
+          <NewCaseSheet open={newCaseOpen} onOpenChange={handleNewCaseOpenChange} />
         )}
 
         {/* Filters */}

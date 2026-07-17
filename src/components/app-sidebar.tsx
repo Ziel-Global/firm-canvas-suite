@@ -231,7 +231,8 @@ export function AppSidebar() {
         {/* New */}
         <div className={cn("relative px-3 pb-3", collapsed && "lg:px-2")}>
           <Button
-            title="New"
+            asChild
+            title="New case"
             className={cn(
               "w-full gap-2 font-semibold",
               collapsed ? "lg:justify-center lg:px-0" : "justify-start",
@@ -239,8 +240,10 @@ export function AppSidebar() {
               "shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]",
             )}
           >
-            <Plus className="size-4 shrink-0" />
-            <span className={cn(collapsed && "lg:sr-only")}>New</span>
+            <Link to="/cases" search={{ new: true }} onClick={closeMobile}>
+              <Plus className="size-4 shrink-0" />
+              <span className={cn(collapsed && "lg:sr-only")}>New</span>
+            </Link>
           </Button>
         </div>
 

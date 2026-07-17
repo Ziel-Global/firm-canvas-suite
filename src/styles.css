@@ -404,6 +404,16 @@ tbody tr:hover {
   box-shadow: 0 0 0 4px oklch(0.75 0.15 210 / 0.2);
 }
 
+/* Command / combobox search fields — no focus box */
+[cmdk-input-wrapper] input:focus,
+[cmdk-input-wrapper] input:focus-visible,
+[cmdk-input]:focus,
+[cmdk-input]:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* ─── Badges & Status ─────────────────────────────────────────────────────── */
 
 .badge-glow-high {

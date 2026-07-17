@@ -24,6 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AppRole } from "@/lib/nav";
+import { cn } from "@/lib/utils";
+
+const FIELD =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -110,6 +114,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
               placeholder="Jane Vance"
               autoComplete="off"
+              className={FIELD}
             />
           </div>
 
@@ -122,6 +127,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="jane@marlowevance.com"
               autoComplete="off"
+              className={FIELD}
             />
           </div>
 
@@ -134,6 +140,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               placeholder="••••••••"
               autoComplete="new-password"
+              className={FIELD}
             />
           </div>
 
@@ -143,7 +150,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               value={form.role}
               onValueChange={(v) => setForm((f) => ({ ...f, role: v as AppRole }))}
             >
-              <SelectTrigger id="role">
+              <SelectTrigger id="role" className={cn(FIELD, "w-full")}>
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
@@ -164,10 +171,11 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               placeholder="+1 555 0100"
               autoComplete="off"
+              className={FIELD}
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-control border border-frame px-4 py-3">
+          <div className="flex items-center justify-between rounded-control border border-white/[0.12] bg-white/[0.03] px-4 py-3">
             <div>
               <Label htmlFor="require-2fa">Require 2FA</Label>
               <p className="text-xs text-muted-foreground">
@@ -184,9 +192,10 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
           <SheetFooter className="mt-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={mutation.isPending}
+              className="border-white/[0.12] bg-white/[0.06] text-foreground hover:bg-white/[0.1] hover:text-foreground"
             >
               Cancel
             </Button>

@@ -151,6 +151,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+                className="border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15"
               />
             </div>
 
