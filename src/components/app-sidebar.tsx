@@ -177,11 +177,11 @@ export function AppSidebar() {
               collapsed && "lg:flex-none lg:justify-center",
             )}
           >
-            <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden">
+            <div className="flex size-10 shrink-0 items-center justify-center">
               <img
-                src="/transparent-law-logo-mark.png"
-                alt="SAS Associates"
-                className="size-9 object-contain brightness-110 contrast-125"
+                src="/onlylogo.png"
+                alt="Firm logo"
+                className="size-10 scale-[2.75] object-contain"
               />
             </div>
             <div
@@ -191,7 +191,7 @@ export function AppSidebar() {
               )}
             >
               <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-                SAS Associates
+              Blackwood & Nelson
               </span>
               <span className="text-[11px] text-muted-foreground">
                 Operations

@@ -13,6 +13,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/lib/nav";
 import { verifyAccess } from "@/lib/access-guard.functions";
+import { SESSION_TIMEOUT_CHANGED_EVENT } from "@/lib/firm-settings-events";
 
 interface Profile {
   id: string;
@@ -175,17 +176,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   // Inactivity-based auto sign-out using firm_settings.session_timeout_minutes.
+  // Re-reads on navigation and applies live updates when Settings are saved.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutMsRef = useRef(DEFAULT_TIMEOUT_MINUTES * 60 * 1000);
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
-    let timeoutMs = DEFAULT_TIMEOUT_MINUTES * 60 * 1000;
 
     const resetTimer = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         void signOut().then(() => navigate({ to: "/auth", replace: true }));
-      }, timeoutMs);
+      }, timeoutMsRef.current);
     };
 
     const events: (keyof WindowEventMap)[] = [
@@ -199,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const onActivity = () => resetTimer();
 
-    async function setup() {
+    async function loadTimeout() {
       const { data } = await supabase
         .from("firm_settings")
         .select("value")
@@ -208,20 +210,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const minutes = Number(data?.value);
       if (Number.isFinite(minutes) && minutes > 0) {
-        timeoutMs = minutes * 60 * 1000;
+        timeoutMsRef.current = minutes * 60 * 1000;
+      } else {
+        timeoutMsRef.current = DEFAULT_TIMEOUT_MINUTES * 60 * 1000;
       }
-      events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
       resetTimer();
     }
 
-    setup();
+    const onSettingChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ minutes?: number }>).detail;
+      const minutes = Number(detail?.minutes);
+      if (Number.isFinite(minutes) && minutes > 0) {
+        timeoutMsRef.current = minutes * 60 * 1000;
+        resetTimer();
+      } else {
+        void loadTimeout();
+      }
+    };
+
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    window.addEventListener(SESSION_TIMEOUT_CHANGED_EVENT, onSettingChanged);
+    void loadTimeout();
+
+    // Pick up remote changes even if this tab didn't save them.
+    const poll = window.setInterval(() => {
+      void loadTimeout();
+    }, 60_000);
 
     return () => {
       cancelled = true;
       if (timerRef.current) clearTimeout(timerRef.current);
+      window.clearInterval(poll);
       events.forEach((e) => window.removeEventListener(e, onActivity));
+      window.removeEventListener(SESSION_TIMEOUT_CHANGED_EVENT, onSettingChanged);
     };
-  }, [session, navigate, signOut]);
+  }, [session, pathname, navigate, signOut]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -124,11 +124,11 @@ function AuthPage() {
       <main className="auth-portal__main">
         <div className="auth-portal__stack">
           <img
-            src="/Logo.png"
-            alt="Sardar Abdul Sami Associates"
+            src="/new-logo.png"
+            alt="Blackwood & Dickson LLP"
             className="auth-portal__logo auth-portal__reveal auth-portal__reveal--logo"
-            width={300}
-            height={300}
+            width={660}
+            height={198}
           />
 
           <header className="auth-portal__header">

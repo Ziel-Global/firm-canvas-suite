@@ -603,13 +603,15 @@ tbody tr:hover {
 }
 
 .auth-portal__logo {
+  position: relative;
+  top: 2.25rem;
   height: auto;
-  width: min(300px, 62vw);
-  max-height: 34vh;
+  width: min(660px, 94vw);
+  max-height: 38vh;
   object-fit: contain;
   filter: contrast(1.1) brightness(1.06);
-  margin-bottom: 0.35rem;
-  margin-top: -0.5rem;
+  margin-bottom: -1.75rem;
+  margin-top: 1.5rem;
 }
 
 .auth-portal__header {
@@ -816,10 +818,11 @@ tbody tr:hover {
   }
 
   .auth-portal__logo {
-    width: min(260px, 58vw);
-    max-height: 30vh;
-    margin-bottom: 0.25rem;
-    margin-top: -0.25rem;
+    top: 1.75rem;
+    width: min(580px, 92vw);
+    max-height: 32vh;
+    margin-bottom: -1.25rem;
+    margin-top: 1.25rem;
   }
 
   .auth-portal__header {
@@ -833,10 +836,11 @@ tbody tr:hover {
 
 @media (max-height: 780px) {
   .auth-portal__logo {
-    width: min(250px, 56vw);
-    max-height: 28vh;
-    margin-bottom: 0.2rem;
-    margin-top: -0.35rem;
+    top: 1.5rem;
+    width: min(520px, 90vw);
+    max-height: 30vh;
+    margin-bottom: -1rem;
+    margin-top: 1rem;
   }
 
   .auth-portal__header {

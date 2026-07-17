@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SlidersHorizontal } from "lucide-react";
 
+import { useAuth } from "@/contexts/auth-context";
+import { FirmSettingsPanel } from "@/components/firm-settings-panel";
 import { ReminderDefaultsSettings } from "@/components/reminder-defaults-settings";
 import { MorningDigestPreview } from "@/components/morning-digest-preview";
 import { WorkflowTemplatesSettings } from "@/components/workflow-templates-settings";
@@ -21,6 +23,9 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
+
   return (
     <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 pb-10">
@@ -36,12 +41,13 @@ function SettingsPage() {
               Settings
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Approvals, templates, workflows, and delivery defaults that shape
-              day-to-day operations across the firm.
+              Firm policy, approvals, templates, workflows, and delivery defaults
+              that shape day-to-day operations.
             </p>
           </div>
         </div>
 
+        {isSuperAdmin ? <FirmSettingsPanel /> : null}
         <DelegationSettings />
         <DocumentTemplatesSettings />
         <WorkflowTemplatesSettings />
