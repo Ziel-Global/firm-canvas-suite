@@ -9,6 +9,8 @@ import {
   Clock,
   Plus,
   ChevronRight,
+  ChevronDown,
+  Check,
   Hash,
 } from "lucide-react";
 
@@ -17,12 +19,11 @@ import { listClients, type ClientRow } from "@/lib/clients.functions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { NewClientSheet } from "@/components/new-client-sheet";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,12 @@ export const Route = createFileRoute("/clients")({
 
 type SortKey = "name" | "active_cases" | "last_contact" | "next_hearing";
 
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "name", label: "Name (A–Z)" },
+  { value: "active_cases", label: "Most active cases" },
+  { value: "last_contact", label: "Most recent contact" },
+  { value: "next_hearing", label: "Next hearing soonest" },
+];
 const ALLOWED_ROLES = [
   "super_admin",
   "admin",
@@ -172,20 +179,35 @@ function ClientsPage() {
                 className="h-10 border-white/[0.08] bg-[#17191D] pl-9 focus-visible:ring-white/10"
               />
             </div>
-            <Select
-              value={sortKey}
-              onValueChange={(v) => setSortKey(v as SortKey)}
-            >
-              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] sm:w-56">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Name (A–Z)</SelectItem>
-                <SelectItem value="active_cases">Most active cases</SelectItem>
-                <SelectItem value="last_contact">Most recent contact</SelectItem>
-                <SelectItem value="next_hearing">Next hearing soonest</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-10 w-full justify-between border border-white/[0.08] bg-[#17191D] px-3 font-normal hover:bg-[#17191D] hover:text-foreground sm:w-56"
+                >
+                  <span className="truncate">
+                    {SORT_OPTIONS.find((o) => o.value === sortKey)?.label ??
+                      "Sort by"}
+                  </span>
+                  <ChevronDown className="size-4 shrink-0 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {SORT_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onSelect={() => setSortKey(opt.value)}
+                    className="justify-between gap-2"
+                  >
+                    {opt.label}
+                    {sortKey === opt.value ? (
+                      <Check className="size-4 shrink-0" />
+                    ) : null}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </Card>
 

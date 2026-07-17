@@ -39,6 +39,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+const FIELD_CLASS =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
+
 const NO_CASE = "__none__";
 const EVENT_TYPES = [
   { value: "meeting", label: "Meeting" },
@@ -175,6 +178,7 @@ export function NewEventSheet({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Client strategy meeting"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -183,7 +187,7 @@ export function NewEventSheet({
             <DarkDatePicker
               value={date}
               onChange={setDate}
-              className="w-full"
+              className={`w-full ${FIELD_CLASS}`}
               placeholder="Pick the day"
             />
           </div>
@@ -196,6 +200,7 @@ export function NewEventSheet({
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+                className={FIELD_CLASS}
               />
             </div>
             <div className="space-y-1.5">
@@ -205,6 +210,7 @@ export function NewEventSheet({
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
+                className={FIELD_CLASS}
               />
             </div>
           </div>
@@ -212,7 +218,7 @@ export function NewEventSheet({
           <div className="space-y-1.5">
             <Label>Type</Label>
             <Select value={eventType} onValueChange={setEventType}>
-              <SelectTrigger>
+              <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -228,7 +234,7 @@ export function NewEventSheet({
           <div className="space-y-1.5">
             <Label>Case (optional)</Label>
             <Select value={caseId} onValueChange={setCaseId}>
-              <SelectTrigger>
+              <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue placeholder="No case" />
               </SelectTrigger>
               <SelectContent>
@@ -249,6 +255,7 @@ export function NewEventSheet({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Room 4 / Zoom"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -260,7 +267,7 @@ export function NewEventSheet({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="pr-[4.5rem]"
+                className={`pr-[4.5rem] ${FIELD_CLASS}`}
               />
               <div className="absolute right-2 top-2 flex items-center gap-0.5">
                 <CleanupButton

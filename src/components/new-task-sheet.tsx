@@ -48,6 +48,8 @@ interface NewTaskSheetProps {
 }
 
 const NO_CASE = "__none__";
+const FIELD_CLASS =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
 const TAG_COLORS = ["purple", "blue", "sand", "green"] as const;
 type TagColor = (typeof TAG_COLORS)[number];
 
@@ -165,6 +167,7 @@ export function NewTaskSheet({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Draft settlement agreement"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -177,7 +180,7 @@ export function NewTaskSheet({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional details"
                 rows={3}
-                className="pr-[4.5rem]"
+                className={cn("pr-[4.5rem]", FIELD_CLASS)}
               />
               <div className="absolute right-2 top-2 flex items-center gap-0.5">
                 <CleanupButton
@@ -194,7 +197,7 @@ export function NewTaskSheet({
           <div className="space-y-1.5">
             <Label>Case (optional)</Label>
             <Select value={caseId} onValueChange={setCaseId} disabled={lockCase}>
-              <SelectTrigger>
+              <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue placeholder="No case" />
               </SelectTrigger>
               <SelectContent>
@@ -213,7 +216,7 @@ export function NewTaskSheet({
           <div className="space-y-1.5">
             <Label>Assignee</Label>
             <Select value={assigneeId} onValueChange={setAssigneeId}>
-              <SelectTrigger>
+              <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue placeholder="Select assignee" />
               </SelectTrigger>
               <SelectContent>
@@ -235,7 +238,7 @@ export function NewTaskSheet({
           <div className="space-y-1.5">
             <Label>Priority</Label>
             <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
+              <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -256,7 +259,8 @@ export function NewTaskSheet({
                   <Button
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start border border-input text-left font-normal",
+                      "w-full justify-start text-left font-normal",
+                      FIELD_CLASS,
                       !startDate && "text-muted-foreground",
                     )}
                   >
@@ -282,7 +286,8 @@ export function NewTaskSheet({
                   <Button
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start border border-input text-left font-normal",
+                      "w-full justify-start text-left font-normal",
+                      FIELD_CLASS,
                       !dueDate && "text-muted-foreground",
                     )}
                   >
@@ -348,7 +353,7 @@ export function NewTaskSheet({
                   }
                 }}
                 placeholder="Add a tag"
-                className="flex-1"
+                className={cn("flex-1", FIELD_CLASS)}
               />
               <Button type="button" variant="ghost" size="icon" onClick={addTag}>
                 <Plus className="size-4" />

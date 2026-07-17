@@ -59,6 +59,8 @@ const CASE_TYPE_LABELS: Record<CaseType, string> = {
 };
 
 const NO_TEMPLATE = "__none__";
+const FIELD_CLASS =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
 
 export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
   const queryClient = useQueryClient();
@@ -151,7 +153,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15"
+                className={FIELD_CLASS}
               />
             </div>
 
@@ -164,7 +166,10 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                     variant="ghost"
                     role="combobox"
                     aria-expanded={clientPopoverOpen}
-                    className="w-full justify-between border border-border bg-surface font-normal"
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      FIELD_CLASS,
+                    )}
                   >
                     <span className={cn(!selectedClient && "text-muted-foreground")}>
                       {selectedClient
@@ -228,7 +233,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                 value={caseType}
                 onValueChange={(v) => setCaseType(v as CaseType)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={FIELD_CLASS}>
                   <SelectValue placeholder="Select a case type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,7 +249,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
             <div className="space-y-2">
               <Label>Workflow template</Label>
               <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger>
+                <SelectTrigger className={FIELD_CLASS}>
                   <SelectValue placeholder="No template" />
                 </SelectTrigger>
                 <SelectContent>

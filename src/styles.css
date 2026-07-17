@@ -226,6 +226,7 @@
     color-scheme: only dark;
     background-color: var(--canvas);
     overflow-x: clip;
+    scrollbar-gutter: stable;
   }
 
   body {

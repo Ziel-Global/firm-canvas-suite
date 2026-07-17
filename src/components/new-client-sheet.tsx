@@ -30,6 +30,9 @@ const EMPTY: CreateClientInput = {
   notes: "",
 };
 
+const FIELD_CLASS =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
+
 export function NewClientSheet({ open, onOpenChange }: NewClientSheetProps) {
   const [form, setForm] = useState<CreateClientInput>(EMPTY);
   const queryClient = useQueryClient();
@@ -74,30 +77,64 @@ export function NewClientSheet({ open, onOpenChange }: NewClientSheetProps) {
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-1 py-4">
           <div className="space-y-2">
             <Label htmlFor="full_name">Full name *</Label>
-            <Input id="full_name" value={form.full_name} onChange={set("full_name")} required />
+            <Input
+              id="full_name"
+              value={form.full_name}
+              onChange={set("full_name")}
+              placeholder="e.g. John Smith"
+              required
+              className={FIELD_CLASS}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={form.email} onChange={set("email")} />
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={set("email")}
+              placeholder="e.g. john@example.com"
+              className={FIELD_CLASS}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={form.phone} onChange={set("phone")} />
+            <Input
+              id="phone"
+              value={form.phone}
+              onChange={set("phone")}
+              placeholder="e.g. +1 555 123 4567"
+              className={FIELD_CLASS}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
-            <Textarea id="address" value={form.address} onChange={set("address")} rows={2} />
+            <Textarea
+              id="address"
+              value={form.address}
+              onChange={set("address")}
+              placeholder="Street address, city"
+              rows={2}
+              className={FIELD_CLASS}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={form.notes} onChange={set("notes")} rows={3} />
+            <Textarea
+              id="notes"
+              value={form.notes}
+              onChange={set("notes")}
+              placeholder="Optional client notes"
+              rows={3}
+              className={FIELD_CLASS}
+            />
           </div>
 
           <SheetFooter className="mt-auto flex-row gap-2">
             <Button
               type="button"
               variant="ghost"
-              className="flex-1"
+              className="flex-1 border border-white/[0.12] bg-white/[0.06] text-foreground hover:bg-white/[0.1] hover:text-foreground"
               onClick={() => onOpenChange(false)}
             >
               Cancel

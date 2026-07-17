@@ -19,6 +19,9 @@ import {
   type ReminderUnit,
 } from "@/lib/reminder-utils";
 
+const FIELD_CLASS =
+  "border-white/20 bg-black/25 shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
+
 interface ReminderEditorProps {
   rules: ReminderRule[];
   onChange: (rules: ReminderRule[]) => void;
@@ -67,14 +70,14 @@ export function ReminderEditor({
               onChange={(e) =>
                 update(rule.id, { value: Math.max(1, Number(e.target.value) || 1) })
               }
-              className="w-20"
+              className={cn("w-20", FIELD_CLASS)}
             />
             <Select
               value={rule.unit}
               onValueChange={(v) => update(rule.id, { unit: v as ReminderUnit })}
               disabled={disabled}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className={cn("w-32", FIELD_CLASS)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
