@@ -25,9 +25,9 @@ import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AiLabRouteImport } from './routes/ai-lab'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortalIndexRouteImport } from './routes/portal.index'
-import { Route as ClientsClientIdRouteImport } from './routes/clients.$clientId'
-import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
-import { Route as ApprovalsApprovalIdRouteImport } from './routes/approvals.$approvalId'
+import { Route as ClientsClientIdRouteImport } from './routes/clients_.$clientId'
+import { Route as CasesCaseIdRouteImport } from './routes/cases_.$caseId'
+import { Route as ApprovalsApprovalIdRouteImport } from './routes/approvals_.$approvalId'
 import { Route as PortalCasesCaseIdRouteImport } from './routes/portal.cases.$caseId'
 import { Route as ApiPublicHooksSendMorningDigestRouteImport } from './routes/api/public/hooks/send-morning-digest'
 import { Route as ApiPublicHooksProcessRemindersRouteImport } from './routes/api/public/hooks/process-reminders'
@@ -114,19 +114,19 @@ const PortalIndexRoute = PortalIndexRouteImport.update({
   getParentRoute: () => PortalRoute,
 } as any)
 const ClientsClientIdRoute = ClientsClientIdRouteImport.update({
-  id: '/$clientId',
-  path: '/$clientId',
-  getParentRoute: () => ClientsRoute,
+  id: '/clients_/$clientId',
+  path: '/clients/$clientId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
-  id: '/$caseId',
-  path: '/$caseId',
-  getParentRoute: () => CasesRoute,
+  id: '/cases_/$caseId',
+  path: '/cases/$caseId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApprovalsApprovalIdRoute = ApprovalsApprovalIdRouteImport.update({
-  id: '/$approvalId',
-  path: '/$approvalId',
-  getParentRoute: () => ApprovalsRoute,
+  id: '/approvals_/$approvalId',
+  path: '/approvals/$approvalId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PortalCasesCaseIdRoute = PortalCasesCaseIdRouteImport.update({
   id: '/cases/$caseId',
@@ -155,12 +155,12 @@ const ApiPublicHooksEscalateOverdueStagesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai-lab': typeof AiLabRoute
-  '/approvals': typeof ApprovalsRouteWithChildren
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRouteWithChildren
-  '/clients': typeof ClientsRouteWithChildren
+  '/cases': typeof CasesRoute
+  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/portal': typeof PortalRouteWithChildren
@@ -180,12 +180,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai-lab': typeof AiLabRoute
-  '/approvals': typeof ApprovalsRouteWithChildren
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRouteWithChildren
-  '/clients': typeof ClientsRouteWithChildren
+  '/cases': typeof CasesRoute
+  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/reports': typeof ReportsRoute
@@ -205,12 +205,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ai-lab': typeof AiLabRoute
-  '/approvals': typeof ApprovalsRouteWithChildren
+  '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
-  '/cases': typeof CasesRouteWithChildren
-  '/clients': typeof ClientsRouteWithChildren
+  '/cases': typeof CasesRoute
+  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/portal': typeof PortalRouteWithChildren
@@ -218,9 +218,9 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
-  '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
-  '/cases/$caseId': typeof CasesCaseIdRoute
-  '/clients/$clientId': typeof ClientsClientIdRoute
+  '/approvals_/$approvalId': typeof ApprovalsApprovalIdRoute
+  '/cases_/$caseId': typeof CasesCaseIdRoute
+  '/clients_/$clientId': typeof ClientsClientIdRoute
   '/portal/': typeof PortalIndexRoute
   '/portal/cases/$caseId': typeof PortalCasesCaseIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
@@ -294,9 +294,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
-    | '/approvals/$approvalId'
-    | '/cases/$caseId'
-    | '/clients/$clientId'
+    | '/approvals_/$approvalId'
+    | '/cases_/$caseId'
+    | '/clients_/$clientId'
     | '/portal/'
     | '/portal/cases/$caseId'
     | '/api/public/hooks/escalate-overdue-stages'
@@ -307,12 +307,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiLabRoute: typeof AiLabRoute
-  ApprovalsRoute: typeof ApprovalsRouteWithChildren
+  ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
   BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
-  CasesRoute: typeof CasesRouteWithChildren
-  ClientsRoute: typeof ClientsRouteWithChildren
+  CasesRoute: typeof CasesRoute
+  ClientsRoute: typeof ClientsRoute
   DocumentsRoute: typeof DocumentsRoute
   KnowledgeBaseRoute: typeof KnowledgeBaseRoute
   PortalRoute: typeof PortalRouteWithChildren
@@ -320,6 +320,9 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
   UsersRoute: typeof UsersRoute
+  ApprovalsApprovalIdRoute: typeof ApprovalsApprovalIdRoute
+  CasesCaseIdRoute: typeof CasesCaseIdRoute
+  ClientsClientIdRoute: typeof ClientsClientIdRoute
   ApiPublicHooksEscalateOverdueStagesRoute: typeof ApiPublicHooksEscalateOverdueStagesRoute
   ApiPublicHooksProcessRemindersRoute: typeof ApiPublicHooksProcessRemindersRoute
   ApiPublicHooksSendMorningDigestRoute: typeof ApiPublicHooksSendMorningDigestRoute
@@ -439,26 +442,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalIndexRouteImport
       parentRoute: typeof PortalRoute
     }
-    '/clients/$clientId': {
-      id: '/clients/$clientId'
-      path: '/$clientId'
+    '/clients_/$clientId': {
+      id: '/clients_/$clientId'
+      path: '/clients/$clientId'
       fullPath: '/clients/$clientId'
       preLoaderRoute: typeof ClientsClientIdRouteImport
-      parentRoute: typeof ClientsRoute
+      parentRoute: typeof rootRouteImport
     }
-    '/cases/$caseId': {
-      id: '/cases/$caseId'
-      path: '/$caseId'
+    '/cases_/$caseId': {
+      id: '/cases_/$caseId'
+      path: '/cases/$caseId'
       fullPath: '/cases/$caseId'
       preLoaderRoute: typeof CasesCaseIdRouteImport
-      parentRoute: typeof CasesRoute
+      parentRoute: typeof rootRouteImport
     }
-    '/approvals/$approvalId': {
-      id: '/approvals/$approvalId'
-      path: '/$approvalId'
+    '/approvals_/$approvalId': {
+      id: '/approvals_/$approvalId'
+      path: '/approvals/$approvalId'
       fullPath: '/approvals/$approvalId'
       preLoaderRoute: typeof ApprovalsApprovalIdRouteImport
-      parentRoute: typeof ApprovalsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/portal/cases/$caseId': {
       id: '/portal/cases/$caseId'
@@ -491,39 +494,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ApprovalsRouteChildren {
-  ApprovalsApprovalIdRoute: typeof ApprovalsApprovalIdRoute
-}
-
-const ApprovalsRouteChildren: ApprovalsRouteChildren = {
-  ApprovalsApprovalIdRoute: ApprovalsApprovalIdRoute,
-}
-
-const ApprovalsRouteWithChildren = ApprovalsRoute._addFileChildren(
-  ApprovalsRouteChildren,
-)
-
-interface CasesRouteChildren {
-  CasesCaseIdRoute: typeof CasesCaseIdRoute
-}
-
-const CasesRouteChildren: CasesRouteChildren = {
-  CasesCaseIdRoute: CasesCaseIdRoute,
-}
-
-const CasesRouteWithChildren = CasesRoute._addFileChildren(CasesRouteChildren)
-
-interface ClientsRouteChildren {
-  ClientsClientIdRoute: typeof ClientsClientIdRoute
-}
-
-const ClientsRouteChildren: ClientsRouteChildren = {
-  ClientsClientIdRoute: ClientsClientIdRoute,
-}
-
-const ClientsRouteWithChildren =
-  ClientsRoute._addFileChildren(ClientsRouteChildren)
-
 interface PortalRouteChildren {
   PortalIndexRoute: typeof PortalIndexRoute
   PortalCasesCaseIdRoute: typeof PortalCasesCaseIdRoute
@@ -540,12 +510,12 @@ const PortalRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiLabRoute: AiLabRoute,
-  ApprovalsRoute: ApprovalsRouteWithChildren,
+  ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,
   BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
-  CasesRoute: CasesRouteWithChildren,
-  ClientsRoute: ClientsRouteWithChildren,
+  CasesRoute: CasesRoute,
+  ClientsRoute: ClientsRoute,
   DocumentsRoute: DocumentsRoute,
   KnowledgeBaseRoute: KnowledgeBaseRoute,
   PortalRoute: PortalRouteWithChildren,
@@ -553,6 +523,9 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,
   UsersRoute: UsersRoute,
+  ApprovalsApprovalIdRoute: ApprovalsApprovalIdRoute,
+  CasesCaseIdRoute: CasesCaseIdRoute,
+  ClientsClientIdRoute: ClientsClientIdRoute,
   ApiPublicHooksEscalateOverdueStagesRoute:
     ApiPublicHooksEscalateOverdueStagesRoute,
   ApiPublicHooksProcessRemindersRoute: ApiPublicHooksProcessRemindersRoute,

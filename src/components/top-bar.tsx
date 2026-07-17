@@ -101,15 +101,17 @@ export function TopBar({ title, className }: TopBarProps) {
               </span>
             </div>
 
-            <Button
-              asChild
-              className="hidden h-9 gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] px-3.5 text-[#1a1c20] shadow-[0_8px_18px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8] sm:inline-flex"
-            >
-              <Link to="/cases" search={{ new: true }}>
-                <Plus className="size-3.5" />
-                New case
-              </Link>
-            </Button>
+            {(role === "super_admin" || role === "admin") && (
+              <Button
+                asChild
+                className="hidden h-9 gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] px-3.5 text-[#1a1c20] shadow-[0_8px_18px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8] sm:inline-flex"
+              >
+                <Link to="/cases" search={{ new: true }}>
+                  <Plus className="size-3.5" />
+                  New case
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>

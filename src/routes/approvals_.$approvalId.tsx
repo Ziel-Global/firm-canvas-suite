@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-export const Route = createFileRoute("/approvals/$approvalId")({
+export const Route = createFileRoute("/approvals_/$approvalId")({
   head: () => ({
     meta: [
       { title: "Review Document — Law Firm Ops" },

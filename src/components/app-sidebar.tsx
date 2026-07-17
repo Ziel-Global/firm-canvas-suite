@@ -229,23 +229,25 @@ export function AppSidebar() {
         </div>
 
         {/* New */}
-        <div className={cn("relative px-3 pb-3", collapsed && "lg:px-2")}>
-          <Button
-            asChild
-            title="New case"
-            className={cn(
-              "w-full gap-2 font-semibold",
-              collapsed ? "lg:justify-center lg:px-0" : "justify-start",
-              "border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20]",
-              "shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]",
-            )}
-          >
-            <Link to="/cases" search={{ new: true }} onClick={closeMobile}>
-              <Plus className="size-4 shrink-0" />
-              <span className={cn(collapsed && "lg:sr-only")}>New</span>
-            </Link>
-          </Button>
-        </div>
+        {(role === "super_admin" || role === "admin") && (
+          <div className={cn("relative px-3 pb-3", collapsed && "lg:px-2")}>
+            <Button
+              asChild
+              title="New case"
+              className={cn(
+                "w-full gap-2 font-semibold",
+                collapsed ? "lg:justify-center lg:px-0" : "justify-start",
+                "border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20]",
+                "shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]",
+              )}
+            >
+              <Link to="/cases" search={{ new: true }} onClick={closeMobile}>
+                <Plus className="size-4 shrink-0" />
+                <span className={cn(collapsed && "lg:sr-only")}>New</span>
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav

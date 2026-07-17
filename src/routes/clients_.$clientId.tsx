@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import { EditClientSheet } from "@/components/edit-client-sheet";
 
-export const Route = createFileRoute("/clients/$clientId")({
+export const Route = createFileRoute("/clients_/$clientId")({
   head: () => ({
     meta: [{ title: "Client — Law Firm Ops" }],
   }),

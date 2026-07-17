@@ -13,6 +13,7 @@ export interface CaseDetail {
   health: string | null;
   current_stage_name: string | null;
   lead_name: string | null;
+  lead_id: string | null;
   opened_at: string | null;
   closed_at: string | null;
   retention_until: string | null;
@@ -63,6 +64,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
     }
 
     let lead_name: string | null = null;
+    let lead_id: string | null = null;
     const { data: lead } = await supabase
       .from("case_assignments")
       .select("user_id")
@@ -71,6 +73,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
       .limit(1)
       .maybeSingle();
     if (lead?.user_id) {
+      lead_id = lead.user_id as string;
       const { data: p } = await supabase
         .from("profiles")
         .select("full_name")
@@ -103,6 +106,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
       health: c.health,
       current_stage_name,
       lead_name,
+      lead_id,
       opened_at: c.opened_at,
       closed_at: c.closed_at,
       retention_until: c.retention_until,
@@ -130,6 +134,7 @@ export interface CaseRow {
   health: string | null;
   current_stage_name: string | null;
   lead_name: string | null;
+  lead_id: string | null;
   next_deadline: string | null;
 }
 
@@ -243,6 +248,7 @@ export const listCases = createServerFn({ method: "GET" })
           ? stageName.get(c.current_stage_id) ?? null
           : null,
         lead_name: lid ? profileName.get(lid) ?? null : null,
+        lead_id: lid ?? null,
         next_deadline: nextDeadline.get(c.id) ?? null,
       };
     });
@@ -306,6 +312,10 @@ export interface CreateCaseInput {
  * folders. If a workflow template is chosen, its stages are copied into
  * case_stages and current_stage_id is set to the first stage. Writes to
  * activity_log (also covered by the case-insert trigger).
+ *
+ * Authorization is checked against the caller's profile (JWT sub). The write
+ * uses the service-role client so RLS WITH CHECK / RETURNING quirks cannot
+ * block a verified admin create.
  */
 export const createCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -324,13 +334,28 @@ export const createCase = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }): Promise<{ id: string; case_ref: string }> => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
 
-    const { data: refData, error: refError } = await supabase.rpc("next_case_ref");
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    if (!profile?.is_active) throw new Error("Your account is inactive.");
+    if (profile.role !== "super_admin" && profile.role !== "admin") {
+      throw new Error("Only admins can create cases.");
+    }
+
+    const { data: refData, error: refError } =
+      await supabaseAdmin.rpc("next_case_ref");
     if (refError) throw new Error(refError.message);
     const case_ref = refData as string;
 
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from("cases")
       .insert({
         case_ref,
@@ -349,7 +374,7 @@ export const createCase = createServerFn({ method: "POST" })
     let firstStageId: string | null = null;
 
     if (data.workflow_template_id) {
-      const { data: tplStages, error: tplError } = await supabase
+      const { data: tplStages, error: tplError } = await supabaseAdmin
         .from("workflow_template_stages")
         .select("name, sequence_order, responsible_role, deadline_days")
         .eq("template_id", data.workflow_template_id)
@@ -358,7 +383,7 @@ export const createCase = createServerFn({ method: "POST" })
 
       if (tplStages && tplStages.length > 0) {
         const today = new Date();
-        const rows = tplStages.map((s) => {
+        const rows = tplStages.map((s, index) => {
           let deadline: string | null = null;
           if (typeof s.deadline_days === "number") {
             const d = new Date(today);
@@ -369,12 +394,14 @@ export const createCase = createServerFn({ method: "POST" })
             case_id: caseId,
             name: s.name as string,
             sequence_order: s.sequence_order as number,
-            status: "pending" as const,
+            status: (index === 0 ? "active" : "pending") as
+              | "active"
+              | "pending",
             deadline,
           };
         });
 
-        const { data: createdStages, error: stageError } = await supabase
+        const { data: createdStages, error: stageError } = await supabaseAdmin
           .from("case_stages")
           .insert(rows)
           .select("id, sequence_order");
@@ -385,7 +412,7 @@ export const createCase = createServerFn({ method: "POST" })
         );
         if (sorted.length > 0) {
           firstStageId = sorted[0].id;
-          await supabase
+          await supabaseAdmin
             .from("cases")
             .update({ current_stage_id: firstStageId })
             .eq("id", caseId);
@@ -393,7 +420,7 @@ export const createCase = createServerFn({ method: "POST" })
       }
     }
 
-    const { error: logError } = await supabase.from("activity_log").insert({
+    const { error: logError } = await supabaseAdmin.from("activity_log").insert({
       case_id: caseId,
       actor_id: userId,
       action: "case_created",
@@ -406,7 +433,10 @@ export const createCase = createServerFn({ method: "POST" })
         workflow_template_id: data.workflow_template_id,
       },
     });
-    if (logError) throw new Error(logError.message);
+    // Trigger already logs case_created; don't fail the create if a second write is blocked.
+    if (logError) {
+      console.warn("[createCase] activity_log insert skipped:", logError.message);
+    }
 
     return { id: caseId, case_ref: inserted.case_ref ?? case_ref };
   });

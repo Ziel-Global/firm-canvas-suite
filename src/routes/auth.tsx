@@ -193,7 +193,7 @@ function AuthPage() {
       </main>
 
       <footer className="auth-portal__footer">
-        <p>&copy; 2026 Sardar Abdul Sami Associates</p>
+        <p>&copy; 2026 Blackwood & Nelson</p>
         <p>Advocates &amp; Legal Consultants</p>
       </footer>
     </div>

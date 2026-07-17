@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, ChevronDown, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -29,12 +29,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -74,6 +73,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
   const [templateId, setTemplateId] = useState<string>(NO_TEMPLATE);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const clientsQuery = useQuery({
     queryKey: ["client-options"],
@@ -94,18 +94,24 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
     [clients, clientId],
   );
 
+  const selectedTemplateLabel =
+    templateId === NO_TEMPLATE
+      ? "No template"
+      : (templates.find((t) => t.id === templateId)?.name ?? "No template");
+
   const reset = () => {
     setTitle("");
     setClientId("");
     setCaseType("");
     setTemplateId(NO_TEMPLATE);
+    setFormError(null);
   };
 
   const mutation = useMutation({
     mutationFn: () =>
       create({
         data: {
-          title,
+          title: title.trim(),
           client_id: clientId,
           case_type: caseType as CaseType,
           workflow_template_id: templateId === NO_TEMPLATE ? null : templateId,
@@ -114,25 +120,52 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
     onSuccess: (result) => {
       toast.success(`Case created — ${result.case_ref}`);
       queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["my-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["ops-dashboard"] });
       reset();
       onOpenChange(false);
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Could not create case.");
+      const message =
+        err instanceof Error ? err.message : "Could not create case.";
+      setFormError(message);
+      toast.error(message);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return toast.error("Title is required.");
-    if (!clientId) return toast.error("Please select a client.");
-    if (!caseType) return toast.error("Please select a case type.");
+    setFormError(null);
+    if (!title.trim()) {
+      const message = "Title is required.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+    if (!clientId) {
+      const message = "Please select a client.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+    if (!caseType) {
+      const message = "Please select a case type.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
     mutation.mutate();
   };
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) setFormError(null);
+          onOpenChange(next);
+        }}
+      >
         <SheetContent className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>
             <SheetTitle>New case</SheetTitle>
@@ -152,6 +185,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Property sale — 12 High Street"
                 required
                 className={FIELD_CLASS}
               />
@@ -229,49 +263,95 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
 
             <div className="space-y-2">
               <Label>Case type *</Label>
-              <Select
-                value={caseType}
-                onValueChange={(v) => setCaseType(v as CaseType)}
-              >
-                <SelectTrigger className={FIELD_CLASS}>
-                  <SelectValue placeholder="Select a case type" />
-                </SelectTrigger>
-                <SelectContent>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      FIELD_CLASS,
+                    )}
+                  >
+                    <span className={cn(!caseType && "text-muted-foreground")}>
+                      {caseType ? CASE_TYPE_LABELS[caseType] : "Select a case type"}
+                    </span>
+                    <ChevronDown className="size-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
                   {CASE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
+                    <DropdownMenuItem
+                      key={t}
+                      onSelect={() => setCaseType(t)}
+                      className="justify-between gap-2"
+                    >
                       {CASE_TYPE_LABELS[t]}
-                    </SelectItem>
+                      {caseType === t ? <Check className="size-4 shrink-0" /> : null}
+                    </DropdownMenuItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="space-y-2">
               <Label>Workflow template</Label>
-              <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger className={FIELD_CLASS}>
-                  <SelectValue placeholder="No template" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_TEMPLATE}>No template</SelectItem>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      FIELD_CLASS,
+                    )}
+                  >
+                    <span className="truncate">{selectedTemplateLabel}</span>
+                    <ChevronDown className="size-4 shrink-0 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                  <DropdownMenuItem
+                    onSelect={() => setTemplateId(NO_TEMPLATE)}
+                    className="justify-between gap-2"
+                  >
+                    No template
+                    {templateId === NO_TEMPLATE ? (
+                      <Check className="size-4 shrink-0" />
+                    ) : null}
+                  </DropdownMenuItem>
                   {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
+                    <DropdownMenuItem
+                      key={t.id}
+                      onSelect={() => setTemplateId(t.id)}
+                      className="justify-between gap-2"
+                    >
+                      <span className="truncate">{t.name}</span>
+                      {templateId === t.id ? (
+                        <Check className="size-4 shrink-0" />
+                      ) : null}
+                    </DropdownMenuItem>
                   ))}
-                </SelectContent>
-              </Select>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <p className="text-xs text-muted-foreground">
-                Optional — copies the template's stages into the case.
+                Optional — copies the template&apos;s stages into the case.
               </p>
             </div>
+
+            {formError ? (
+              <p className="rounded-md border border-priority-high/30 bg-priority-high/10 px-3 py-2 text-sm text-priority-high">
+                {formError}
+              </p>
+            ) : null}
 
             <SheetFooter className="mt-auto flex-row gap-2">
               <Button
                 type="button"
                 variant="ghost"
-                className="flex-1"
+                className="flex-1 border border-white/[0.12] bg-white/[0.06] text-foreground hover:bg-white/[0.1] hover:text-foreground"
                 onClick={() => onOpenChange(false)}
+                disabled={mutation.isPending}
               >
                 Cancel
               </Button>

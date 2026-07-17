@@ -1,21 +1,19 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { RefreshCw, UserCog, Lock, Sparkles, Loader2 } from "lucide-react";
 
-import { listProfiles } from "@/lib/users.functions";
 import {
   changeCaseStatus,
-  reassignLead,
   closeCase,
 } from "@/lib/case-lifecycle.functions";
 import { generateClosureSummary } from "@/lib/knowledge-base.functions";
+import { AssignLeadDialog } from "@/components/assign-lead-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -38,8 +36,6 @@ const STATUS_OPTIONS = [
   { value: "on_hold", label: "On hold" },
 ] as const;
 
-const STAFF_ROLES = ["super_admin", "admin", "senior_lawyer", "junior_lawyer"];
-
 export function CaseLifecycleActions({
   caseId,
   status,
@@ -49,37 +45,25 @@ export function CaseLifecycleActions({
 }) {
   const queryClient = useQueryClient();
   const changeStatus = useServerFn(changeCaseStatus);
-  const reassign = useServerFn(reassignLead);
   const close = useServerFn(closeCase);
   const genSummary = useServerFn(generateClosureSummary);
-  const fetchProfiles = useServerFn(listProfiles);
 
   const [statusOpen, setStatusOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
 
   const [newStatus, setNewStatus] = useState<string>(status ?? "active");
-  const [newLeadId, setNewLeadId] = useState<string>("");
-  const [keepReadOnly, setKeepReadOnly] = useState(true);
   const [summary, setSummary] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const isClosed = status === "closed";
 
-  const { data: profiles } = useQuery({
-    queryKey: ["assignable-leads"],
-    queryFn: () => fetchProfiles(),
-    enabled: reassignOpen,
-  });
-  const leadOptions = (profiles ?? []).filter(
-    (p) => p.is_active && STAFF_ROLES.includes(p.role),
-  );
-
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ["case", caseId] });
     queryClient.invalidateQueries({ queryKey: ["case-overview", caseId] });
     queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["cases"] });
   }
 
   async function handleStatus() {
@@ -91,25 +75,6 @@ export function CaseLifecycleActions({
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update status.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleReassign() {
-    if (!newLeadId) {
-      toast.error("Choose a new lead.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await reassign({ data: { caseId, newLeadId, keepReadOnly } });
-      toast.success("Lead reassigned.");
-      setReassignOpen(false);
-      setNewLeadId("");
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not reassign lead.");
     } finally {
       setBusy(false);
     }
@@ -144,12 +109,12 @@ export function CaseLifecycleActions({
   }
 
   return (
-    <Card className="space-y-2 p-5">
+    <Card className="space-y-2 border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-5">
       <h3 className="text-sm font-semibold text-foreground">Lifecycle</h3>
       <div className="grid gap-2">
         <Button
           variant="ghost"
-          className="justify-start"
+          className="justify-start border border-transparent hover:border-white/[0.08]"
           disabled={isClosed}
           onClick={() => {
             setNewStatus(status && status !== "closed" ? status : "active");
@@ -161,12 +126,12 @@ export function CaseLifecycleActions({
         </Button>
         <Button
           variant="ghost"
-          className="justify-start"
+          className="justify-start border border-transparent hover:border-white/[0.08]"
           disabled={isClosed}
           onClick={() => setReassignOpen(true)}
         >
           <UserCog className="size-4" />
-          Reassign lead
+          Assign / change lead
         </Button>
         <Button
           variant="destructive"
@@ -179,7 +144,6 @@ export function CaseLifecycleActions({
         </Button>
       </div>
 
-      {/* Change status */}
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
         <DialogContent>
           <DialogHeader>
@@ -191,7 +155,7 @@ export function CaseLifecycleActions({
           <div className="space-y-2">
             <Label>Status</Label>
             <Select value={newStatus} onValueChange={setNewStatus}>
-              <SelectTrigger>
+              <SelectTrigger className="border-border bg-surface">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +168,11 @@ export function CaseLifecycleActions({
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setStatusOpen(false)}>
+            <Button
+              variant="ghost"
+              className="border border-white/[0.12] bg-white/[0.06]"
+              onClick={() => setStatusOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleStatus} disabled={busy}>
@@ -214,58 +182,13 @@ export function CaseLifecycleActions({
         </DialogContent>
       </Dialog>
 
-      {/* Reassign lead */}
-      <Dialog open={reassignOpen} onOpenChange={setReassignOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reassign lead</DialogTitle>
-            <DialogDescription>
-              The current lead is removed from the case unless you keep their
-              read-only access.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>New lead</Label>
-              <Select value={newLeadId} onValueChange={setNewLeadId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a lawyer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {leadOptions.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.full_name ?? "Unnamed"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="keep-ro">Keep previous lead read-only</Label>
-                <p className="text-xs text-muted-foreground">
-                  Grants the former lead a read-only access override.
-                </p>
-              </div>
-              <Switch
-                id="keep-ro"
-                checked={keepReadOnly}
-                onCheckedChange={setKeepReadOnly}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setReassignOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReassign} disabled={busy}>
-              Reassign
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AssignLeadDialog
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        caseId={caseId}
+        onAssigned={() => refresh()}
+      />
 
-      {/* Close case */}
       <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
         <DialogContent>
           <DialogHeader>
@@ -286,9 +209,17 @@ export function CaseLifecycleActions({
                 disabled={generatingSummary || busy}
                 className="h-7 text-xs text-tag-blue border-tag-blue/30 hover:bg-tag-blue/10"
               >
-                {generatingSummary
-                  ? <><Loader2 className="size-3 mr-1 animate-spin" />Generating…</>
-                  : <><Sparkles className="size-3 mr-1" />Auto-generate with AI</>}
+                {generatingSummary ? (
+                  <>
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 size-3" />
+                    Auto-generate with AI
+                  </>
+                )}
               </Button>
             </div>
             <Textarea
@@ -297,13 +228,19 @@ export function CaseLifecycleActions({
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Summarise the outcome and final disposition, or click Auto-generate…"
               rows={7}
+              className="border-border bg-surface"
             />
             <p className="text-xs text-muted-foreground">
-              Review and edit the summary before closing. It will be stored on the case and be searchable in the Knowledge Base.
+              Review and edit the summary before closing. It will be stored on
+              the case and be searchable in the Knowledge Base.
             </p>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setCloseOpen(false)}>
+            <Button
+              variant="ghost"
+              className="border border-white/[0.12] bg-white/[0.06]"
+              onClick={() => setCloseOpen(false)}
+            >
               Cancel
             </Button>
             <Button

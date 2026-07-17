@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { NewCaseSheet } from "@/components/new-case-sheet";
+import { AssignLeadDialog } from "@/components/assign-lead-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { listCases, type CaseRow } from "@/lib/cases.functions";
 import { Card } from "@/components/ui/card";
@@ -129,9 +130,16 @@ function CasesPage() {
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
   const [newCaseOpen, setNewCaseOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<{
+    id: string;
+    title: string;
+    leadId: string | null;
+    leadName: string | null;
+  } | null>(null);
 
   const canView = role != null;
   const canCreate = role === "super_admin" || role === "admin";
+  const canAssign = canCreate;
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -280,6 +288,17 @@ function CasesPage() {
         {canCreate && (
           <NewCaseSheet open={newCaseOpen} onOpenChange={handleNewCaseOpenChange} />
         )}
+
+        <AssignLeadDialog
+          open={assignTarget != null}
+          onOpenChange={(open) => {
+            if (!open) setAssignTarget(null);
+          }}
+          caseId={assignTarget?.id ?? ""}
+          caseTitle={assignTarget?.title}
+          currentLeadId={assignTarget?.leadId}
+          currentLeadName={assignTarget?.leadName}
+        />
 
         {/* Filters */}
         <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)] sm:p-4">
@@ -489,7 +508,40 @@ function CasesPage() {
                         </TableCell>
 
                         <TableCell className="px-4 py-4">
-                          {c.lead_name ? (
+                          {canAssign ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAssignTarget({
+                                  id: c.id,
+                                  title: c.title,
+                                  leadId: c.lead_id,
+                                  leadName: c.lead_name,
+                                })
+                              }
+                              className={cn(
+                                "group/lead flex max-w-[180px] items-center gap-2.5 rounded-lg border px-2 py-1.5 text-left transition-colors",
+                                c.lead_name
+                                  ? "border-transparent hover:border-white/15 hover:bg-white/[0.05]"
+                                  : "border-dashed border-white/20 bg-white/[0.03] hover:border-white/35 hover:bg-white/[0.06]",
+                              )}
+                            >
+                              {c.lead_name ? (
+                                <>
+                                  <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-[10px] font-semibold tracking-wide text-foreground/85">
+                                    {leadInitials}
+                                  </span>
+                                  <span className="truncate text-sm text-foreground/85 group-hover/lead:underline">
+                                    {c.lead_name}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm font-medium text-foreground/90">
+                                  Assign lead…
+                                </span>
+                              )}
+                            </button>
+                          ) : c.lead_name ? (
                             <div className="flex items-center gap-2.5">
                               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-[10px] font-semibold tracking-wide text-foreground/85">
                                 {leadInitials}
@@ -583,9 +635,26 @@ function CasesPage() {
                 <div className="mt-auto space-y-2 border-t border-white/[0.06] pt-3 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <User className="size-3.5 shrink-0" />
-                    <span className="truncate">
-                      Lead: {c.lead_name ?? "—"}
-                    </span>
+                    {canAssign ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAssignTarget({
+                            id: c.id,
+                            title: c.title,
+                            leadId: c.lead_id,
+                            leadName: c.lead_name,
+                          })
+                        }
+                        className="truncate text-left hover:text-foreground hover:underline"
+                      >
+                        Lead: {c.lead_name ?? "Assign…"}
+                      </button>
+                    ) : (
+                      <span className="truncate">
+                        Lead: {c.lead_name ?? "—"}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <CalendarClock className="size-3.5 shrink-0" />

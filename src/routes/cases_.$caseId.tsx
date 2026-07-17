@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
@@ -8,11 +8,11 @@ import {
   Briefcase,
   CalendarClock,
   CalendarDays,
-  Pencil,
   Plus,
   CheckSquare,
   Activity,
   Bot,
+  UserPlus,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
@@ -20,7 +20,6 @@ import { getCaseDetail } from "@/lib/cases.functions";
 import { getMyCaseAccess } from "@/lib/case-access.functions";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,21 +32,24 @@ import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseDocumentsTab } from "@/components/case-documents-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 import { CaseSummariseModal } from "@/components/case-summarise-modal";
+import { AssignLeadDialog } from "@/components/assign-lead-dialog";
+import { NewTaskSheet } from "@/components/new-task-sheet";
+import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/cases/$caseId")({
+export const Route = createFileRoute("/cases_/$caseId")({
   head: () => ({
     meta: [{ title: "Case — Law Firm Ops" }],
   }),
   component: CaseDetailPage,
   errorComponent: ({ error }) => (
-    <main className="px-4 py-6 sm:px-6">
+    <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <p className="text-sm text-destructive" role="alert">
         {error.message}
       </p>
     </main>
   ),
   notFoundComponent: () => (
-    <main className="px-4 py-6 sm:px-6">
+    <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <p className="text-sm text-muted-foreground">Case not found.</p>
     </main>
   ),
@@ -103,15 +105,18 @@ function formatDate(value: string | null) {
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
   const { role } = useAuth();
+  const queryClient = useQueryClient();
   const fetchDetail = useServerFn(getCaseDetail);
   const checkMyAccess = useServerFn(getMyCaseAccess);
   const [tab, setTab] = useState<string>("overview");
   const [summariseModalOpen, setSummariseModalOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
+  const canAssign = role === "super_admin" || role === "admin";
+  const canManageLifecycle = canAssign;
 
-  // Poll the caller's effective access so a revoked override signs them out of
-  // this case immediately (RLS enforces it; this surfaces it in the UI).
   const { data: myAccess } = useQuery({
     queryKey: ["my-case-access", caseId],
     queryFn: () => checkMyAccess({ data: { caseId } }),
@@ -129,7 +134,7 @@ function CaseDetailPage() {
 
   if (!canView) {
     return (
-      <main className="px-4 py-6 sm:px-6">
+      <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Case</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to view this page.
@@ -140,7 +145,7 @@ function CaseDetailPage() {
 
   if (accessRevoked) {
     return (
-      <main className="px-4 py-6 sm:px-6">
+      <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
         <Link
           to="/cases"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -160,7 +165,7 @@ function CaseDetailPage() {
   }
 
   return (
-    <main className="px-4 py-6 sm:px-6">
+    <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
       <Link
         to="/cases"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -178,12 +183,13 @@ function CaseDetailPage() {
 
       {data && (
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[20rem_1fr]">
-          {/* Left summary rail */}
           <aside className="space-y-4">
-            <Card className="space-y-5 p-5">
+            <Card className="space-y-5 border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-5 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.55)]">
               <div>
-                <p className="text-xs text-muted-foreground">{data.case_ref ?? "—"}</p>
-                <h2 className="mt-0.5 text-lg font-semibold tracking-tight text-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
+                  {data.case_ref ?? "—"}
+                </p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
                   {data.title}
                 </h2>
               </div>
@@ -194,6 +200,26 @@ function CaseDetailPage() {
                   <Tag color="sand">{STATUS_LABELS[data.status] ?? data.status}</Tag>
                 )}
               </div>
+
+              {!data.lead_id && canAssign ? (
+                <button
+                  type="button"
+                  onClick={() => setAssignOpen(true)}
+                  className="flex w-full items-start gap-3 rounded-xl border border-dashed border-white/20 bg-white/[0.03] px-3 py-3 text-left transition-colors hover:border-white/35 hover:bg-white/[0.06]"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
+                    <UserPlus className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">
+                      Assign a lead
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Required so lawyers can own this matter and stages.
+                    </span>
+                  </span>
+                </button>
+              ) : null}
 
               <dl className="space-y-3 text-sm">
                 <RailRow icon={Briefcase} label="Client">
@@ -210,7 +236,23 @@ function CaseDetailPage() {
                   )}
                 </RailRow>
                 <RailRow icon={User} label="Lead">
-                  {data.lead_name ?? "—"}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={cn(!data.lead_name && "text-muted-foreground")}>
+                      {data.lead_name ?? "Unassigned"}
+                    </span>
+                    {canAssign ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 gap-1 border border-white/[0.1] bg-white/[0.04] px-2 text-xs"
+                        onClick={() => setAssignOpen(true)}
+                      >
+                        <UserPlus className="size-3.5" />
+                        {data.lead_id ? "Change" : "Assign"}
+                      </Button>
+                    ) : null}
+                  </div>
                 </RailRow>
                 <RailRow icon={CheckSquare} label="Current stage">
                   {data.current_stage_name ?? "—"}
@@ -242,36 +284,74 @@ function CaseDetailPage() {
               </dl>
             </Card>
 
-            <Card className="space-y-2 p-5">
+            <Card className="space-y-2 border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-5">
               <h3 className="text-sm font-semibold text-foreground">Quick actions</h3>
               <div className="grid gap-2">
-                <Button variant="ghost" className="justify-start" disabled>
+                <Button
+                  variant="ghost"
+                  className="justify-start border border-transparent hover:border-white/[0.08]"
+                  onClick={() => setTaskOpen(true)}
+                >
                   <Plus className="size-4" />
                   New task
                 </Button>
-                <Button variant="ghost" className="justify-start" disabled>
-                  <CalendarDays className="size-4" />
-                  Add event
+                <Button
+                  variant="ghost"
+                  className="justify-start border border-transparent hover:border-white/[0.08]"
+                  onClick={() => setTab("stages")}
+                >
+                  <CheckSquare className="size-4" />
+                  Open stages
                 </Button>
-                <Button variant="ghost" className="justify-start" disabled>
-                  <Pencil className="size-4" />
-                  Edit case
-                </Button>
-                <Button variant="ghost" className="justify-start text-tag-blue hover:text-tag-blue/90 hover:bg-tag-blue/10" onClick={() => setSummariseModalOpen(true)}>
+                {canAssign ? (
+                  <Button
+                    variant="ghost"
+                    className="justify-start border border-transparent hover:border-white/[0.08]"
+                    onClick={() => setAssignOpen(true)}
+                  >
+                    <UserPlus className="size-4" />
+                    {data.lead_id ? "Change lead" : "Assign lead"}
+                  </Button>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  className="justify-start text-tag-blue hover:bg-tag-blue/10 hover:text-tag-blue/90"
+                  onClick={() => setSummariseModalOpen(true)}
+                >
                   <Bot className="size-4" />
                   Summarise case
                 </Button>
               </div>
             </Card>
 
-            {role === "super_admin" && (
+            {canManageLifecycle && (
               <CaseLifecycleActions caseId={caseId} status={data.status} />
             )}
           </aside>
 
-          {/* Tabbed main area */}
           <section className="min-w-0">
-            <CaseSummariseModal open={summariseModalOpen} onOpenChange={setSummariseModalOpen} caseId={caseId} />
+            <CaseSummariseModal
+              open={summariseModalOpen}
+              onOpenChange={setSummariseModalOpen}
+              caseId={caseId}
+            />
+            <AssignLeadDialog
+              open={assignOpen}
+              onOpenChange={setAssignOpen}
+              caseId={caseId}
+              caseTitle={data.title}
+              currentLeadId={data.lead_id}
+              currentLeadName={data.lead_name}
+              onAssigned={() => {
+                queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+              }}
+            />
+            <NewTaskSheet
+              open={taskOpen}
+              onOpenChange={setTaskOpen}
+              defaultCaseId={caseId}
+              lockCase
+            />
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex w-full flex-wrap justify-start gap-1">
                 {TABS.map((t) => (
@@ -296,12 +376,12 @@ function CaseDetailPage() {
                   ) : t === "documents" ? (
                     <CaseDocumentsTab caseId={caseId} />
                   ) : t === "access" ? (
-                    role === "super_admin" ? (
+                    role === "super_admin" || role === "admin" ? (
                       <CaseAccessTab caseId={caseId} />
                     ) : (
                       <Card className="p-6">
                         <p className="text-sm text-muted-foreground">
-                          Only super admins can view case access.
+                          Only admins can view case access.
                         </p>
                       </Card>
                     )
@@ -322,8 +402,6 @@ function CaseDetailPage() {
     </main>
   );
 }
-
-
 
 function RailRow({
   icon: Icon,

@@ -11,16 +11,27 @@ import {
   StickyNote,
   Undo2,
   User,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
 import { completeStage, returnStage } from "@/lib/stage-transitions.functions";
+import { assignStageAssignee } from "@/lib/case-lifecycle.functions";
+import { listAssignableStaff } from "@/lib/users.functions";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const STATUS_TAG: Record<
@@ -168,6 +179,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         caseId={caseId}
         isFirst={stages[0]?.id === selected.id}
         isSuperAdmin={role === "super_admin"}
+        canAssign={role === "super_admin" || role === "admin"}
         canAct={
           role === "super_admin" ||
           role === "admin" ||
@@ -176,7 +188,7 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         }
         onChanged={() => {
           queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
-          queryClient.invalidateQueries({ queryKey: ["case-detail", caseId] });
+          queryClient.invalidateQueries({ queryKey: ["case", caseId] });
           queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
         }}
       />
@@ -198,6 +210,7 @@ function StageDetail({
   caseId,
   isFirst,
   canAct,
+  canAssign,
   isSuperAdmin,
   onChanged,
 }: {
@@ -205,17 +218,34 @@ function StageDetail({
   caseId: string;
   isFirst: boolean;
   canAct: boolean;
+  canAssign: boolean;
   isSuperAdmin: boolean;
   onChanged: () => void;
 }) {
   const status = stage.status ?? "pending";
   const tag = STATUS_TAG[status] ?? STATUS_TAG.pending;
+  const NONE = "__none__";
 
   const complete = useServerFn(completeStage);
   const sendBack = useServerFn(returnStage);
+  const assignStage = useServerFn(assignStageAssignee);
+  const fetchStaff = useServerFn(listAssignableStaff);
   const [notes, setNotes] = useState("");
   const [comments, setComments] = useState("");
   const [returning, setReturning] = useState(false);
+  const [assigneeDraft, setAssigneeDraft] = useState<string>(
+    stage.assignee_id ?? NONE,
+  );
+
+  useEffect(() => {
+    setAssigneeDraft(stage.assignee_id ?? NONE);
+  }, [stage.id, stage.assignee_id]);
+
+  const { data: staff = [] } = useQuery({
+    queryKey: ["assignable-staff"],
+    queryFn: () => fetchStaff(),
+    enabled: canAssign,
+  });
 
   const completeMutation = useMutation({
     mutationFn: () =>
@@ -245,12 +275,28 @@ function StageDetail({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const assignMutation = useMutation({
+    mutationFn: () =>
+      assignStage({
+        data: {
+          stageId: stage.id,
+          assigneeId: assigneeDraft === NONE ? null : assigneeDraft,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Stage assignee updated.");
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const isActive = status === "active";
   const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
   const principalLocked = isPrincipalApproval && !isSuperAdmin;
+  const assigneeDirty = (stage.assignee_id ?? NONE) !== assigneeDraft;
 
   return (
-    <Card className="space-y-5 p-6">
+    <Card className="space-y-5 border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-lg font-semibold text-foreground">{stage.name ?? "Stage"}</h3>
         <Tag color={tag.color}>{tag.label}</Tag>
@@ -258,7 +304,41 @@ function StageDetail({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field icon={<User className="size-4" />} label="Assignee">
-          {stage.assignee_name || "Unassigned"}
+          {canAssign ? (
+            <div className="space-y-2">
+              <Select value={assigneeDraft} onValueChange={setAssigneeDraft}>
+                <SelectTrigger className="border-border bg-surface">
+                  <SelectValue placeholder="Assign someone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Unassigned</SelectItem>
+                  {staff.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.full_name ?? "Unnamed"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {assigneeDirty ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  disabled={assignMutation.isPending}
+                  onClick={() => assignMutation.mutate()}
+                >
+                  {assignMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <UserPlus className="size-3.5" />
+                  )}
+                  Save assignee
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            stage.assignee_name || "Unassigned"
+          )}
         </Field>
         <Field icon={<Clock className="size-4" />} label="Deadline">
           {formatDate(stage.deadline)}
@@ -296,7 +376,7 @@ function StageDetail({
           <Lock className="mt-0.5 size-4 shrink-0 text-priority-high" />
           <p>
             This is the <span className="font-medium">Principal Approval</span> stage. No output can
-            advance past it without the Super Admin's explicit sign-off. Only the Super Admin can
+            advance past it without the Super Admin&apos;s explicit sign-off. Only the Super Admin can
             mark this stage complete.
           </p>
         </div>
@@ -308,14 +388,15 @@ function StageDetail({
           {!returning ? (
             <>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <Label className="text-xs font-medium text-muted-foreground">
                   Completion notes (optional)
-                </label>
+                </Label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Summarise the work completed for this stage…"
                   rows={3}
+                  className="border-border bg-surface"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -345,14 +426,15 @@ function StageDetail({
           ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <Label className="text-xs font-medium text-muted-foreground">
                   Comments for the previous assignee
-                </label>
+                </Label>
                 <Textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
                   placeholder="Explain what needs to change before this stage can proceed…"
                   rows={3}
+                  className="border-border bg-surface"
                 />
               </div>
               <div className="flex flex-wrap gap-2">

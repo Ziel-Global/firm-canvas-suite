@@ -29,3 +29,46 @@ export const listProfiles = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (data ?? []) as ProfileRow[];
   });
+
+const ASSIGNABLE_ROLES = [
+  "super_admin",
+  "admin",
+  "senior_lawyer",
+  "junior_lawyer",
+] as const;
+
+/**
+ * Active staff that can be assigned as case lead / stage owner.
+ * Admins and super admins may call this; the list is loaded via service role
+ * after an explicit role check (profiles RLS otherwise hides peers from admins).
+ */
+export const listAssignableStaff = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ProfileRow[]> => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+
+    const { data: me, error: meErr } = await supabaseAdmin
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", userId)
+      .maybeSingle();
+    if (meErr) throw new Error(meErr.message);
+    if (
+      !me?.is_active ||
+      (me.role !== "super_admin" && me.role !== "admin")
+    ) {
+      throw new Error("Only admins can list assignable staff.");
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, role, phone, is_active, created_at")
+      .eq("is_active", true)
+      .in("role", [...ASSIGNABLE_ROLES])
+      .order("full_name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ProfileRow[];
+  });

@@ -18,6 +18,7 @@ import { GlobalLoadingBar } from "@/components/global-loading-bar";
 import { PremiumLoaderPanel } from "@/components/premium-loader";
 import { TopBar } from "@/components/top-bar";
 import { AuthProvider } from "@/contexts/auth-context";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -176,6 +177,7 @@ function RootComponent() {
             </div>
           </AppSidebarProvider>
         )}
+        <Toaster richColors position="top-right" closeButton />
       </AuthProvider>
     </QueryClientProvider>
   );
