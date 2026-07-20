@@ -11,7 +11,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
-import type { AppRole } from "@/lib/nav";
+import { homePathForRole, type AppRole } from "@/lib/nav";
 import { verifyAccess } from "@/lib/access-guard.functions";
 import { SESSION_TIMEOUT_CHANGED_EVENT } from "@/lib/firm-settings-events";
 
@@ -108,35 +108,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Redirect: unauthenticated → /auth; clients → /portal only; staff stay internal.
+  // Redirect: unauthenticated → /auth; signed-in users leave /auth for their
+  // role home; clients → /portal only; staff stay on the ops app.
   useEffect(() => {
     if (loading) return;
     const isPublic = PUBLIC_PATHS.has(pathname);
     const onPortal = isPortalPath(pathname);
 
     if (!session && !isPublic) {
-      navigate({ to: "/auth", replace: true });
-      return;
+      // Avoid bouncing a just-signed-in user back to /auth while React state
+      // catches up with the Supabase session.
+      let cancelled = false;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (cancelled) return;
+        if (!data.session) {
+          navigate({ to: "/auth", replace: true });
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (!session || !profile) return;
 
-    if (!profile.is_active && !isPublic) {
-      void signOut().then(() => navigate({ to: "/auth", replace: true }));
+    if (!profile.is_active) {
+      if (!isPublic) {
+        void signOut().then(() => navigate({ to: "/auth", replace: true }));
+      }
+      return;
+    }
+
+    const home = homePathForRole(profile.role);
+
+    // Leave the sign-in screen once we know who they are.
+    // Keep /bootstrap reachable for one-time setup even while signed in.
+    if (pathname === "/auth") {
+      navigate({ to: home, replace: true });
       return;
     }
 
     if (profile.role === "client") {
       // Clients only use the portal — never the internal app shell.
-      if (!onPortal && !isPublic) {
+      if (!onPortal) {
         navigate({ to: "/portal", replace: true });
       }
       return;
     }
 
-    // Staff who land on the portal are sent back to the ops app.
+    // Staff who land on the portal are sent to their ops dashboard.
     if (onPortal) {
-      navigate({ to: "/", replace: true });
+      navigate({ to: home, replace: true });
     }
   }, [loading, session, profile, pathname, navigate, signOut]);
 

@@ -78,6 +78,18 @@ export function allowedPathsForRole(role: AppRole | null | undefined): string[] 
   return allowed;
 }
 
+/**
+ * Post-login / default landing path for each role.
+ * Staff (including senior & junior lawyers) land on `/`, which renders
+ * the role-appropriate dashboard. Clients use the portal only.
+ */
+export function homePathForRole(
+  role: AppRole | null | undefined,
+): "/" | "/portal" {
+  if (role === "client") return "/portal";
+  return "/";
+}
+
 export function navGroupsForRole(role: AppRole | null | undefined): NavGroup[] {
   const allowed = new Set(allowedPathsForRole(role));
   return NAV_GROUPS.map((group) => ({

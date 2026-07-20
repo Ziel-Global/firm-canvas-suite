@@ -386,6 +386,8 @@ function TasksPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["tasks"],
     queryFn: () => fetchTasks(),
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   const [board, setBoard] = useState<Board>(emptyBoard());

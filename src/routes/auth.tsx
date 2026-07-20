@@ -7,6 +7,7 @@ import {
   recordFailedLogin,
   clearFailedLogins,
 } from "@/lib/login-security.functions";
+import { homePathForRole, type AppRole } from "@/lib/nav";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -39,7 +40,7 @@ function AuthPage() {
         .maybeSingle();
       if (!profile?.is_active) return;
       navigate({
-        to: profile.role === "client" ? "/portal" : "/",
+        to: homePathForRole(profile.role as AppRole),
         replace: true,
       });
     })();
@@ -96,7 +97,7 @@ function AuthPage() {
 
     await clearFailedLogins({ data: { email: trimmedEmail } });
 
-    let destination: "/portal" | "/" = "/";
+    let destination: "/" | "/portal" = "/";
     const uid = signInData.user?.id;
     if (uid) {
       const { data: profile } = await supabase
@@ -104,8 +105,13 @@ function AuthPage() {
         .select("role, is_active")
         .eq("id", uid)
         .maybeSingle();
-      if (profile?.role === "client" && profile.is_active) {
-        destination = "/portal";
+      if (profile?.is_active) {
+        destination = homePathForRole(profile.role as AppRole);
+      } else if (profile && !profile.is_active) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        setError("This account is inactive. Contact your firm administrator.");
+        return;
       }
     }
 

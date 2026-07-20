@@ -191,7 +191,7 @@ export function AppSidebar() {
               )}
             >
               <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-              Blackwood & Nelson
+              Verdio
               </span>
               <span className="text-[11px] text-muted-foreground">
                 Operations

@@ -161,7 +161,19 @@ export interface TaskFormOptions {
   assignees: TaskAssigneeOption[];
 }
 
-const ROLES_CAN_ASSIGN = ["super_admin", "admin"];
+const ROLES_CAN_ASSIGN_OTHERS = ["super_admin", "admin", "senior_lawyer"] as const;
+
+const TASK_ASSIGNEE_ROLES = [
+  "super_admin",
+  "admin",
+  "senior_lawyer",
+  "junior_lawyer",
+  "support",
+] as const;
+
+function roleCanAssignOthers(role: string) {
+  return (ROLES_CAN_ASSIGN_OTHERS as readonly string[]).includes(role);
+}
 
 /**
  * Options for the New Task sheet. Only super_admin/admin may assign to others,
@@ -171,23 +183,27 @@ export const getTaskFormOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<TaskFormOptions> => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
 
-    const { data: me, error: meErr } = await supabase
+    const { data: me, error: meErr } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, role")
+      .select("id, full_name, role, is_active")
       .eq("id", userId)
       .single();
     if (meErr) throw new Error(meErr.message);
+    if (!me?.is_active) throw new Error("Your account is inactive.");
 
-    const canAssignOthers = ROLES_CAN_ASSIGN.includes(me.role as string);
+    const canAssignOthers = roleCanAssignOthers(me.role as string);
 
     let assignees: TaskAssigneeOption[];
     if (canAssignOthers) {
-      const { data: people, error } = await supabase
+      const { data: people, error } = await supabaseAdmin
         .from("profiles")
         .select("id, full_name, role")
         .eq("is_active", true)
-        .neq("role", "client")
+        .in("role", [...TASK_ASSIGNEE_ROLES])
         .order("full_name", { ascending: true });
       if (error) throw new Error(error.message);
       assignees = (people ?? []).map((p) => ({
@@ -251,27 +267,63 @@ export const createTask = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
 
-    const { data: me, error: meErr } = await supabase
+    const { data: me, error: meErr } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, role")
+      .select("id, full_name, role, is_active")
       .eq("id", userId)
       .single();
     if (meErr) throw new Error(meErr.message);
+    if (!me?.is_active) throw new Error("Your account is inactive.");
 
-    const canAssignOthers = ROLES_CAN_ASSIGN.includes(me.role as string);
+    const canAssignOthers = roleCanAssignOthers(me.role as string);
 
-    let assigneeId = data.assignee_id?.trim() || userId;
+    const requestedAssignee = data.assignee_id?.trim() || null;
+    if (!requestedAssignee && canAssignOthers) {
+      throw new Error("Choose who this task is assigned to.");
+    }
+
+    let assigneeId = requestedAssignee ?? userId;
     if (assigneeId !== userId && !canAssignOthers) {
       throw new Error("You can only create tasks assigned to yourself.");
     }
 
-    const { data: inserted, error } = await supabase
+    const { data: assignee, error: assigneeErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, role, is_active")
+      .eq("id", assigneeId)
+      .maybeSingle();
+    if (assigneeErr) throw new Error(assigneeErr.message);
+    if (!assignee?.is_active) {
+      throw new Error("That assignee is inactive or does not exist.");
+    }
+    if (
+      !(TASK_ASSIGNEE_ROLES as readonly string[]).includes(assignee.role as string)
+    ) {
+      throw new Error("Tasks can only be assigned to firm staff.");
+    }
+
+    const caseId = data.case_id?.trim() || null;
+    if (caseId && me.role === "senior_lawyer") {
+      const { data: access, error: accessErr } = await supabase.rpc(
+        "effective_case_access",
+        { _case_id: caseId },
+      );
+      if (accessErr) throw new Error(accessErr.message);
+      if (access !== "full") {
+        throw new Error("You can only assign case tasks on matters you fully access.");
+      }
+    }
+
+    const { data: inserted, error } = await supabaseAdmin
       .from("tasks")
       .insert({
         title: data.title.trim(),
         description: data.description?.trim() || null,
-        case_id: data.case_id?.trim() || null,
+        case_id: caseId,
         assignee_id: assigneeId,
         priority: data.priority ?? null,
         start_date: data.start_date || null,
@@ -287,7 +339,7 @@ export const createTask = createServerFn({ method: "POST" })
 
     const tags = (data.tags ?? []).filter((t) => t.label.trim());
     if (tags.length) {
-      const { error: tagErr } = await supabase.from("task_tags").insert(
+      const { error: tagErr } = await supabaseAdmin.from("task_tags").insert(
         tags.map((t) => ({
           task_id: taskId,
           label: t.label.trim(),
@@ -299,7 +351,7 @@ export const createTask = createServerFn({ method: "POST" })
 
     // Notify the assignee (skip self-assignment to avoid noise).
     if (assigneeId !== userId) {
-      await supabase.from("notifications").insert({
+      await supabaseAdmin.from("notifications").insert({
         user_id: assigneeId,
         type: "task_assigned",
         title: "New task assigned",
@@ -307,19 +359,17 @@ export const createTask = createServerFn({ method: "POST" })
         link: "/tasks",
       });
 
-      // Send email via auth admin
-      const { supabaseAdmin: supabaseAdminInst } = await import("@/integrations/supabase/client.server");
-      const { data: authUser } = await supabaseAdminInst.auth.admin.getUserById(assigneeId);
-      const { data: assigneeProf } = await supabase.from("profiles").select("full_name").eq("id", assigneeId).single();
+      const { data: authUser } =
+        await supabaseAdmin.auth.admin.getUserById(assigneeId);
 
       if (authUser?.user?.email) {
         supabase.functions.invoke("send-email", {
           body: {
             to: authUser.user.email,
             subject: `New Task Assigned: ${data.title.trim()}`,
-            html: `<p>Hi ${(assigneeProf as any)?.full_name || 'Team Member'},</p><p>${(me.full_name as string) || "A colleague"} has assigned you a new task: <strong>${data.title.trim()}</strong>.</p><p><a href="https://firmcanvas.app/tasks">View Task</a></p>`
-          }
-        }).catch(err => console.error("Failed to send task email:", err));
+            html: `<p>Hi ${assignee.full_name || "Team Member"},</p><p>${(me.full_name as string) || "A colleague"} has assigned you a new task: <strong>${data.title.trim()}</strong>.</p><p><a href="https://firmcanvas.app/tasks">View Task</a></p>`,
+          },
+        }).catch((err) => console.error("Failed to send task email:", err));
       }
     }
 

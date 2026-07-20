@@ -135,6 +135,7 @@ export function NewTaskSheet({
     onSuccess: () => {
       toast.success("Task created");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-dashboard"] });
       reset();
       onOpenChange(false);
     },
@@ -144,6 +145,10 @@ export function NewTaskSheet({
   function handleSubmit() {
     if (!title.trim()) {
       toast.error("A task title is required.");
+      return;
+    }
+    if (options?.canAssignOthers && !assigneeId) {
+      toast.error("Choose who this task is assigned to.");
       return;
     }
     mutation.mutate();
@@ -232,7 +237,11 @@ export function NewTaskSheet({
               <p className="text-xs text-muted-foreground">
                 You can only assign tasks to yourself.
               </p>
-            ) : null}
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                The assignee will see this task on their Tasks board immediately.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">

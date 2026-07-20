@@ -30,6 +30,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ListSkeleton } from "@/components/loading-skeletons";
+import { PremiumLoaderPanel } from "@/components/premium-loader";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -100,12 +101,21 @@ function formatDue(iso: string | null) {
 function DashboardPage() {
   const { role, loading } = useAuth();
 
-  if (loading || !role) return null;
+  if (loading || !role) {
+    return (
+      <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
+        <div className="mx-auto w-full max-w-[1440px] pt-10">
+          <PremiumLoaderPanel label="Loading your dashboard…" />
+        </div>
+      </main>
+    );
+  }
 
   if (role === "client") {
     return <Navigate to="/portal" replace />;
   }
 
+  // Senior / junior lawyers (and support) get the personal workspace dashboard.
   if (
     role === "senior_lawyer" ||
     role === "junior_lawyer" ||
@@ -116,7 +126,14 @@ function DashboardPage() {
 
   if (role === "super_admin") return <OperationsDashboard />;
   if (role === "admin") return <AdminDashboard />;
-  return null;
+
+  return (
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
+      <p className="text-sm text-muted-foreground">
+        No dashboard is configured for this role.
+      </p>
+    </main>
+  );
 }
 
 function DashboardShell({ children }: { children: ReactNode }) {
