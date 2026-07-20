@@ -199,7 +199,7 @@ function AuthPage() {
       </main>
 
       <footer className="auth-portal__footer">
-        <p>&copy; 2026 Blackwood & Nelson</p>
+        <p>&copy; 2026 Verdio</p>
         <p>Advocates &amp; Legal Consultants</p>
       </footer>
     </div>
