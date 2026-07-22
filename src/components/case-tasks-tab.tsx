@@ -3,14 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus } from "lucide-react";
 
-import { listTasks } from "@/lib/tasks.functions";
+import { listTasks, type TaskRow } from "@/lib/tasks.functions";
 import { Button } from "@/components/ui/button";
 import { TaskListView } from "@/components/task-list-view";
 import { NewTaskSheet } from "@/components/new-task-sheet";
+import { TaskDetailSheet } from "@/components/task-detail-sheet";
 
 export function CaseTasksTab({ caseId }: { caseId: string }) {
   const fetchTasks = useServerFn(listTasks);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tasks", { caseId }],
@@ -35,7 +38,14 @@ export function CaseTasksTab({ caseId }: { caseId: string }) {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading tasks…</p>
       ) : (
-        <TaskListView tasks={data ?? []} showCase={false} />
+        <TaskListView
+          tasks={data ?? []}
+          showCase={false}
+          onSelect={(task) => {
+            setSelectedTask(task);
+            setDetailOpen(true);
+          }}
+        />
       )}
 
       <NewTaskSheet
@@ -43,6 +53,14 @@ export function CaseTasksTab({ caseId }: { caseId: string }) {
         onOpenChange={setSheetOpen}
         defaultCaseId={caseId}
         lockCase
+      />
+      <TaskDetailSheet
+        task={selectedTask}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setSelectedTask(null);
+        }}
       />
     </div>
   );

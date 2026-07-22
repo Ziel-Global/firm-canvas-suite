@@ -222,7 +222,8 @@ export const getPortalDocumentDownloadUrl = createServerFn({ method: "POST" })
     }
     if (!filePath) throw new Error("No file is available for this document.");
 
-    const { data: signed, error: signedError } = await supabase.storage
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error: signedError } = await supabaseAdmin.storage
       .from(BUCKET)
       .createSignedUrl(filePath, 60);
     if (signedError) throw new Error(signedError.message);

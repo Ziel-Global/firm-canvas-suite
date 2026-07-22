@@ -36,6 +36,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NewEventSheet } from "@/components/new-event-sheet";
+import { EventDetailSheet } from "@/components/event-detail-sheet";
 
 export const Route = createFileRoute("/calendar")({
   head: () => ({
@@ -91,9 +92,16 @@ function CalendarPage() {
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [showPrivate, setShowPrivate] = useState(true);
 
   const range = useMemo(() => rangeFor(view, anchor), [view, anchor]);
+
+  function openEventDetail(event: CalendarEvent) {
+    setSelectedEvent(event);
+    setDetailOpen(true);
+  }
 
   const { data: allEvents = [], isLoading } = useQuery({
     queryKey: [
@@ -242,17 +250,25 @@ function CalendarPage() {
         {isLoading ? (
           <CalendarSkeleton />
         ) : view === "month" ? (
-          <MonthView anchor={anchor} events={events} />
+          <MonthView anchor={anchor} events={events} onSelect={openEventDetail} />
         ) : view === "week" ? (
-          <WeekView range={range} events={events} />
+          <WeekView range={range} events={events} onSelect={openEventDetail} />
         ) : (
-          <DayView anchor={anchor} events={events} />
+          <DayView anchor={anchor} events={events} onSelect={openEventDetail} />
         )}
 
         <NewEventSheet
           open={sheetOpen}
           onOpenChange={setSheetOpen}
           defaultDate={anchor}
+        />
+        <EventDetailSheet
+          event={selectedEvent}
+          open={detailOpen}
+          onOpenChange={(open) => {
+            setDetailOpen(open);
+            if (!open) setSelectedEvent(null);
+          }}
         />
       </div>
     </main>
@@ -266,9 +282,11 @@ function eventTime(e: CalendarEvent) {
 function DayView({
   anchor,
   events,
+  onSelect,
 }: {
   anchor: Date;
   events: CalendarEvent[];
+  onSelect: (event: CalendarEvent) => void;
 }) {
   const dayEvents = events.filter(
     (e) => e.starts_at && isSameDay(new Date(e.starts_at), anchor),
@@ -290,7 +308,7 @@ function DayView({
             </div>
             <div className="min-h-[3.25rem] space-y-2 border-l border-white/[0.06] p-2">
               {slotEvents.map((e) => (
-                <EventBlock key={e.id} event={e} detailed />
+                <EventBlock key={e.id} event={e} detailed onSelect={onSelect} />
               ))}
             </div>
           </div>
@@ -303,9 +321,11 @@ function DayView({
 function WeekView({
   range,
   events,
+  onSelect,
 }: {
   range: { from: Date; to: Date };
   events: CalendarEvent[];
+  onSelect: (event: CalendarEvent) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(range.from, i));
   return (
@@ -344,7 +364,9 @@ function WeekView({
                   No events
                 </p>
               ) : (
-                dayEvents.map((e) => <EventBlock key={e.id} event={e} />)
+                dayEvents.map((e) => (
+                  <EventBlock key={e.id} event={e} onSelect={onSelect} />
+                ))
               )}
             </div>
           </Card>
@@ -357,9 +379,11 @@ function WeekView({
 function MonthView({
   anchor,
   events,
+  onSelect,
 }: {
   anchor: Date;
   events: CalendarEvent[];
+  onSelect: (event: CalendarEvent) => void;
 }) {
   const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 });
   const days = Array.from({ length: 42 }, (_, i) => addDays(start, i));
@@ -408,16 +432,18 @@ function MonthView({
               </div>
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((e) => (
-                  <div
+                  <button
                     key={e.id}
+                    type="button"
+                    onClick={() => onSelect(e)}
                     className={cn(
-                      "truncate rounded-md border-l-2 px-1.5 py-0.5 text-[11px] text-foreground/90",
+                      "block w-full truncate rounded-md border-l-2 px-1.5 py-0.5 text-left text-[11px] text-foreground/90 transition-colors hover:bg-white/[0.06]",
                       typeStyle(e.event_type),
                     )}
                     title={e.title ?? ""}
                   >
                     {eventTime(e)} {e.title}
-                  </div>
+                  </button>
                 ))}
                 {dayEvents.length > 3 && (
                   <p className="px-1 text-[10px] text-muted-foreground">
@@ -436,15 +462,19 @@ function MonthView({
 function EventBlock({
   event,
   detailed = false,
+  onSelect,
 }: {
   event: CalendarEvent;
   detailed?: boolean;
+  onSelect: (event: CalendarEvent) => void;
 }) {
   const end = event.ends_at ? format(new Date(event.ends_at), "h:mm a") : "";
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onSelect(event)}
       className={cn(
-        "rounded-lg border-l-2 px-2 py-1.5 text-foreground transition-colors hover:bg-white/[0.04]",
+        "w-full rounded-lg border-l-2 px-2 py-1.5 text-left text-foreground transition-colors hover:bg-white/[0.04]",
         typeStyle(event.event_type),
       )}
     >
@@ -469,6 +499,6 @@ function EventBlock({
           )}
         </div>
       )}
-    </div>
+    </button>
   );
 }

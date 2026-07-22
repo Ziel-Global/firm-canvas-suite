@@ -36,10 +36,27 @@ import { AssignLeadDialog } from "@/components/assign-lead-dialog";
 import { NewTaskSheet } from "@/components/new-task-sheet";
 import { cn } from "@/lib/utils";
 
+const TABS = [
+  "overview",
+  "stages",
+  "tasks",
+  "documents",
+  "calendar",
+  "notes",
+  "access",
+  "activity",
+] as const;
+
 export const Route = createFileRoute("/cases_/$caseId")({
   head: () => ({
     meta: [{ title: "Case — Law Firm Ops" }],
   }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => {
+    const tab = typeof search.tab === "string" ? search.tab : undefined;
+    return {
+      tab: tab && (TABS as readonly string[]).includes(tab) ? tab : undefined,
+    };
+  },
   component: CaseDetailPage,
   errorComponent: ({ error }) => (
     <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
@@ -82,17 +99,6 @@ const HEALTH_LABELS: Record<string, string> = {
   overdue: "Overdue",
 };
 
-const TABS = [
-  "overview",
-  "stages",
-  "tasks",
-  "documents",
-  "calendar",
-  "notes",
-  "access",
-  "activity",
-] as const;
-
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleDateString(undefined, {
@@ -104,33 +110,46 @@ function formatDate(value: string | null) {
 
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
-  const { role } = useAuth();
+  const { tab: tabFromSearch } = Route.useSearch();
+  const { role, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const fetchDetail = useServerFn(getCaseDetail);
   const checkMyAccess = useServerFn(getMyCaseAccess);
-  const [tab, setTab] = useState<string>("overview");
+  const [tab, setTab] = useState<string>(tabFromSearch ?? "overview");
   const [summariseModalOpen, setSummariseModalOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
 
   const canView = role != null && ALLOWED_ROLES.includes(role);
-  const canAssign = role === "super_admin" || role === "admin";
+  const isFirmAdmin = role === "super_admin" || role === "admin";
+  const canAssign = isFirmAdmin;
   const canManageLifecycle = canAssign;
 
-  const { data: myAccess } = useQuery({
+  const { data: myAccess, isLoading: accessLoading } = useQuery({
     queryKey: ["my-case-access", caseId],
     queryFn: () => checkMyAccess({ data: { caseId } }),
-    enabled: canView,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: true,
+    enabled: canView && !isFirmAdmin,
+    refetchInterval: isFirmAdmin ? false : 15000,
+    refetchOnWindowFocus: !isFirmAdmin,
   });
-  const accessRevoked = myAccess?.level === "none";
+  // Firm admins always retain case access by role. For everyone else, wait
+  // until the access check settles before treating a missing level as revoked.
+  const accessRevoked =
+    !isFirmAdmin && !accessLoading && myAccess?.level === "none";
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["case", caseId],
     queryFn: () => fetchDetail({ data: { id: caseId } }),
     enabled: canView && !accessRevoked,
   });
+
+  if (authLoading) {
+    return (
+      <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
+        <p className="mt-8 text-center text-sm text-muted-foreground">Loading case…</p>
+      </main>
+    );
+  }
 
   if (!canView) {
     return (

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Search, X, Share2 } from "lucide-react";
+import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Search, X, Share2, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   getCaseFolders,
   getDocumentVersions,
   getFolderDocuments,
+  getDocumentViewUrl,
   restoreDocumentVersion,
   uploadDocument,
   submitForApproval,
@@ -71,6 +72,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const fetchFolders = useServerFn(getCaseFolders);
   const fetchDocs = useServerFn(getFolderDocuments);
   const fetchVersions = useServerFn(getDocumentVersions);
+  const fetchViewUrl = useServerFn(getDocumentViewUrl);
   const upload = useServerFn(uploadDocument);
   const submitDoc = useServerFn(submitForApproval);
   const shareWithClient = useServerFn(shareDocumentWithClient);
@@ -85,10 +87,44 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const [uploading, setUploading] = useState(false);
   const [versionUploading, setVersionUploading] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
+  const [viewBusyId, setViewBusyId] = useState<string | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [versionNote, setVersionNote] = useState("");
+
+  async function openDocument(
+    documentId: string,
+    options?: { versionId?: string; download?: boolean },
+  ) {
+    const busyKey = options?.versionId ?? documentId;
+    setViewBusyId(busyKey);
+    try {
+      const result = await fetchViewUrl({
+        data: {
+          caseId,
+          documentId,
+          versionId: options?.versionId ?? null,
+        },
+      });
+      if (options?.download) {
+        const a = document.createElement("a");
+        a.href = result.url;
+        a.download = result.fileName;
+        a.rel = "noopener";
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        window.open(result.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open document");
+    } finally {
+      setViewBusyId(null);
+    }
+  }
 
   async function handleFile(file: File) {
     if (!selectedFolderId || !selectedFolder || !canUploadSelectedFolder) return;
@@ -103,6 +139,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       queryClient.invalidateQueries({
         queryKey: ["folder-documents", caseId, selectedFolderId],
       });
+      queryClient.invalidateQueries({ queryKey: ["global-documents"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -340,6 +377,32 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={viewBusyId === selectedDocument.id}
+                    onClick={() => void openDocument(selectedDocument.id)}
+                    className="border-white/15 bg-white/[0.03]"
+                  >
+                    {viewBusyId === selectedDocument.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                    View
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={viewBusyId === selectedDocument.id}
+                    onClick={() =>
+                      void openDocument(selectedDocument.id, { download: true })
+                    }
+                    className="border-white/15 bg-white/[0.03]"
+                  >
+                    <Download className="size-4" />
+                    Download
+                  </Button>
                   {canShareWithClient ? (
                     <Button
                       type="button"
@@ -386,9 +449,13 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                 versionFileInputRef={versionFileInputRef}
                 versionNote={versionNote}
                 versionUploading={versionUploading}
+                viewBusyId={viewBusyId}
                 onNoteChange={setVersionNote}
                 onUploadClick={() => versionFileInputRef.current?.click()}
                 onUploadFile={handleVersionFile}
+                onViewVersion={(versionId) =>
+                  void openDocument(selectedDocument.id, { versionId })
+                }
                 onRestore={async (versionId) => {
                   try {
                     await restoreVersion({
@@ -473,9 +540,11 @@ function VersionHistoryPanel({
   versionFileInputRef,
   versionNote,
   versionUploading,
+  viewBusyId,
   onNoteChange,
   onUploadClick,
   onUploadFile,
+  onViewVersion,
   onRestore,
 }: {
   caseId: string;
@@ -485,9 +554,11 @@ function VersionHistoryPanel({
   versionFileInputRef: React.RefObject<HTMLInputElement | null>;
   versionNote: string;
   versionUploading: boolean;
+  viewBusyId: string | null;
   onNoteChange: (value: string) => void;
   onUploadClick: () => void;
   onUploadFile: (file: File) => Promise<void>;
+  onViewVersion: (versionId: string) => void;
   onRestore: (versionId: string) => Promise<void>;
 }) {
   return (
@@ -556,11 +627,26 @@ function VersionHistoryPanel({
                     {version.uploader_name ?? "Unknown"} · {formatDate(version.uploaded_at)}
                   </p>
                 </div>
-                {!version.is_current && (
-                  <Button variant="ghost" size="sm" onClick={() => void onRestore(version.id)}>
-                    Restore
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={viewBusyId === version.id || !version.file_path}
+                    onClick={() => onViewVersion(version.id)}
+                  >
+                    {viewBusyId === version.id ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Eye className="size-3.5" />
+                    )}
+                    View
                   </Button>
-                )}
+                  {!version.is_current && (
+                    <Button variant="ghost" size="sm" onClick={() => void onRestore(version.id)}>
+                      Restore
+                    </Button>
+                  )}
+                </div>
               </div>
               {version.note && (
                 <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">

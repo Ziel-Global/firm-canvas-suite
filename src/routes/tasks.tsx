@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -32,6 +32,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NewTaskSheet } from "@/components/new-task-sheet";
+import { TaskDetailSheet } from "@/components/task-detail-sheet";
 import { TaskListView } from "@/components/task-list-view";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
@@ -172,9 +173,16 @@ function TaskCardBody({ task }: { task: TaskRow }) {
 const CARD_SHADOW =
   "shadow-[0_8px_24px_-16px_rgba(0,0,0,0.55)] hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.65)]";
 
-function SortableTaskCard({ task }: { task: TaskRow }) {
+function SortableTaskCard({
+  task,
+  onSelect,
+}: {
+  task: TaskRow;
+  onSelect: (task: TaskRow) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <Card
@@ -182,6 +190,19 @@ function SortableTaskCard({ task }: { task: TaskRow }) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      onPointerDown={(e) => {
+        pointerStart.current = { x: e.clientX, y: e.clientY };
+        listeners?.onPointerDown?.(e);
+      }}
+      onClick={(e) => {
+        const start = pointerStart.current;
+        pointerStart.current = null;
+        if (isDragging || !start) return;
+        const moved =
+          Math.abs(e.clientX - start.x) > 6 || Math.abs(e.clientY - start.y) > 6;
+        if (moved) return;
+        onSelect(task);
+      }}
       className={cn(
         "cursor-grab touch-none rounded-xl border border-white/[0.08] bg-[rgba(22,22,25,0.95)] p-4 transition-all active:cursor-grabbing",
         CARD_SHADOW,
@@ -199,12 +220,14 @@ function Column({
   accent,
   tasks,
   onAddTask,
+  onSelectTask,
 }: {
   columnKey: TaskStatus;
   label: string;
   accent: string;
   tasks: TaskRow[];
   onAddTask: () => void;
+  onSelectTask: (task: TaskRow) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: columnKey });
 
@@ -246,7 +269,11 @@ function Column({
           strategy={verticalListSortingStrategy}
         >
           {tasks.map((task) => (
-            <SortableTaskCard key={task.id} task={task} />
+            <SortableTaskCard
+              key={task.id}
+              task={task}
+              onSelect={onSelectTask}
+            />
           ))}
         </SortableContext>
         <button
@@ -393,9 +420,16 @@ function TasksPage() {
   const [board, setBoard] = useState<Board>(emptyBoard());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [tolerance, setTolerance] = useState(0);
   const [view, setView] = useState<"board" | "list">("board");
+
+  function openTaskDetail(task: TaskRow) {
+    setSelectedTask(task);
+    setDetailOpen(true);
+  }
 
 
   useEffect(() => {
@@ -565,6 +599,7 @@ function TasksPage() {
             tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
               (col) => displayBoard[col],
             )}
+            onSelect={openTaskDetail}
           />
         ) : (
           <DndContext
@@ -583,6 +618,7 @@ function TasksPage() {
                   accent={col.accent}
                   tasks={displayBoard[col.key]}
                   onAddTask={() => setSheetOpen(true)}
+                  onSelectTask={openTaskDetail}
                 />
               ))}
             </div>
@@ -602,6 +638,14 @@ function TasksPage() {
         )}
 
         <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+        <TaskDetailSheet
+          task={selectedTask}
+          open={detailOpen}
+          onOpenChange={(open) => {
+            setDetailOpen(open);
+            if (!open) setSelectedTask(null);
+          }}
+        />
       </div>
     </main>
   );

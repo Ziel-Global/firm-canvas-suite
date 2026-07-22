@@ -58,9 +58,14 @@ interface TaskListViewProps {
   tasks: TaskRow[];
   /** Hide the case column when already scoped to a single case. */
   showCase?: boolean;
+  onSelect?: (task: TaskRow) => void;
 }
 
-export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
+export function TaskListView({
+  tasks,
+  showCase = true,
+  onSelect,
+}: TaskListViewProps) {
   if (!tasks.length) {
     return (
       <div className="rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-6 py-14 text-center">
@@ -107,7 +112,23 @@ export function TaskListView({ tasks, showCase = true }: TaskListViewProps) {
             return (
               <TableRow
                 key={task.id}
-                className="border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+                role={onSelect ? "button" : undefined}
+                tabIndex={onSelect ? 0 : undefined}
+                onClick={onSelect ? () => onSelect(task) : undefined}
+                onKeyDown={
+                  onSelect
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelect(task);
+                        }
+                      }
+                    : undefined
+                }
+                className={
+                  "border-white/[0.06] transition-colors hover:bg-white/[0.03]" +
+                  (onSelect ? " cursor-pointer" : "")
+                }
               >
                 <TableCell className="max-w-[280px]">
                   <p className="font-medium tracking-tight text-foreground">{task.title}</p>

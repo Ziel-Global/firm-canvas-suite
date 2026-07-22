@@ -151,7 +151,14 @@ function RootComponent() {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      // Clear on session switch so React Query never briefly serves the
+      // previous user's cached tasks/dashboard (invalidate keeps old data
+      // visible while refetching). Same-user profile updates only invalidate.
+      if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
+        queryClient.clear();
+      } else {
+        queryClient.invalidateQueries();
+      }
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);

@@ -6,6 +6,83 @@ import type { Database } from "@/integrations/supabase/types";
 
 const BUCKET = "case-documents";
 
+async function ensureCaseDocumentsBucket() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+  if (listError) throw new Error(listError.message);
+  if (buckets?.some((b) => b.id === BUCKET || b.name === BUCKET)) return;
+
+  const { error } = await supabaseAdmin.storage.createBucket(BUCKET, {
+    public: false,
+    fileSizeLimit: 52428800,
+    allowedMimeTypes: [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "image/jpeg",
+      "image/png",
+      "text/plain",
+    ],
+  });
+  // Ignore race where another request created it first.
+  if (error && !/already exists|duplicate/i.test(error.message)) {
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Upload bytes with the service-role client. Storage RLS on this project rejects
+ * authenticated inserts even when effective_case_access is full; authorization is
+ * enforced by the caller before invoking this helper.
+ */
+async function uploadToCaseDocuments(
+  objectName: string,
+  bytes: Uint8Array,
+  contentType: string,
+) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await ensureCaseDocumentsBucket();
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .upload(objectName, bytes, {
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(uploadError.message);
+}
+
+async function removeCaseDocumentObjects(objectNames: string[]) {
+  if (!objectNames.length) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.storage.from(BUCKET).remove(objectNames);
+}
+
+async function assertCanUploadToCase(
+  supabase: SupabaseClient<Database>,
+  caseId: string,
+  folderId: string,
+) {
+  const { data: access, error: accessError } = await supabase.rpc(
+    "effective_case_access",
+    { _case_id: caseId },
+  );
+  if (accessError) throw new Error(accessError.message);
+  if (access !== "full") {
+    throw new Error("You do not have permission to upload documents to this case.");
+  }
+
+  const { data: folder, error: folderError } = await supabase
+    .from("document_folders")
+    .select("id, code")
+    .eq("id", folderId)
+    .eq("case_id", caseId)
+    .maybeSingle();
+  if (folderError) throw new Error(folderError.message);
+  if (!folder) throw new Error("That document folder was not found for this case.");
+}
+
 /**
  * Allowed upload types. Maps a normalised file extension to its MIME type.
  * Anything outside this list (notably executables) is rejected.
@@ -38,6 +115,7 @@ export interface CaseDocument {
   id: string;
   folder_id: string | null;
   title: string;
+  case_id?: string | null;
   case_title?: string; // Optional, added for global search
   doc_type: string | null;
   current_version: number | null;
@@ -302,6 +380,8 @@ export const uploadDocument = createServerFn({ method: "POST" })
       throw new Error("A folder id is required.");
     }
 
+    await assertCanUploadToCase(supabase, caseId, folderId);
+
     const isVersionUpload = Boolean(existingDocument);
 
     const rawName = file.name || "upload";
@@ -343,11 +423,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
     }
     // -----------------------------
 
-    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(objectName, bytes, {
-      contentType: allowedMimes[0],
-      upsert: false,
-    });
-    if (uploadError) throw new Error(uploadError.message);
+    await uploadToCaseDocuments(objectName, bytes, allowedMimes[0]);
 
     const title = dotIdx >= 0 ? rawName.slice(0, dotIdx) : rawName;
 
@@ -366,7 +442,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
         .select("id")
         .single();
       if (docError || !doc) {
-        await supabase.storage.from(BUCKET).remove([objectName]);
+        await removeCaseDocumentObjects([objectName]);
         throw new Error(docError?.message ?? "Failed to create document.");
       }
 
@@ -379,7 +455,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
       });
       if (versionError) {
         await supabase.from("documents").delete().eq("id", doc.id);
-        await supabase.storage.from(BUCKET).remove([objectName]);
+        await removeCaseDocumentObjects([objectName]);
         throw new Error(versionError.message);
       }
 
@@ -398,7 +474,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (versionInsertError || !versionRow) {
-      await supabase.storage.from(BUCKET).remove([objectName]);
+      await removeCaseDocumentObjects([objectName]);
       throw new Error(versionInsertError?.message ?? "Failed to create document version.");
     }
 
@@ -414,12 +490,118 @@ export const uploadDocument = createServerFn({ method: "POST" })
       .eq("id", existingDocument!.id);
     if (updateError) {
       await supabase.from("document_versions").delete().eq("id", versionRow.id);
-      await supabase.storage.from(BUCKET).remove([objectName]);
+      await removeCaseDocumentObjects([objectName]);
       throw new Error(updateError.message);
     }
 
     return { id: existingDocument!.id as string };
   });
+
+/**
+ * Resolve a short-lived signed URL so staff can view or download a document
+ * they are permitted to read. Storage bytes are served via the service role
+ * after RLS confirms document access (authenticated storage reads are blocked).
+ */
+export const getDocumentViewUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string; documentId: string; versionId?: string | null }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.documentId) throw new Error("A document id is required.");
+    return {
+      caseId: input.caseId,
+      documentId: input.documentId,
+      versionId:
+        typeof input.versionId === "string" && input.versionId
+          ? input.versionId
+          : null,
+    };
+  })
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ url: string; fileName: string; docType: string | null }> => {
+      const { supabase } = context;
+
+      const { data: readable, error: readableError } = await supabase.rpc(
+        "can_read_document",
+        { _doc_id: data.documentId },
+      );
+      if (readableError) throw new Error(readableError.message);
+      if (!readable) throw new Error("You do not have permission to view this document.");
+
+      const { data: doc, error: docError } = await supabase
+        .from("documents")
+        .select("id, case_id, title, doc_type, file_path, current_version")
+        .eq("id", data.documentId)
+        .eq("case_id", data.caseId)
+        .maybeSingle();
+      if (docError) throw new Error(docError.message);
+      if (!doc) throw new Error("Document not found.");
+
+      let filePath: string | null = null;
+      let versionNumber = doc.current_version ?? 1;
+
+      if (data.versionId) {
+        const { data: version, error: versionError } = await supabase
+          .from("document_versions")
+          .select("file_path, version_number")
+          .eq("id", data.versionId)
+          .eq("document_id", data.documentId)
+          .maybeSingle();
+        if (versionError) throw new Error(versionError.message);
+        if (!version) throw new Error("Document version not found.");
+        filePath = version.file_path;
+        versionNumber = version.version_number ?? versionNumber;
+      } else {
+        filePath = doc.file_path ?? null;
+        if (!filePath && doc.current_version != null) {
+          const { data: version, error: versionError } = await supabase
+            .from("document_versions")
+            .select("file_path, version_number")
+            .eq("document_id", data.documentId)
+            .eq("version_number", doc.current_version)
+            .maybeSingle();
+          if (versionError) throw new Error(versionError.message);
+          filePath = version?.file_path ?? null;
+          if (version?.version_number != null) versionNumber = version.version_number;
+        }
+        if (!filePath) {
+          const { data: latest, error: latestError } = await supabase
+            .from("document_versions")
+            .select("file_path, version_number")
+            .eq("document_id", data.documentId)
+            .order("version_number", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestError) throw new Error(latestError.message);
+          filePath = latest?.file_path ?? null;
+          if (latest?.version_number != null) versionNumber = latest.version_number;
+        }
+      }
+
+      if (!filePath) throw new Error("No file is available for this document.");
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: signed, error: signedError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .createSignedUrl(filePath, 120);
+      if (signedError) throw new Error(signedError.message);
+      if (!signed?.signedUrl) throw new Error("Could not create a view link.");
+
+      const ext = filePath.includes(".")
+        ? filePath.slice(filePath.lastIndexOf("."))
+        : "";
+      const baseTitle = (doc.title ?? "document").replace(/[\\/:*?"<>|]+/g, "_");
+      const fileName = `${baseTitle}-v${versionNumber}${ext}`;
+
+      return {
+        url: signed.signedUrl,
+        fileName,
+        docType: (doc.doc_type as string) ?? null,
+      };
+    },
+  );
 
 /**
  * Restore a prior document version.
@@ -500,7 +682,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
     }
 
     let query = supabase.from("documents").select(`
-      id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
+      id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
       cases(id, title)
     `);
 
@@ -522,6 +704,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
 
     return docs.map((d: any) => ({
       id: d.id,
+      case_id: d.case_id ?? d.cases?.id ?? null,
       folder_id: d.folder_id,
       title: d.title ?? "Untitled",
       case_title: d.cases?.title ?? "Unknown Case",
@@ -650,7 +833,6 @@ export const createAiDocument = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // 1. Find the "01 Internal Drafts" folder for this case
     const { data: folder } = await supabase
       .from("document_folders")
       .select("id")
@@ -660,36 +842,54 @@ export const createAiDocument = createServerFn({ method: "POST" })
 
     if (!folder) throw new Error("Internal Drafts folder not found.");
 
-    // 2. Upload content as a file to Supabase Storage
-    // Generating a random filename
+    await assertCanUploadToCase(supabase, data.caseId, folder.id);
+
     const fileId = crypto.randomUUID();
-    const filePath = `${data.caseId}/${fileId}.txt`; // using .txt for now
-    
-    // In a Node/Deno environment, we can upload a string directly or as a Blob/File
-    const { error: uploadError } = await supabase.storage
+    const objectName = `${data.caseId}/${folder.id}/${fileId}.txt`;
+    const bytes = new TextEncoder().encode(data.content);
+
+    try {
+      await uploadToCaseDocuments(objectName, bytes, "text/plain");
+    } catch (err) {
+      throw new Error(
+        `Upload error: ${err instanceof Error ? err.message : "Unknown upload error"}`,
+      );
+    }
+
+    const { data: doc, error: docError } = await supabase
       .from("documents")
-      .upload(filePath, data.content, {
-        contentType: "text/plain",
-      });
+      .insert({
+        case_id: data.caseId,
+        folder_id: folder.id,
+        title: data.title,
+        doc_type: data.docType,
+        file_path: objectName,
+        current_version: 1,
+        approval_status: "draft",
+        uploaded_by: userId,
+      })
+      .select("id")
+      .single();
 
-    if (uploadError) throw new Error(`Upload error: ${uploadError.message}`);
+    if (docError || !doc) {
+      await removeCaseDocumentObjects([objectName]);
+      throw new Error(docError?.message ?? "Failed to create document.");
+    }
 
-    // 3. Create document record
-    const { error: docError } = await supabase.from("documents").insert({
-      case_id: data.caseId,
-      folder_id: folder.id,
-      title: data.title,
-      doc_type: data.docType,
-      file_path: filePath,
-      file_type: "text/plain",
-      file_size_bytes: new Blob([data.content]).size,
-      approval_status: "draft",
+    const { error: versionError } = await supabase.from("document_versions").insert({
+      document_id: doc.id,
+      version_number: 1,
+      file_path: objectName,
       uploaded_by: userId,
+      note: "AI generated draft",
     });
+    if (versionError) {
+      await supabase.from("documents").delete().eq("id", doc.id);
+      await removeCaseDocumentObjects([objectName]);
+      throw new Error(versionError.message);
+    }
 
-    if (docError) throw new Error(`Database error: ${docError.message}`);
-
-    return { ok: true };
+    return { ok: true, id: doc.id as string };
   });
 
 export interface ClientShareStatus {

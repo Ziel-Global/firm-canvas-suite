@@ -132,64 +132,29 @@ function GlobalDocumentsPage() {
                       : "Draft";
 
                 return (
-                  <li
-                    key={doc.id}
-                    className="flex w-full items-start gap-3.5 px-4 py-3.5 transition-colors hover:bg-white/[0.03] sm:px-5"
-                  >
-                    <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-muted-foreground">
-                      <FileText className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-                          {doc.title}
-                        </span>
-                        <span
-                          className={cn(
-                            "rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                            status,
-                          )}
-                        >
-                          {statusLabel}
-                        </span>
-                        {doc.is_locked && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-priority-high/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-priority-high">
-                            <Lock className="size-3" />
-                            Locked
-                          </span>
-                        )}
-                        {doc.is_archived && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            <Archive className="size-3" />
-                            Archived
-                          </span>
-                        )}
+                  <li key={doc.id}>
+                    {doc.case_id ? (
+                      <Link
+                        to="/cases/$caseId"
+                        params={{ caseId: doc.case_id }}
+                        search={{ tab: "documents" }}
+                        className="flex w-full items-start gap-3.5 px-4 py-3.5 transition-colors hover:bg-white/[0.03] sm:px-5"
+                      >
+                        <DocumentRowBody
+                          doc={doc}
+                          status={status}
+                          statusLabel={statusLabel}
+                        />
+                      </Link>
+                    ) : (
+                      <div className="flex w-full items-start gap-3.5 px-4 py-3.5 sm:px-5">
+                        <DocumentRowBody
+                          doc={doc}
+                          status={status}
+                          statusLabel={statusLabel}
+                        />
                       </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}
-                        {doc.case_title && doc.case_title !== "Unknown Case" ? (
-                          <span className="truncate">{doc.case_title}</span>
-                        ) : null}
-                        <span className="tabular-nums">
-                          v{doc.current_version ?? 1}
-                        </span>
-                        <span>·</span>
-                        <span>
-                          Uploaded by {doc.uploader_name ?? "Unknown"}
-                        </span>
-                        <span>·</span>
-                        <span className="tabular-nums">
-                          {new Date(doc.created_at).toLocaleDateString(
-                            undefined,
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )}
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </li>
                 );
               })}
@@ -221,5 +186,76 @@ function GlobalDocumentsPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function DocumentRowBody({
+  doc,
+  status,
+  statusLabel,
+}: {
+  doc: {
+    title: string;
+    doc_type: string | null;
+    case_title?: string;
+    current_version: number | null;
+    uploader_name: string | null;
+    created_at: string;
+    is_locked: boolean;
+    is_archived: boolean;
+  };
+  status: string;
+  statusLabel: string;
+}) {
+  return (
+    <>
+      <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-muted-foreground">
+        <FileText className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+            {doc.title}
+          </span>
+          <span
+            className={cn(
+              "rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              status,
+            )}
+          >
+            {statusLabel}
+          </span>
+          {doc.is_locked && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-priority-high/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-priority-high">
+              <Lock className="size-3" />
+              Locked
+            </span>
+          )}
+          {doc.is_archived && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <Archive className="size-3" />
+              Archived
+            </span>
+          )}
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}
+          {doc.case_title && doc.case_title !== "Unknown Case" ? (
+            <span className="truncate">{doc.case_title}</span>
+          ) : null}
+          <span className="tabular-nums">v{doc.current_version ?? 1}</span>
+          <span>·</span>
+          <span>Uploaded by {doc.uploader_name ?? "Unknown"}</span>
+          <span>·</span>
+          <span className="tabular-nums">
+            {new Date(doc.created_at).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+      </div>
+    </>
   );
 }

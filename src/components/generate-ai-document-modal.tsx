@@ -84,7 +84,8 @@ export function GenerateAIDocumentModal({
         }
       });
       toast.success("Saved to Internal Drafts");
-      queryClient.invalidateQueries({ queryKey: ["case-documents", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["folder-documents", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["global-documents"] });
       setStep(1);
       setSelectedTemplateId("");
       setFormValues({});
