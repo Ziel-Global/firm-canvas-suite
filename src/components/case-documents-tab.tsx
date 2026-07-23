@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Tag } from "@/components/ui/tag";
 import { Pill } from "@/components/ui/pill";
 import { GenerateAIDocumentModal } from "@/components/generate-ai-document-modal";
+import { DocumentVisibilityPanel } from "@/components/document-visibility-panel";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,12 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+/** Display name without the redundant "04 " code prefix stored in the DB. */
+function folderLabel(folder: { code: string; name: string }) {
+  const prefix = `${folder.code} `;
+  return folder.name.startsWith(prefix) ? folder.name.slice(prefix.length) : folder.name;
 }
 
 export function CaseDocumentsTab({ caseId }: { caseId: string }) {
@@ -154,7 +161,9 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       toast.success("AI Proofreader complete. No major issues found.", { id: "ai-proofread" });
 
       await submitDoc({ data: { documentId } });
-      toast.success("Submitted for approval");
+      toast.success(
+        "Submitted for approval. After approval it moves to Approved Documents and locks.",
+      );
       queryClient.invalidateQueries({ queryKey: ["folder-documents", caseId, selectedFolderId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit", { id: "ai-proofread" });
@@ -281,7 +290,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                 )}
               >
                 <Icon className="size-4 shrink-0" />
-                <span className="truncate">{folder.name}</span>
+                <span className="truncate">{folderLabel(folder)}</span>
               </button>
             );
           })}
@@ -317,7 +326,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="size-4" />
-                {uploading ? "Uploading…" : `Upload to ${selectedFolder.name}`}
+                {uploading ? "Uploading…" : `Upload to ${folderLabel(selectedFolder)}`}
               </Button>
             </>
           ) : selectedFolder ? (
@@ -332,8 +341,28 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
         )}
 
         {!docsLoading && documents && documents.length === 0 && (
-          <Card className="p-6">
+          <Card className="space-y-3 p-6">
             <p className="text-sm text-muted-foreground">This folder is empty.</p>
+            {selectedFolder?.code !== "04" &&
+            folders.some((folder) => folder.code === "04") ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  After admin approval, files leave this folder and appear under{" "}
+                  <span className="text-foreground">Approved Documents</span>, marked
+                  locked (final / view-only).
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const approved = folders.find((folder) => folder.code === "04");
+                    if (approved) setSelectedFolderId(approved.id);
+                  }}
+                >
+                  Open Approved Documents
+                </Button>
+              </div>
+            ) : null}
           </Card>
         )}
 
@@ -368,6 +397,12 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       {selectedDocument.approval_status === "approved" ? "Approved" :
                        selectedDocument.approval_status === "in_review" ? "In Review" : "Draft"}
                     </Pill>
+                    {selectedDocument.is_locked ? (
+                      <Pill className="bg-priority-high/20 text-foreground">
+                        <Lock className="size-3" />
+                        Locked · final
+                      </Pill>
+                    ) : null}
                     {selectedDocument.shared_with_client ? (
                       <Pill className="bg-status-ontrack/20 text-status-ontrack">
                         <Share2 className="size-3" />
@@ -375,6 +410,18 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       </Pill>
                     ) : null}
                   </div>
+                  {selectedDocument.approval_status === "in_review" ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      After approval, this file moves to Approved Documents and locks
+                      (view / download only).
+                    </p>
+                  ) : null}
+                  {selectedDocument.approval_status === "approved" &&
+                  selectedDocument.is_locked ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Approved and locked. Contents are final — view and download only.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -439,6 +486,14 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                 </div>
               </div>
             </Card>
+
+            {canShareWithClient ? (
+              <DocumentVisibilityPanel
+                caseId={caseId}
+                documentId={selectedDocument.id}
+                documentTitle={selectedDocument.title}
+              />
+            ) : null}
 
             {canManageVersions && (
               <VersionHistoryPanel
@@ -507,8 +562,14 @@ function DocumentRow({
             {doc.is_locked && (
               <Pill className="bg-priority-high/20 text-foreground">
                 <Lock className="size-3" />
-                Locked
+                Locked · final
               </Pill>
+            )}
+            {doc.visibility_mode === "admin_only" && (
+              <Pill className="bg-white/[0.08] text-muted-foreground">Admin only</Pill>
+            )}
+            {doc.visibility_mode === "allowlist" && (
+              <Pill className="bg-white/[0.08] text-muted-foreground">Restricted</Pill>
             )}
             {doc.is_archived && <Pill className="bg-frame text-muted-foreground">Archived</Pill>}
             {doc.shared_with_client && (

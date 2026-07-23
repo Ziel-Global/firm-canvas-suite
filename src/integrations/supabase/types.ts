@@ -707,6 +707,7 @@ export type Database = {
           submitted_by: string | null
           approved_at: string | null
           approved_by: string | null
+          visibility_mode: string
         }
         Insert: {
           case_id?: string | null
@@ -725,6 +726,7 @@ export type Database = {
           submitted_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          visibility_mode?: string
         }
         Update: {
           case_id?: string | null
@@ -743,6 +745,7 @@ export type Database = {
           submitted_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          visibility_mode?: string
         }
         Relationships: [
           {
@@ -757,6 +760,47 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_visibility_rules: {
+        Row: {
+          id: string
+          document_id: string
+          effect: string
+          subject_type: string
+          user_id: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          effect: string
+          subject_type: string
+          user_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          effect?: string
+          subject_type?: string
+          user_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_visibility_rules_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]

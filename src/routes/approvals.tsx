@@ -81,7 +81,7 @@ function ApprovalsQueuePage() {
   async function handleApprove(documentId: string) {
     try {
       await approveDoc({ data: { documentId } });
-      toast.success("Document approved");
+      toast.success("Document approved — moved to Approved Documents and locked");
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Approval failed");

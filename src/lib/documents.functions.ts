@@ -111,6 +111,37 @@ export interface CaseFolder {
   name: string;
 }
 
+export type DocumentVisibilityMode = "open" | "allowlist" | "admin_only";
+
+export type StaffCaseRole =
+  | "senior_lawyer"
+  | "junior_lawyer"
+  | "support"
+  | "admin"
+  | "super_admin";
+
+export interface CaseTeamMember {
+  userId: string;
+  fullName: string;
+  role: StaffCaseRole | string;
+  isLead: boolean;
+}
+
+export interface DocumentVisibilityRule {
+  id: string;
+  effect: "allow" | "deny";
+  subjectType: "user" | "role";
+  userId: string | null;
+  role: string | null;
+  userName: string | null;
+}
+
+export interface DocumentVisibilityState {
+  mode: DocumentVisibilityMode;
+  rules: DocumentVisibilityRule[];
+  team: CaseTeamMember[];
+}
+
 export interface CaseDocument {
   id: string;
   folder_id: string | null;
@@ -130,6 +161,8 @@ export interface CaseDocument {
   created_at: string;
   /** True when this document is shared with the case's linked portal client. */
   shared_with_client: boolean;
+  /** Who may see this document beyond folder rules. */
+  visibility_mode: DocumentVisibilityMode;
 }
 
 // --- MALWARE SCANNING HOOK ---
@@ -191,19 +224,43 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<CaseDocument[]> => {
     const { supabase } = context;
 
-    const { data: docs, error } = await supabase
-      .from("documents")
-      .select(
-        "id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at",
-      )
-      .eq("case_id", data.caseId)
-      .eq("folder_id", data.folderId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    const baseSelect =
+      "id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at";
+
+    let docs: Array<Record<string, unknown>> | null = null;
+    {
+      const first = await supabase
+        .from("documents")
+        .select(`${baseSelect}, visibility_mode`)
+        .eq("case_id", data.caseId)
+        .eq("folder_id", data.folderId)
+        .order("created_at", { ascending: false });
+      if (
+        first.error &&
+        /visibility_mode|document_visibility/i.test(first.error.message)
+      ) {
+        const fallback = await supabase
+          .from("documents")
+          .select(baseSelect)
+          .eq("case_id", data.caseId)
+          .eq("folder_id", data.folderId)
+          .order("created_at", { ascending: false });
+        if (fallback.error) throw new Error(fallback.error.message);
+        docs = (fallback.data ?? []) as Array<Record<string, unknown>>;
+      } else if (first.error) {
+        throw new Error(first.error.message);
+      } else {
+        docs = (first.data ?? []) as Array<Record<string, unknown>>;
+      }
+    }
     if (!docs || docs.length === 0) return [];
 
     const uploaderIds = Array.from(
-      new Set(docs.map((d) => d.uploaded_by).filter((v): v is string => Boolean(v))),
+      new Set(
+        docs
+          .map((d) => d.uploaded_by as string | null)
+          .filter((v): v is string => Boolean(v)),
+      ),
     );
 
     const nameById = new Map<string, string>();
@@ -236,7 +293,7 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
           .eq("shared_with", client.user_id)
           .in(
             "document_id",
-            docs.map((d) => d.id),
+            docs.map((d) => d.id as string),
           );
         for (const s of shares ?? []) {
           if (s.document_id) sharedIds.add(s.document_id);
@@ -245,21 +302,26 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
     }
 
     return docs.map((d) => ({
-      id: d.id,
-      folder_id: d.folder_id,
-      title: d.title ?? "Untitled",
-      doc_type: d.doc_type,
-      current_version: d.current_version,
+      id: d.id as string,
+      folder_id: (d.folder_id as string | null) ?? null,
+      title: (d.title as string) ?? "Untitled",
+      doc_type: (d.doc_type as string | null) ?? null,
+      current_version: (d.current_version as number | null) ?? null,
       is_locked: Boolean(d.is_locked),
       is_archived: Boolean(d.is_archived),
-      approval_status: (d.approval_status as CaseDocument['approval_status']) ?? 'draft',
+      approval_status:
+        (d.approval_status as CaseDocument["approval_status"]) ?? "draft",
       submitted_at: (d.submitted_at as string) ?? null,
       approved_at: (d.approved_at as string) ?? null,
       approved_by: (d.approved_by as string) ?? null,
-      uploaded_by: d.uploaded_by,
-      uploader_name: d.uploaded_by ? (nameById.get(d.uploaded_by) ?? null) : null,
+      uploaded_by: (d.uploaded_by as string | null) ?? null,
+      uploader_name: d.uploaded_by
+        ? (nameById.get(d.uploaded_by as string) ?? null)
+        : null,
       created_at: d.created_at as string,
-      shared_with_client: sharedIds.has(d.id),
+      shared_with_client: sharedIds.has(d.id as string),
+      visibility_mode:
+        (d.visibility_mode as DocumentVisibilityMode | undefined) ?? "open",
     }));
   });
 
@@ -682,7 +744,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
     }
 
     let query = supabase.from("documents").select(`
-      id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
+      id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at, visibility_mode,
       cases(id, title)
     `);
 
@@ -691,8 +753,27 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
     if (data.type) query = query.eq("doc_type", data.type);
     if (data.folderId) query = query.eq("folder_id", data.folderId);
     
-    const { data: docs, error } = await query.order("created_at", { ascending: false }).limit(100);
-    if (error) throw new Error(error.message);
+    let docs: any[] | null = null;
+    {
+      const first = await query.order("created_at", { ascending: false }).limit(100);
+      if (first.error && /visibility_mode|document_visibility/i.test(first.error.message)) {
+        let fallback = supabase.from("documents").select(`
+          id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
+          cases(id, title)
+        `);
+        if (data.q) fallback = fallback.ilike("title", `%${data.q}%`);
+        if (data.caseId) fallback = fallback.eq("case_id", data.caseId);
+        if (data.type) fallback = fallback.eq("doc_type", data.type);
+        if (data.folderId) fallback = fallback.eq("folder_id", data.folderId);
+        const second = await fallback.order("created_at", { ascending: false }).limit(100);
+        if (second.error) throw new Error(second.error.message);
+        docs = second.data ?? [];
+      } else if (first.error) {
+        throw new Error(first.error.message);
+      } else {
+        docs = first.data ?? [];
+      }
+    }
     if (!docs || docs.length === 0) return [];
     
     const uploaderIds = Array.from(new Set(docs.map((d) => d.uploaded_by).filter((v): v is string => Boolean(v))));
@@ -720,6 +801,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
       uploader_name: d.uploaded_by ? (nameById.get(d.uploaded_by) ?? null) : null,
       created_at: d.created_at as string,
       shared_with_client: false,
+      visibility_mode: (d.visibility_mode as DocumentVisibilityMode) ?? "open",
     }));
   });
 export const submitForApproval = createServerFn({ method: "POST" })
@@ -812,7 +894,7 @@ export const approveDocument = createServerFn({ method: "POST" })
           body: {
             to: authUser.user.email,
             subject: `Document Approved: ${docData.title}`,
-            html: `<p>Hi ${(prof as any)?.full_name || 'Team Member'},</p><p>Great news! Your document <strong>${docData.title}</strong> has been approved.</p><p><a href="https://firmcanvas.app/cases/${docData.case_id}">View Document</a></p>`
+            html: `<p>Hi ${(prof as any)?.full_name || 'Team Member'},</p><p>Great news! Your document <strong>${docData.title}</strong> has been approved.</p><p>It is now in the <strong>Approved Documents</strong> folder and locked as final (view / download only).</p><p><a href="https://firmcanvas.app/cases/${docData.case_id}?tab=documents">View Document</a></p>`
           }
         }).catch(err => console.error(err));
       }
@@ -1095,4 +1177,262 @@ export const unshareDocumentWithClient = createServerFn({ method: "POST" })
     if (logErr) throw new Error(logErr.message);
 
     return { ok: true, clientName: portalClient.clientName };
+  });
+
+const STAFF_VISIBILITY_ROLES: StaffCaseRole[] = [
+  "senior_lawyer",
+  "junior_lawyer",
+  "support",
+];
+
+async function loadCaseTeamMembers(
+  supabase: SupabaseClient<Database>,
+  caseId: string,
+): Promise<CaseTeamMember[]> {
+  const { data: assignments, error } = await supabase
+    .from("case_assignments")
+    .select("user_id, is_lead")
+    .eq("case_id", caseId);
+  if (error) throw new Error(error.message);
+  if (!assignments?.length) return [];
+
+  const ids = assignments.map((a) => a.user_id).filter(Boolean) as string[];
+  const { data: profiles, error: profilesErr } = await supabase
+    .from("profiles")
+    .select("id, full_name, role, is_active")
+    .in("id", ids);
+  if (profilesErr) throw new Error(profilesErr.message);
+
+  const leadById = new Map(
+    assignments.map((a) => [a.user_id as string, Boolean(a.is_lead)]),
+  );
+
+  return (profiles ?? [])
+    .filter((p) => p.is_active !== false && p.role !== "client")
+    .map((p) => ({
+      userId: p.id as string,
+      fullName: (p.full_name as string) || "Unnamed",
+      role: (p.role as string) || "support",
+      isLead: leadById.get(p.id as string) ?? false,
+    }))
+    .sort((a, b) => a.fullName.localeCompare(b.fullName));
+}
+
+/**
+ * Case team (appointed people) for document visibility pickers.
+ */
+export const getCaseTeamMembers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseTeamMember[]> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+    return loadCaseTeamMembers(supabase, data.caseId);
+  });
+
+/**
+ * Current visibility mode + rules for a document (admin only).
+ */
+export const getDocumentVisibility = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string; documentId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.documentId) throw new Error("A document id is required.");
+    return input;
+  })
+  .handler(async ({ data, context }): Promise<DocumentVisibilityState> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+
+    const { data: doc, error: docErr } = await supabase
+      .from("documents")
+      .select("id, visibility_mode")
+      .eq("id", data.documentId)
+      .eq("case_id", data.caseId)
+      .maybeSingle();
+    if (docErr) throw new Error(docErr.message);
+    if (!doc) throw new Error("Document not found.");
+
+    const { data: rules, error: rulesErr } = await supabase
+      .from("document_visibility_rules")
+      .select("id, effect, subject_type, user_id, role")
+      .eq("document_id", data.documentId);
+    if (rulesErr) {
+      if (/document_visibility|schema cache|visibility_mode/i.test(rulesErr.message)) {
+        throw new Error(
+          "Document access migration is not applied yet. Run supabase/migrations/20260723120000_document_visibility_acl.sql in the Supabase SQL editor.",
+        );
+      }
+      throw new Error(rulesErr.message);
+    }
+
+    const typedRules = (rules ?? []) as Array<{
+      id: string;
+      effect: "allow" | "deny";
+      subject_type: "user" | "role";
+      user_id: string | null;
+      role: string | null;
+    }>;
+
+    const ruleUserIds = typedRules
+      .map((r) => r.user_id)
+      .filter((id): id is string => Boolean(id));
+
+    const nameById = new Map<string, string>();
+    if (ruleUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ruleUserIds);
+      for (const p of profiles ?? []) {
+        nameById.set(p.id as string, (p.full_name as string) ?? "Unnamed");
+      }
+    }
+
+    const team = await loadCaseTeamMembers(supabase, data.caseId);
+
+    return {
+      mode:
+        ((doc as { visibility_mode?: string }).visibility_mode as DocumentVisibilityMode) ??
+        "open",
+      rules: typedRules.map((r) => ({
+        id: r.id,
+        effect: r.effect,
+        subjectType: r.subject_type,
+        userId: r.user_id,
+        role: r.role,
+        userName: r.user_id ? (nameById.get(r.user_id) ?? null) : null,
+      })),
+      team,
+    };
+  });
+
+/**
+ * Replace document visibility mode and allow/deny rules (admin only).
+ */
+export const setDocumentVisibility = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      caseId: string;
+      documentId: string;
+      mode: DocumentVisibilityMode;
+      rules: Array<{
+        effect: "allow" | "deny";
+        subjectType: "user" | "role";
+        userId?: string | null;
+        role?: string | null;
+      }>;
+    }) => {
+      if (!input?.caseId) throw new Error("A case id is required.");
+      if (!input?.documentId) throw new Error("A document id is required.");
+      if (!["open", "allowlist", "admin_only"].includes(input.mode)) {
+        throw new Error("Invalid visibility mode.");
+      }
+      return {
+        caseId: input.caseId,
+        documentId: input.documentId,
+        mode: input.mode as DocumentVisibilityMode,
+        rules: Array.isArray(input.rules) ? input.rules : [],
+      };
+    },
+  )
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const { supabase, userId } = context;
+    await requireAdminRole(supabase, userId);
+
+    const { data: doc, error: docErr } = await supabase
+      .from("documents")
+      .select("id, title, case_id")
+      .eq("id", data.documentId)
+      .eq("case_id", data.caseId)
+      .maybeSingle();
+    if (docErr) throw new Error(docErr.message);
+    if (!doc) throw new Error("Document not found.");
+
+    const normalized = data.rules
+      .map((r) => {
+        if (r.subjectType === "user") {
+          if (!r.userId) return null;
+          return {
+            document_id: data.documentId,
+            effect: r.effect,
+            subject_type: "user" as const,
+            user_id: r.userId,
+            role: null,
+            created_by: userId,
+          };
+        }
+        if (!r.role || !STAFF_VISIBILITY_ROLES.includes(r.role as StaffCaseRole)) {
+          return null;
+        }
+        return {
+          document_id: data.documentId,
+          effect: r.effect,
+          subject_type: "role" as const,
+          user_id: null,
+          role: r.role as StaffCaseRole,
+          created_by: userId,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    const filtered =
+      data.mode === "admin_only"
+        ? []
+        : data.mode === "allowlist"
+          ? normalized.filter((r) => r.effect === "allow")
+          : normalized.filter((r) => r.effect === "deny");
+
+    const { error: updateErr } = await supabase
+      .from("documents")
+      .update({ visibility_mode: data.mode })
+      .eq("id", data.documentId)
+      .eq("case_id", data.caseId);
+    if (updateErr) {
+      if (/visibility_mode|document_visibility/i.test(updateErr.message)) {
+        throw new Error(
+          "Document access migration is not applied yet. Run supabase/migrations/20260723120000_document_visibility_acl.sql in the Supabase SQL editor.",
+        );
+      }
+      throw new Error(updateErr.message);
+    }
+
+    const { error: delErr } = await supabase
+      .from("document_visibility_rules")
+      .delete()
+      .eq("document_id", data.documentId);
+    if (delErr) {
+      if (/document_visibility|schema cache/i.test(delErr.message)) {
+        throw new Error(
+          "Document access migration is not applied yet. Run supabase/migrations/20260723120000_document_visibility_acl.sql in the Supabase SQL editor.",
+        );
+      }
+      throw new Error(delErr.message);
+    }
+
+    if (filtered.length > 0) {
+      const { error: insErr } = await supabase
+        .from("document_visibility_rules")
+        .insert(filtered);
+      if (insErr) throw new Error(insErr.message);
+    }
+
+    const { error: logErr } = await supabase.from("activity_log").insert({
+      case_id: data.caseId,
+      actor_id: userId,
+      action: "document_visibility_updated",
+      detail: {
+        document_id: data.documentId,
+        document_title: doc.title,
+        mode: data.mode,
+        rule_count: filtered.length,
+      },
+    });
+    if (logErr) throw new Error(logErr.message);
+
+    return { ok: true };
   });

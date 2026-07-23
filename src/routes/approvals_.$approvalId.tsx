@@ -116,7 +116,7 @@ function ReviewScreenPage() {
   async function handleApprove() {
     try {
       await approveDoc({ data: { documentId: detail!.document_id } });
-      toast.success("Document approved and workflow advanced.");
+      toast.success("Document approved — moved to Approved Documents and locked.");
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       navigate({ to: "/approvals" });
     } catch (err) {
