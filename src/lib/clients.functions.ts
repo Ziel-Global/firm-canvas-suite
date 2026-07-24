@@ -133,38 +133,116 @@ export interface CreateClientInput {
   phone?: string;
   address?: string;
   notes?: string;
+  /** When set, creates a portal login (auth user + profile role=client) linked to this client. */
+  portal_password?: string;
 }
 
 /**
  * Create a new client. Auto-generates a unique, sequential client_ref in the
  * format CL-YYYY-NNNN via the `next_client_ref` DB function (advisory-locked to
  * avoid race conditions) and writes the creation to activity_log.
+ *
+ * Optional `portal_password` (requires email): creates a Supabase Auth user with
+ * profile role `client` and links `clients.user_id` so they can sign in at /auth
+ * and land on /portal.
  */
 export const createClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: CreateClientInput) => {
     const full_name = (input.full_name ?? "").trim();
     if (!full_name) throw new Error("Full name is required.");
+
+    const email = normalizeClientEmail(input.email);
+    const portal_password = (input.portal_password ?? "").trim();
+
+    if (portal_password) {
+      if (!email) {
+        throw new Error("Email is required to enable portal access.");
+      }
+      if (portal_password.length < 8) {
+        throw new Error("Portal password must be at least 8 characters.");
+      }
+    }
+
     return {
       full_name,
-      email: normalizeClientEmail(input.email),
+      email,
       phone: input.phone?.trim() || null,
       address: input.address?.trim() || null,
       notes: input.notes?.trim() || null,
+      portal_password: portal_password || null,
     };
   })
-  .handler(async ({ data, context }): Promise<{ id: string; client_ref: string }> => {
-    const { supabase, userId } = context;
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ id: string; client_ref: string; portalEnabled: boolean }> => {
+      const { supabase, userId } = context;
 
-    await assertClientEmailAvailable(supabase, data.email);
+      const { data: me, error: meError } = await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", userId)
+        .maybeSingle();
+      if (meError) throw new Error(meError.message);
+      if (
+        !me?.is_active ||
+        (me.role !== "super_admin" && me.role !== "admin")
+      ) {
+        throw new Error("Only admins can create clients.");
+      }
 
-    const { data: refData, error: refError } = await supabase.rpc("next_client_ref");
-    if (refError) throw new Error(refError.message);
-    const client_ref = refData as string;
+      await assertClientEmailAvailable(supabase, data.email);
 
-    const { data: inserted, error: insertError } = await supabase
-      .from("clients")
-      .insert({
+      const { data: refData, error: refError } =
+        await supabase.rpc("next_client_ref");
+      if (refError) throw new Error(refError.message);
+      const client_ref = refData as string;
+
+      let portalUserId: string | null = null;
+
+      if (data.portal_password && data.email) {
+        const { supabaseAdmin } = await import(
+          "@/integrations/supabase/client.server"
+        );
+
+        const { data: created, error: createError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: data.email,
+            password: data.portal_password,
+            email_confirm: true,
+          });
+
+        if (createError || !created.user) {
+          throw new Error(
+            `Could not create portal login: ${createError?.message ?? "unknown error"}`,
+          );
+        }
+
+        portalUserId = created.user.id;
+
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .insert({
+            id: portalUserId,
+            full_name: data.full_name,
+            role: "client",
+            phone: data.phone,
+            is_active: true,
+            two_factor_enabled: false,
+            created_by: userId,
+          });
+
+        if (profileError) {
+          await supabaseAdmin.auth.admin.deleteUser(portalUserId);
+          throw new Error(
+            `Could not create portal profile: ${profileError.message}`,
+          );
+        }
+      }
+
+      const insertPayload = {
         client_ref,
         full_name: data.full_name,
         email: data.email,
@@ -172,26 +250,86 @@ export const createClient = createServerFn({ method: "POST" })
         address: data.address,
         notes: data.notes,
         created_by: userId,
-      })
-      .select("id, client_ref")
-      .single();
-    if (insertError) {
-      if (isUniqueViolation(insertError)) {
-        throw new Error("A client with this email already exists.");
+        ...(portalUserId ? { user_id: portalUserId } : {}),
+      };
+
+      const writer =
+        portalUserId != null
+          ? (
+              await import("@/integrations/supabase/client.server")
+            ).supabaseAdmin
+          : supabase;
+
+      const { data: inserted, error: insertError } = await writer
+        .from("clients")
+        .insert(insertPayload)
+        .select("id, client_ref")
+        .single();
+
+      if (insertError) {
+        if (portalUserId) {
+          const { supabaseAdmin } = await import(
+            "@/integrations/supabase/client.server"
+          );
+          await supabaseAdmin.from("profiles").delete().eq("id", portalUserId);
+          await supabaseAdmin.auth.admin.deleteUser(portalUserId);
+        }
+        if (isUniqueViolation(insertError)) {
+          throw new Error("A client with this email already exists.");
+        }
+        throw new Error(insertError.message);
       }
-      throw new Error(insertError.message);
-    }
 
-    const { error: logError } = await supabase.from("activity_log").insert({
-      actor_id: userId,
-      action: "client_created",
-      detail: { client_id: inserted.id, client_ref: inserted.client_ref, full_name: data.full_name },
-    });
-    if (logError) throw new Error(logError.message);
+      if (portalUserId && data.email) {
+        const { supabaseAdmin } = await import(
+          "@/integrations/supabase/client.server"
+        );
+        await supabaseAdmin.from("notifications").insert({
+          user_id: portalUserId,
+          type: "welcome_email",
+          title: "Client portal access",
+          body:
+            `Your client portal account is ready. Sign in at /auth with ${data.email} ` +
+            `and the password provided by your firm.`,
+          link: "/auth",
+        });
+        void supabaseAdmin.functions
+          .invoke("send-email", {
+            body: {
+              to: data.email,
+              subject: "Your client portal access",
+              html:
+                `<p>Hi ${data.full_name},</p>` +
+                `<p>Your client portal account has been created.</p>` +
+                `<p>Sign in with <strong>${data.email}</strong> and the password ` +
+                `provided by your firm administrator.</p>` +
+                `<p><a href="https://firmcanvas.app/auth">Open portal sign-in</a></p>`,
+            },
+          })
+          .catch((err) =>
+            console.error("Failed to send portal welcome email:", err),
+          );
+      }
 
-    return { id: inserted.id, client_ref: inserted.client_ref ?? client_ref };
-  });
+      const { error: logError } = await supabase.from("activity_log").insert({
+        actor_id: userId,
+        action: "client_created",
+        detail: {
+          client_id: inserted.id,
+          client_ref: inserted.client_ref,
+          full_name: data.full_name,
+          portal_enabled: Boolean(portalUserId),
+        },
+      });
+      if (logError) throw new Error(logError.message);
 
+      return {
+        id: inserted.id,
+        client_ref: inserted.client_ref ?? client_ref,
+        portalEnabled: Boolean(portalUserId),
+      };
+    },
+  );
 export interface ClientCaseRow {
   id: string;
   case_ref: string | null;

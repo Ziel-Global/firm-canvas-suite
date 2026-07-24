@@ -16,14 +16,16 @@ export interface CalendarEvent {
   owner_id: string | null;
 }
 
-/** List events within an inclusive ISO date range [from, to]. */
+/** List events within an inclusive ISO date range [from, to]. Optionally scoped to one case. */
 export const listCalendarEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { from: string; to: string }) => input)
+  .validator(
+    (input: { from: string; to: string; caseId?: string | null }) => input,
+  )
   .handler(async ({ data, context }): Promise<CalendarEvent[]> => {
     const { supabase } = context;
 
-    const { data: events, error } = await supabase
+    let query = supabase
       .from("calendar_events")
       .select(
         "id, title, description, case_id, event_type, starts_at, ends_at, location, is_private, owner_id, cases(case_ref)",
@@ -31,6 +33,12 @@ export const listCalendarEvents = createServerFn({ method: "GET" })
       .gte("starts_at", data.from)
       .lte("starts_at", data.to)
       .order("starts_at", { ascending: true });
+
+    if (data.caseId) {
+      query = query.eq("case_id", data.caseId);
+    }
+
+    const { data: events, error } = await query;
 
     if (error) throw new Error(error.message);
 
@@ -81,18 +89,33 @@ export const createCalendarEvent = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<CalendarEvent> => {
     const { supabase, userId } = context;
     const eventType = data.event_type ?? "meeting";
+    const caseId = data.case_id ?? null;
+    const isPrivate = data.is_private ?? false;
+
+    // Hearings surface in the client portal for the case's client — they must
+    // be linked to a case and not marked private.
+    if (eventType === "hearing") {
+      if (!caseId) {
+        throw new Error("Court hearings must be linked to a case.");
+      }
+      if (isPrivate) {
+        throw new Error(
+          "Court hearings cannot be private — clients need to see them in the portal.",
+        );
+      }
+    }
 
     const { data: created, error } = await supabase
       .from("calendar_events")
       .insert({
         title: data.title,
         description: data.description ?? null,
-        case_id: data.case_id ?? null,
+        case_id: caseId,
         event_type: eventType,
         location: data.location ?? null,
         starts_at: data.starts_at,
         ends_at: data.ends_at,
-        is_private: data.is_private ?? false,
+        is_private: isPrivate,
         owner_id: userId,
       })
       .select(

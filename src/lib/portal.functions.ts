@@ -81,12 +81,13 @@ export const getPortalHome = createServerFn({ method: "GET" })
       .order("opened_at", { ascending: false });
     if (casesError) throw new Error(casesError.message);
 
-    const nowIso = new Date().toISOString();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const { data: hearings, error: hearingsError } = await supabase
       .from("calendar_events")
       .select("id, title, starts_at, ends_at, location, case_id")
       .eq("event_type", "hearing")
-      .gte("starts_at", nowIso)
+      .gte("starts_at", startOfToday.toISOString())
       .order("starts_at", { ascending: true })
       .limit(20);
     if (hearingsError) throw new Error(hearingsError.message);

@@ -31,6 +31,7 @@ import { CaseTeamTab } from "@/components/case-team-tab";
 import { CaseTasksTab } from "@/components/case-tasks-tab";
 import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseDocumentsTab } from "@/components/case-documents-tab";
+import { CaseCalendarTab } from "@/components/case-calendar-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 import { CaseSummariseModal } from "@/components/case-summarise-modal";
 import { AssignLeadDialog } from "@/components/assign-lead-dialog";
@@ -403,6 +404,8 @@ function CaseDetailPage() {
                     <CaseTasksTab caseId={caseId} />
                   ) : t === "documents" ? (
                     <CaseDocumentsTab caseId={caseId} />
+                  ) : t === "calendar" ? (
+                    <CaseCalendarTab caseId={caseId} />
                   ) : t === "team" ? (
                     role === "super_admin" || role === "admin" ? (
                       <CaseTeamTab

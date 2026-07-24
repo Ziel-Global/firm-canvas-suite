@@ -147,6 +147,9 @@ export function NewEventSheet({
       if (!starts_at || !ends_at) throw new Error("Pick a date and times.");
       if (ends_at <= starts_at)
         throw new Error("End time must be after the start time.");
+      if (eventType === "hearing" && caseId === NO_CASE) {
+        throw new Error("Court hearings must be linked to a case.");
+      }
       return create({
         data: {
           title: title.trim(),
@@ -156,13 +159,18 @@ export function NewEventSheet({
           location: location.trim() || null,
           starts_at,
           ends_at,
-          is_private: isPrivate,
+          is_private: eventType === "hearing" ? false : isPrivate,
           reminders: rulesToEventReminders(reminders),
         },
       });
     },
-    onSuccess: () => {
-      toast.success("Event created");
+    onSuccess: (created) => {
+      const isHearing = created.event_type === "hearing";
+      toast.success(
+        isHearing
+          ? "Hearing created — visible on this case and in the client portal"
+          : "Event created",
+      );
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
       reset();
       onOpenChange(false);
@@ -176,13 +184,17 @@ export function NewEventSheet({
     return `${match.case_ref} — ${match.title ?? "Untitled"}`;
   })();
 
+  const caseRequiredForHearing = eventType === "hearing";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>New event</SheetTitle>
           <SheetDescription>
-            Add a commitment to the firm calendar.
+            {lockCase
+              ? "Add a commitment to this case calendar. Court hearings also appear in the client portal."
+              : "Add a commitment to the firm calendar. Court hearings linked to a case appear in the client portal."}
           </SheetDescription>
         </SheetHeader>
 
@@ -233,7 +245,13 @@ export function NewEventSheet({
 
           <div className="space-y-1.5">
             <Label>Type</Label>
-            <Select value={eventType} onValueChange={setEventType}>
+            <Select
+              value={eventType}
+              onValueChange={(value) => {
+                setEventType(value);
+                if (value === "hearing") setIsPrivate(false);
+              }}
+            >
               <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue />
               </SelectTrigger>
@@ -245,10 +263,19 @@ export function NewEventSheet({
                 ))}
               </SelectContent>
             </Select>
+            {eventType === "hearing" && (
+              <p className="text-xs text-muted-foreground">
+                Visible to the case client in their portal.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
-            <Label>Case{lockCase ? "" : " (optional)"}</Label>
+            <Label>
+              Case
+              {lockCase || caseRequiredForHearing ? "" : " (optional)"}
+              {caseRequiredForHearing && !lockCase ? " (required)" : ""}
+            </Label>
             {lockCase ? (
               <Input
                 readOnly
@@ -259,10 +286,22 @@ export function NewEventSheet({
             ) : (
               <Select value={caseId} onValueChange={setCaseId}>
                 <SelectTrigger className={FIELD_CLASS}>
-                  <SelectValue placeholder="No case" />
+                  <SelectValue
+                    placeholder={
+                      caseRequiredForHearing ? "Select a case" : "No case"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_CASE}>No case</SelectItem>
+                  {caseRequiredForHearing ? (
+                    caseId === NO_CASE && (
+                      <SelectItem value={NO_CASE} disabled>
+                        Select a case
+                      </SelectItem>
+                    )
+                  ) : (
+                    <SelectItem value={NO_CASE}>No case</SelectItem>
+                  )}
                   {(cases ?? []).map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.case_ref} — {c.title ?? "Untitled"}
@@ -319,7 +358,7 @@ export function NewEventSheet({
 
 
 
-          {isSuperAdmin && (
+          {isSuperAdmin && eventType !== "hearing" && (
             <div className="flex items-center justify-between rounded-control border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">
