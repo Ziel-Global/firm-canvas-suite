@@ -23,7 +23,7 @@ import { EditClientSheet } from "@/components/edit-client-sheet";
 
 export const Route = createFileRoute("/clients_/$clientId")({
   head: () => ({
-    meta: [{ title: "verdio" }],
+    meta: [{ title: "Verdio" }],
   }),
   component: ClientDetailPage,
   errorComponent: ({ error }) => (

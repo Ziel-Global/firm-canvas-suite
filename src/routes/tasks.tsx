@@ -56,7 +56,7 @@ import { useAppSidebar } from "@/components/app-sidebar";
 export const Route = createFileRoute("/tasks")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       { name: "description", content: "Task board for the firm operations system." },
     ],
   }),

@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 export const Route = createFileRoute("/portal")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "View your case status, shared documents, and upcoming hearings.",

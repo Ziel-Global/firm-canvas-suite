@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/ai-lab")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Sandboxed AI Edge Function testing environment.",

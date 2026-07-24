@@ -12,7 +12,7 @@ import { homePathForRole, type AppRole } from "@/lib/nav";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Sign in to Verdio.",

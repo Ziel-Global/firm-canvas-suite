@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/bootstrap")({
   head: () => ({
-    meta: [{ title: "verdio" }],
+    meta: [{ title: "Verdio" }],
   }),
   component: BootstrapPage,
 });

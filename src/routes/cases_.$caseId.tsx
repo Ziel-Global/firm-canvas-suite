@@ -52,7 +52,7 @@ const TABS = [
 
 export const Route = createFileRoute("/cases_/$caseId")({
   head: () => ({
-    meta: [{ title: "verdio" }],
+    meta: [{ title: "Verdio" }],
   }),
   validateSearch: (search: Record<string, unknown>): { tab?: string } => {
     const tab = typeof search.tab === "string" ? search.tab : undefined;

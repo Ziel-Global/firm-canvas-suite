@@ -32,7 +32,7 @@ import { ListSkeleton } from "@/components/loading-skeletons";
 export const Route = createFileRoute("/clients")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Firm clients with active cases and hearings.",

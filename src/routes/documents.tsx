@@ -15,7 +15,7 @@ import { ListSkeleton } from "@/components/loading-skeletons";
 export const Route = createFileRoute("/documents")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       { name: "description", content: "Global search across all firm documents." },
     ],
   }),

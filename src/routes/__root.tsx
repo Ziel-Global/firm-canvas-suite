@@ -92,20 +92,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Verdio — law firm operations management.",
       },
       { name: "author", content: "Verdio" },
-      { property: "og:title", content: "verdio" },
+      { property: "og:title", content: "Verdio" },
       {
         property: "og:description",
         content: "Verdio — law firm operations management.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "verdio" },
+      { name: "twitter:title", content: "Verdio" },
       {
         name: "twitter:description",
         content: "Verdio — law firm operations management.",

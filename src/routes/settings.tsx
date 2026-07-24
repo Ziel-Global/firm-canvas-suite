@@ -12,7 +12,7 @@ import { DocumentTemplatesSettings } from "@/components/document-templates-setti
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Firm-wide configuration for the operations system.",

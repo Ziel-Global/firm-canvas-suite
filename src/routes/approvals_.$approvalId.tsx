@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/approvals_/$approvalId")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       { name: "description", content: "AI Review and approval interface." },
     ],
   }),

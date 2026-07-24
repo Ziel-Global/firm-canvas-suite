@@ -114,7 +114,7 @@ export const getReportData = createServerFn({ method: "GET" })
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [
-      { title: "verdio" },
+      { title: "Verdio" },
       {
         name: "description",
         content: "Firm operations reports and exports.",
