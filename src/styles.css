@@ -956,3 +956,136 @@ tbody tr:hover {
 .client-portal__main {
   min-height: calc(100vh - 4rem);
 }
+
+/* ─── Profile page ────────────────────────────────────────────────────────── */
+
+.profile-card {
+  border-radius: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(14, 14, 16, 0.82);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 56px -36px rgba(0, 0, 0, 0.75);
+}
+
+.profile-section-icon {
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.profile-monogram {
+  position: relative;
+  display: flex;
+  width: 3.75rem;
+  height: 3.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(
+      circle at 35% 28%,
+      rgba(255, 255, 255, 0.16),
+      rgba(255, 255, 255, 0.03) 55%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.03),
+    0 14px 28px -14px rgba(0, 0, 0, 0.7);
+}
+
+.profile-monogram__letter {
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+}
+
+@media (min-width: 640px) {
+  .profile-monogram {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .profile-monogram__letter {
+    font-size: 1.5rem;
+  }
+}
+
+.profile-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.profile-field {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.028);
+  padding: 0 0.9rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.92);
+  outline: none !important;
+  box-shadow: none !important;
+  transition:
+    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-field--icon {
+  padding-left: 2.5rem;
+}
+
+.profile-field::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.profile-field:hover:not(:disabled):not([readonly]) {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profile-field:focus,
+.profile-field:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border-color: rgba(210, 216, 224, 0.42) !important;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: 0 0 0 3px rgba(210, 216, 224, 0.08) !important;
+}
+
+.profile-field[readonly] {
+  color: rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.015);
+  cursor: default;
+}
+
+.profile-field[readonly]:hover,
+.profile-field[readonly]:focus,
+.profile-field[readonly]:focus-visible {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.015);
+  box-shadow: none !important;
+}
+
+.profile-page .profile-field:focus-visible {
+  outline: none !important;
+}
+

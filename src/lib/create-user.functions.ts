@@ -2,21 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const APP_ROLES = [
-  "super_admin",
-  "admin",
-  "senior_lawyer",
-  "junior_lawyer",
-  "support",
-  "client",
-] as const;
+import { CREATE_USER_ROLES } from "@/lib/roles";
 
 const createUserSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required").max(120),
   email: z.string().trim().email("A valid email is required").max(255),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(APP_ROLES),
+  // Staff only — clients are portal accounts, not internal users.
+  role: z.enum(CREATE_USER_ROLES),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   requireTwoFactor: z.boolean(),
 });

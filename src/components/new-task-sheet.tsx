@@ -156,7 +156,7 @@ export function NewTaskSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
+      <SheetContent className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-md">
         <SheetHeader>
           <SheetTitle>New task</SheetTitle>
           <SheetDescription>
@@ -164,7 +164,7 @@ export function NewTaskSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-1.5">
             <Label htmlFor="task-title">Title</Label>
             <Input

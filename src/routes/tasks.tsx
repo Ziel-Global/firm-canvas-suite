@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
 import {
   listTasks,
@@ -50,6 +51,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { BoardSkeleton, ListSkeleton } from "@/components/loading-skeletons";
+import { useAppSidebar } from "@/components/app-sidebar";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({
@@ -232,7 +234,7 @@ function Column({
   const { setNodeRef, isOver } = useDroppable({ id: columnKey });
 
   return (
-    <div className="flex min-w-[17.5rem] flex-1 flex-col">
+    <div className="flex w-[17.5rem] shrink-0 flex-col">
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className={cn("size-2 rounded-full", accent)} />
@@ -258,7 +260,7 @@ function Column({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex flex-1 flex-col gap-2.5 rounded-2xl border border-white/[0.06] p-2.5 transition-colors",
+          "flex min-h-[12rem] flex-1 flex-col gap-2.5 rounded-2xl border border-white/[0.06] p-2.5 transition-colors",
           isOver
             ? "border-white/20 bg-white/[0.05]"
             : "bg-white/[0.02]",
@@ -409,6 +411,7 @@ function TasksPage() {
   const fetchTasks = useServerFn(listTasks);
   const persist = useServerFn(reorderTasks);
   const queryClient = useQueryClient();
+  const { collapsed } = useAppSidebar();
 
   const { data, isLoading } = useQuery({
     queryKey: ["tasks"],
@@ -418,6 +421,8 @@ function TasksPage() {
   });
 
   const [board, setBoard] = useState<Board>(emptyBoard());
+  const boardRef = useRef(board);
+  boardRef.current = board;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
@@ -443,6 +448,10 @@ function TasksPage() {
   const mutation = useMutation({
     mutationFn: (tasks: TaskOrderInput[]) => persist({ data: { tasks } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not update task status");
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 
   const activeTask = useMemo(() => {
@@ -467,24 +476,26 @@ function TasksPage() {
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) return;
-    const activeCol = findColumn(board, String(active.id));
-    const overCol = findColumn(board, String(over.id));
+    const prev = boardRef.current;
+    const activeCol = findColumn(prev, String(active.id));
+    const overCol = findColumn(prev, String(over.id));
     if (!activeCol || !overCol || activeCol === overCol) return;
 
-    setBoard((prev) => {
-      const next: Board = { ...prev };
+    setBoard(() => {
       const item = prev[activeCol].find((t) => t.id === active.id);
       if (!item) return prev;
-      next[activeCol] = prev[activeCol].filter((t) => t.id !== active.id);
       const overItems = prev[overCol];
       const overIndex = overItems.findIndex((t) => t.id === over.id);
       const insertAt = overIndex >= 0 ? overIndex : overItems.length;
-      next[overCol] = [
-        ...overItems.slice(0, insertAt),
-        { ...item, status: overCol },
-        ...overItems.slice(insertAt),
-      ];
-      return next;
+      return {
+        ...prev,
+        [activeCol]: prev[activeCol].filter((t) => t.id !== active.id),
+        [overCol]: [
+          ...overItems.slice(0, insertAt),
+          { ...item, status: overCol },
+          ...overItems.slice(insertAt),
+        ],
+      };
     });
   }
 
@@ -493,28 +504,58 @@ function TasksPage() {
     setActiveId(null);
     if (!over) return;
 
-    const activeCol = findColumn(board, String(active.id));
-    const overCol = findColumn(board, String(over.id));
-    if (!activeCol || !overCol) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const current = boardRef.current;
 
-    let nextBoard = board;
-    if (activeCol === overCol) {
-      const items = board[activeCol];
-      const oldIndex = items.findIndex((t) => t.id === active.id);
-      const newIndex = items.findIndex((t) => t.id === over.id);
-      if (oldIndex !== newIndex && newIndex >= 0) {
+    const fromCol = findColumn(current, activeId);
+    const toCol = findColumn(current, overId);
+    if (!fromCol || !toCol) return;
+
+    let next: Board = current;
+
+    if (fromCol === toCol) {
+      const items = current[fromCol];
+      const oldIndex = items.findIndex((t) => t.id === activeId);
+      const newIndex = items.findIndex((t) => t.id === overId);
+      if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
         const reordered = [...items];
         const [moved] = reordered.splice(oldIndex, 1);
         reordered.splice(newIndex, 0, moved);
-        nextBoard = { ...board, [activeCol]: reordered };
-        setBoard(nextBoard);
+        next = { ...current, [fromCol]: reordered };
+      }
+    } else {
+      const alreadyMoved = current[toCol].some((t) => t.id === activeId);
+      if (!alreadyMoved) {
+        const item = current[fromCol].find((t) => t.id === activeId);
+        if (!item) return;
+        const overItems = current[toCol];
+        const overIndex = overItems.findIndex((t) => t.id === overId);
+        const insertAt = overIndex >= 0 ? overIndex : overItems.length;
+        next = {
+          ...current,
+          [fromCol]: current[fromCol].filter((t) => t.id !== activeId),
+          [toCol]: [
+            ...overItems.slice(0, insertAt),
+            { ...item, status: toCol },
+            ...overItems.slice(insertAt),
+          ],
+        };
+      } else {
+        next = {
+          ...current,
+          [toCol]: current[toCol].map((t) =>
+            t.id === activeId ? { ...t, status: toCol } : t,
+          ),
+        };
       }
     }
 
-    // Persist affected columns with new status + sort_order.
+    if (next !== current) setBoard(next);
+
     const changed: TaskOrderInput[] = [];
-    for (const col of Object.keys(nextBoard) as TaskStatus[]) {
-      nextBoard[col].forEach((t, idx) => {
+    for (const col of Object.keys(next) as TaskStatus[]) {
+      next[col].forEach((t, idx) => {
         changed.push({ id: t.id, status: col, sort_order: idx });
       });
     }
@@ -522,8 +563,8 @@ function TasksPage() {
   }
 
   return (
-    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
+    <main className="dashboard-shell min-h-[calc(100dvh-3.5rem)] min-w-0 py-4 sm:py-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-col gap-6 px-3 sm:px-5 md:px-7 lg:px-8 xl:px-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
@@ -588,65 +629,77 @@ function TasksPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          view === "list" ? (
-            <ListSkeleton rows={6} />
-          ) : (
-            <BoardSkeleton />
-          )
-        ) : view === "list" ? (
+        {isLoading && view === "list" ? <ListSkeleton rows={6} /> : null}
+        {!isLoading && view === "list" ? (
           <TaskListView
             tasks={(Object.keys(displayBoard) as TaskStatus[]).flatMap(
               (col) => displayBoard[col],
             )}
             onSelect={openTaskDetail}
           />
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex flex-col gap-4 overflow-x-auto pb-2 lg:flex-row lg:items-stretch">
-              {COLUMNS.map((col) => (
-                <Column
-                  key={col.key}
-                  columnKey={col.key}
-                  label={col.label}
-                  accent={col.accent}
-                  tasks={displayBoard[col.key]}
-                  onAddTask={() => setSheetOpen(true)}
-                  onSelectTask={openTaskDetail}
-                />
-              ))}
-            </div>
-            <DragOverlay>
-              {activeTask ? (
-                <Card
-                  className={cn(
-                    "rounded-xl border border-white/[0.08] bg-[rgba(22,22,25,0.98)] p-4",
-                    CARD_SHADOW,
-                  )}
-                >
-                  <TaskCardBody task={activeTask} />
-                </Card>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
-
-        <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
-        <TaskDetailSheet
-          task={selectedTask}
-          open={detailOpen}
-          onOpenChange={(open) => {
-            setDetailOpen(open);
-            if (!open) setSelectedTask(null);
-          }}
-        />
+        ) : null}
       </div>
+
+      {isLoading && view === "board" ? (
+        <div className="mt-6 px-3 sm:px-5 md:px-7 lg:px-8 xl:px-10">
+          <BoardSkeleton />
+        </div>
+      ) : null}
+
+      {!isLoading && view === "board" ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div
+            className={cn(
+              "mt-6 flex min-w-0 gap-4 overflow-x-auto overscroll-x-contain pb-2",
+              // Full AppMain width: left bleeds under sidebar; right to viewport (small end pad).
+              "pr-3 sm:pr-4",
+              collapsed
+                ? "pl-3 sm:pl-5 md:pl-7 lg:-ml-[4.25rem] lg:pl-[calc(4.25rem+2rem)] xl:pl-[calc(4.25rem+2.5rem)]"
+                : "pl-3 sm:pl-5 md:pl-7 lg:-ml-64 lg:pl-[calc(16rem+2rem)] xl:pl-[calc(16rem+2.5rem)]",
+            )}
+          >
+            {COLUMNS.map((col) => (
+              <Column
+                key={col.key}
+                columnKey={col.key}
+                label={col.label}
+                accent={col.accent}
+                tasks={displayBoard[col.key]}
+                onAddTask={() => setSheetOpen(true)}
+                onSelectTask={openTaskDetail}
+              />
+            ))}
+          </div>
+          <DragOverlay dropAnimation={null} style={{ zIndex: 100 }}>
+            {activeTask ? (
+              <Card
+                className={cn(
+                  "rounded-xl border border-white/[0.08] bg-[rgba(22,22,25,0.98)] p-4",
+                  CARD_SHADOW,
+                )}
+              >
+                <TaskCardBody task={activeTask} />
+              </Card>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : null}
+
+      <NewTaskSheet open={sheetOpen} onOpenChange={setSheetOpen} />
+      <TaskDetailSheet
+        task={selectedTask}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setSelectedTask(null);
+        }}
+      />
     </main>
   );
 }

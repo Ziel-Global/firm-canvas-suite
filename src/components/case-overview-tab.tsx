@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -17,6 +18,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { StatusDot, type StatusDotProps } from "@/components/ui/status-dot";
+import { NewTaskSheet } from "@/components/new-task-sheet";
+import { NewEventSheet } from "@/components/new-event-sheet";
+import { EditCaseSheet } from "@/components/edit-case-sheet";
 
 const HEALTH_MAP: Record<string, StatusDotProps["status"]> = {
   on_track: "ontrack",
@@ -37,12 +41,17 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   complete: "Complete",
 };
 
+const ACTION_BTN =
+  "justify-start border border-transparent hover:border-white/[0.08] hover:bg-white/[0.05]";
+
 function actionLabel(action: string | null) {
   switch (action) {
     case "case_created":
       return "Case created";
     case "case_status_changed":
       return "Case status changed";
+    case "case_updated":
+      return "Case details updated";
     case "stage_created":
       return "Stage created";
     case "stage_status_changed":
@@ -92,15 +101,22 @@ function daysUntil(value: string | null): number | null {
 export function CaseOverviewTab({
   caseId,
   role,
+  onOpenDocuments,
 }: {
   caseId: string;
   role: string | null;
+  /** Switch the case detail page to the Documents tab (for uploads). */
+  onOpenDocuments?: () => void;
 }) {
   const fetchOverview = useServerFn(getCaseOverview);
   const { data, isLoading, error } = useQuery({
     queryKey: ["case-overview", caseId],
     queryFn: () => fetchOverview({ data: { id: caseId } }),
   });
+
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [eventOpen, setEventOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -260,27 +276,67 @@ export function CaseOverviewTab({
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-foreground">Quick actions</h3>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="ghost" disabled>
+            <Button
+              type="button"
+              variant="ghost"
+              className={ACTION_BTN}
+              onClick={() => setTaskOpen(true)}
+            >
               <Plus className="size-4" />
               New task
             </Button>
-            <Button variant="ghost" disabled>
+            <Button
+              type="button"
+              variant="ghost"
+              className={ACTION_BTN}
+              onClick={() => onOpenDocuments?.()}
+            >
               <Upload className="size-4" />
               Upload document
             </Button>
-            <Button variant="ghost" disabled>
+            <Button
+              type="button"
+              variant="ghost"
+              className={ACTION_BTN}
+              onClick={() => setEventOpen(true)}
+            >
               <CalendarDays className="size-4" />
               Add event
             </Button>
-            {canEditCase && (
-              <Button variant="ghost" disabled>
+            {canEditCase ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className={ACTION_BTN}
+                onClick={() => setEditOpen(true)}
+              >
                 <Pencil className="size-4" />
                 Edit case
               </Button>
-            )}
+            ) : null}
           </div>
         </Card>
       )}
+
+      <NewTaskSheet
+        open={taskOpen}
+        onOpenChange={setTaskOpen}
+        defaultCaseId={caseId}
+        lockCase
+      />
+      <NewEventSheet
+        open={eventOpen}
+        onOpenChange={setEventOpen}
+        defaultCaseId={caseId}
+        lockCase
+      />
+      {canEditCase ? (
+        <EditCaseSheet
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          caseId={caseId}
+        />
+      ) : null}
     </div>
   );
 }

@@ -2,15 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const APP_ROLES = [
-  "super_admin",
-  "admin",
-  "senior_lawyer",
-  "junior_lawyer",
-  "support",
-  "client",
-] as const;
+import { STAFF_ROLES } from "@/lib/roles";
 
 function generateTempPassword(): string {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -68,7 +60,8 @@ export const updateUserDetails = createServerFn({ method: "POST" })
       .object({
         userId: z.string().uuid(),
         fullName: z.string().trim().min(1).max(120),
-        role: z.enum(APP_ROLES),
+        // Staff only — cannot turn an internal user into a portal client.
+        role: z.enum(STAFF_ROLES),
         phone: z.string().trim().max(40).optional().or(z.literal("")),
       })
       .parse(data),
@@ -76,6 +69,19 @@ export const updateUserDetails = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorId = await requireSuperAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (targetError) throw new Error(targetError.message);
+    if (!target) throw new Error("User not found.");
+    if (target.role === "client") {
+      throw new Error(
+        "Client portal accounts are not managed from Users. Use the Clients area.",
+      );
+    }
 
     const { error } = await supabaseAdmin
       .from("profiles")

@@ -30,13 +30,15 @@ const MODE_OPTIONS: {
 }[] = [
   {
     mode: "open",
-    title: "Open to case team",
-    description: "Anyone with folder access can see it. Optionally lock specific people or roles out.",
+    title: "Open in this folder",
+    description:
+      "Anyone who can already open this folder can see it. Use “Allow only selected” if you need people who normally cannot open this folder.",
   },
   {
     mode: "allowlist",
     title: "Allow only selected",
-    description: "Only the people and roles you tick can see it (admins always can).",
+    description:
+      "Only the people and roles you tick can see it — including across folders they cannot normally browse. Admins always can.",
   },
   {
     mode: "admin_only",
@@ -111,10 +113,17 @@ export function DocumentVisibilityPanel({
     if (mode === "admin_only") return "Locked for everyone except admins";
     if (mode === "allowlist") {
       const n = allowedUsers.size + allowedRoles.size;
-      return n === 0 ? "Allowlist empty — only admins / uploader see it" : `Allowed: ${n} selection(s)`;
+      if (n === 0) return "Allowlist empty — only admins / uploader see it";
+      if (
+        allowedRoles.size === ROLE_OPTIONS.length &&
+        allowedUsers.size === 0
+      ) {
+        return "All case roles can see";
+      }
+      return `Allowed: ${n} selection(s)`;
     }
     const n = deniedUsers.size + deniedRoles.size;
-    return n === 0 ? "Open to case team" : `Open, with ${n} lock(s)`;
+    return n === 0 ? "Open for this folder" : `Open, with ${n} lock(s)`;
   }, [mode, allowedUsers, allowedRoles, deniedUsers, deniedRoles]);
 
   function toggle(set: Set<string>, id: string, checked: boolean, setter: (s: Set<string>) => void) {
@@ -122,6 +131,30 @@ export function DocumentVisibilityPanel({
     if (checked) next.add(id);
     else next.delete(id);
     setter(next);
+  }
+
+  function selectMode(next: DocumentVisibilityMode) {
+    setMode(next);
+    // Switching to Open / Lock should not keep stale deny ticks that would
+    // accidentally hide the doc from everyone.
+    if (next === "open") {
+      setDeniedUsers(new Set());
+      setDeniedRoles(new Set());
+    }
+    if (next === "admin_only") {
+      setAllowedUsers(new Set());
+      setAllowedRoles(new Set());
+      setDeniedUsers(new Set());
+      setDeniedRoles(new Set());
+    }
+  }
+
+  function allowEveryoneOnCase() {
+    setMode("allowlist");
+    setAllowedRoles(new Set(ROLE_OPTIONS.map((r) => r.role)));
+    setAllowedUsers(new Set((data?.team ?? []).map((m) => m.userId)));
+    setDeniedUsers(new Set());
+    setDeniedRoles(new Set());
   }
 
   async function handleSave() {
@@ -217,7 +250,7 @@ export function DocumentVisibilityPanel({
             <button
               key={option.mode}
               type="button"
-              onClick={() => setMode(option.mode)}
+              onClick={() => selectMode(option.mode)}
               className={cn(
                 "w-full rounded-[var(--radius-control)] border px-3 py-2.5 text-left transition-colors",
                 active
@@ -233,6 +266,26 @@ export function DocumentVisibilityPanel({
       </div>
 
       {mode !== "admin_only" ? (
+        <div className="space-y-3">
+          {mode === "allowlist" ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-white/[0.12] bg-white/[0.04]"
+                onClick={allowEveryoneOnCase}
+              >
+                Allow everyone on this case
+              </Button>
+            </div>
+          ) : null}
+          {mode === "open" ? (
+            <p className="text-xs text-muted-foreground">
+              Optional: lock specific roles or people out. Leave unchecked for
+              everyone who can open this folder.
+            </p>
+          ) : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -289,6 +342,7 @@ export function DocumentVisibilityPanel({
               )}
             </div>
           </div>
+        </div>
         </div>
       ) : null}
 

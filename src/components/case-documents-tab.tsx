@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Search, X, Share2, Eye, Download } from "lucide-react";
+import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Share2, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -20,15 +20,15 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tag } from "@/components/ui/tag";
-import { Pill } from "@/components/ui/pill";
 import { GenerateAIDocumentModal } from "@/components/generate-ai-document-modal";
 import { DocumentVisibilityPanel } from "@/components/document-visibility-panel";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const ACCEPT = ".pdf,.docx,.xlsx,.jpg,.jpeg,.png";
+
+type DocSubTab = "list" | "access" | "versions";
 
 type FolderRole =
   "super_admin" | "admin" | "senior_lawyer" | "junior_lawyer" | "support" | "client" | null;
@@ -69,6 +69,18 @@ function formatDate(value: string) {
   });
 }
 
+/** Soft secondary action — keeps label visible on hover. */
+const BTN_SOFT =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.05] px-3.5 text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/[0.18] hover:bg-white/[0.1] hover:text-foreground disabled:pointer-events-none disabled:opacity-50";
+
+/** Light primary CTA — dark ink stays dark on hover. */
+const BTN_LIGHT =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-xl border-0 bg-gradient-to-b from-[#F8F8F8] to-[#D4D4D4] px-3.5 text-xs font-semibold text-[#14161a] shadow-[0_8px_20px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.85)] transition-[filter,transform] hover:brightness-110 hover:text-[#14161a] active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:text-[#14161a]";
+
+/** Blue accent soft button. */
+const BTN_BLUE =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-tag-blue/30 bg-tag-blue/15 px-3.5 text-xs font-medium text-tag-blue shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-tag-blue/45 hover:bg-tag-blue/22 hover:text-tag-blue disabled:pointer-events-none disabled:opacity-50";
+
 /** Display name without the redundant "04 " code prefix stored in the DB. */
 function folderLabel(folder: { code: string; name: string }) {
   const prefix = `${folder.code} `;
@@ -99,6 +111,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [versionNote, setVersionNote] = useState("");
+  const [docSubTab, setDocSubTab] = useState<DocSubTab>("list");
 
   async function openDocument(
     documentId: string,
@@ -269,10 +282,13 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[16rem_1fr]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
       <GenerateAIDocumentModal open={aiModalOpen} onOpenChange={setAiModalOpen} caseId={caseId} />
-      
-      <Card className="h-fit p-2">
+
+      <aside className="h-fit rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-2 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.65)]">
+        <p className="px-3 pb-2 pt-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Folders
+        </p>
         <nav className="space-y-0.5">
           {folders.map((folder) => {
             const active = folder.id === selectedFolderId;
@@ -281,256 +297,379 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
               <button
                 key={folder.id}
                 type="button"
-                onClick={() => setSelectedFolderId(folder.id)}
+                onClick={() => {
+                  setSelectedFolderId(folder.id);
+                  setDocSubTab("list");
+                }}
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 py-2 text-left text-sm transition-colors",
+                  "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                   active
-                    ? "bg-frame font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-frame/60 hover:text-foreground",
+                    ? "bg-tag-blue/15 font-medium text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--tag-blue)_35%,transparent)]"
+                    : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
                 )}
               >
-                <Icon className="size-4 shrink-0" />
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    active ? "text-tag-blue" : "text-muted-foreground/80",
+                  )}
+                />
                 <span className="truncate">{folderLabel(folder)}</span>
               </button>
             );
           })}
         </nav>
-      </Card>
+      </aside>
 
-      <div className="min-w-0 space-y-3">
-        <div className="flex items-center justify-end gap-2">
-          {selectedFolder && canUploadSelectedFolder ? (
-            <>
-              <Button
-                variant="outline"
-                className="text-tag-blue border-tag-blue/30 hover:bg-tag-blue/10"
-                onClick={() => setAiModalOpen(true)}
+      <div className="min-w-0 space-y-4">
+        <Tabs
+          value={docSubTab}
+          onValueChange={(value) => setDocSubTab(value as DocSubTab)}
+        >
+          <TabsList className="h-auto w-full justify-start gap-1 rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1.5 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.7)]">
+            <TabsTrigger
+              value="list"
+              className="rounded-xl px-3.5 py-2 text-xs font-medium data-[state=active]:bg-tag-blue/18 data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--tag-blue)_30%,transparent)]"
+            >
+              Document list
+            </TabsTrigger>
+            {canShareWithClient ? (
+              <TabsTrigger
+                value="access"
+                className="rounded-xl px-3.5 py-2 text-xs font-medium data-[state=active]:bg-tag-blue/18 data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--tag-blue)_30%,transparent)]"
               >
-                <Bot className="size-4 mr-1.5" />
-                Generate with AI
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={ACCEPT}
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleFile(file);
-                  e.target.value = "";
-                }}
+                Access
+              </TabsTrigger>
+            ) : null}
+            {canManageVersions ? (
+              <TabsTrigger
+                value="versions"
+                className="rounded-xl px-3.5 py-2 text-xs font-medium data-[state=active]:bg-tag-blue/18 data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--tag-blue)_30%,transparent)]"
+              >
+                Version history
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
+
+          <TabsContent value="list" className="mt-4 space-y-4 outline-none">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-tag-blue/80">
+                  {selectedFolder ? folderLabel(selectedFolder) : "Documents"}
+                </p>
+                <h3 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {docsLoading
+                    ? "Loading…"
+                    : `${documents?.length ?? 0} file${(documents?.length ?? 0) === 1 ? "" : "s"}`}
+                </h3>
+              </div>
+
+              {selectedFolder && canUploadSelectedFolder ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className={cn(BTN_BLUE, "h-10 px-4 text-sm")}
+                    onClick={() => setAiModalOpen(true)}
+                  >
+                    <Bot className="size-4" />
+                    Generate with AI
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={!selectedFolderId || uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(BTN_LIGHT, "h-10 px-4 text-sm")}
+                  >
+                    <Upload className="size-4" />
+                    {uploading ? "Uploading…" : "Upload"}
+                  </button>
+                </div>
+              ) : selectedFolder ? (
+                <p className="text-sm text-muted-foreground">
+                  Uploads are not available in this folder.
+                </p>
+              ) : null}
+            </div>
+
+            {docsLoading && (
+              <div className="rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.55)] px-5 py-12 text-center text-sm text-muted-foreground">
+                Loading files…
+              </div>
+            )}
+
+            {!docsLoading && documents && documents.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-white/[0.1] bg-[rgba(18,18,20,0.4)] px-6 py-10 text-center">
+                <FileText className="mx-auto size-8 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-foreground">This folder is empty</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Upload a file or generate one with AI to get started.
+                </p>
+                {selectedFolder?.code !== "04" &&
+                folders.some((folder) => folder.code === "04") ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-4 h-9 rounded-xl border border-white/[0.1] bg-white/[0.04] px-4 text-sm"
+                    onClick={() => {
+                      const approved = folders.find((folder) => folder.code === "04");
+                      if (approved) setSelectedFolderId(approved.id);
+                    }}
+                  >
+                    Open Approved Documents
+                  </Button>
+                ) : null}
+              </div>
+            )}
+
+            {!docsLoading && documents && documents.length > 0 ? (
+              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.55)] shadow-[0_24px_60px_-36px_rgba(0,0,0,0.8)]">
+                <ul className="divide-y divide-white/[0.05]">
+                  {documents.map((doc) => (
+                    <DocumentRow
+                      key={doc.id}
+                      doc={doc}
+                      selected={doc.id === selectedDocumentId}
+                      onSelect={() => setSelectedDocumentId(doc.id)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {selectedDocument ? (
+              <SelectedDocumentBar
+                document={selectedDocument}
+                viewBusy={viewBusyId === selectedDocument.id}
+                shareBusy={shareBusy}
+                canShareWithClient={canShareWithClient}
+                showAccessHint={canShareWithClient || canManageVersions}
+                onView={() => void openDocument(selectedDocument.id)}
+                onDownload={() =>
+                  void openDocument(selectedDocument.id, { download: true })
+                }
+                onToggleShare={() =>
+                  void handleToggleClientShare(
+                    selectedDocument.id,
+                    selectedDocument.shared_with_client,
+                  )
+                }
+                onSubmit={() => void handleSubmit(selectedDocument.id)}
+                onOpenAccess={() => setDocSubTab("access")}
+                onOpenVersions={() => setDocSubTab("versions")}
+                canManageVersions={canManageVersions}
               />
-              <Button
-                variant="default"
-                disabled={!selectedFolderId || uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="size-4" />
-                {uploading ? "Uploading…" : `Upload to ${folderLabel(selectedFolder)}`}
-              </Button>
-            </>
-          ) : selectedFolder ? (
-            <p className="text-sm text-muted-foreground">
-              Uploads are not available in this folder.
+            ) : null}
+          </TabsContent>
+
+          {canShareWithClient ? (
+            <TabsContent value="access" className="mt-4 outline-none">
+              {selectedDocument ? (
+                <DocumentVisibilityPanel
+                  caseId={caseId}
+                  documentId={selectedDocument.id}
+                  documentTitle={selectedDocument.title}
+                />
+              ) : (
+                <div className="rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.55)] px-6 py-10 text-center text-sm text-muted-foreground">
+                  Select a document in Document list first, then open Access.
+                </div>
+              )}
+            </TabsContent>
+          ) : null}
+
+          {canManageVersions ? (
+            <TabsContent value="versions" className="mt-4 outline-none">
+              {selectedDocument ? (
+                <VersionHistoryPanel
+                  caseId={caseId}
+                  document={selectedDocument}
+                  versions={versions ?? []}
+                  versionsLoading={versionsLoading}
+                  versionFileInputRef={versionFileInputRef}
+                  versionNote={versionNote}
+                  versionUploading={versionUploading}
+                  viewBusyId={viewBusyId}
+                  onNoteChange={setVersionNote}
+                  onUploadClick={() => versionFileInputRef.current?.click()}
+                  onUploadFile={handleVersionFile}
+                  onViewVersion={(versionId) =>
+                    void openDocument(selectedDocument.id, { versionId })
+                  }
+                  onRestore={async (versionId) => {
+                    try {
+                      await restoreVersion({
+                        data: {
+                          caseId,
+                          documentId: selectedDocument.id,
+                          versionId,
+                        },
+                      });
+                      toast.success("Version restored");
+                      queryClient.invalidateQueries({
+                        queryKey: ["folder-documents", caseId, selectedFolderId],
+                      });
+                      queryClient.invalidateQueries({
+                        queryKey: ["document-versions", caseId, selectedDocument.id],
+                      });
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Restore failed",
+                      );
+                    }
+                  }}
+                />
+              ) : (
+                <div className="rounded-2xl border border-white/[0.08] bg-[rgba(18,18,20,0.55)] px-6 py-10 text-center text-sm text-muted-foreground">
+                  Select a document in Document list first, then open Version history.
+                </div>
+              )}
+            </TabsContent>
+          ) : null}
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+function statusLabel(status: CaseDocument["approval_status"]) {
+  if (status === "approved") return "Approved";
+  if (status === "in_review") return "In review";
+  return "Draft";
+}
+
+function SelectedDocumentBar({
+  document: doc,
+  viewBusy,
+  shareBusy,
+  canShareWithClient,
+  canManageVersions,
+  showAccessHint,
+  onView,
+  onDownload,
+  onToggleShare,
+  onSubmit,
+  onOpenAccess,
+  onOpenVersions,
+}: {
+  document: CaseDocument;
+  viewBusy: boolean;
+  shareBusy: boolean;
+  canShareWithClient: boolean;
+  canManageVersions: boolean;
+  showAccessHint: boolean;
+  onView: () => void;
+  onDownload: () => void;
+  onToggleShare: () => void;
+  onSubmit: () => void;
+  onOpenAccess: () => void;
+  onOpenVersions: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-tag-blue/20 bg-gradient-to-br from-tag-blue/[0.12] via-white/[0.04] to-transparent p-4 shadow-[0_24px_60px_-36px_rgba(0,0,0,0.85)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-tag-blue" />
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-tag-blue/85">
+              Selected file
+            </p>
+          </div>
+          <h4 className="truncate text-base font-semibold tracking-tight text-foreground">
+            {doc.title}
+          </h4>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-medium",
+                doc.approval_status === "approved" &&
+                  "bg-tag-blue/20 text-tag-blue",
+                doc.approval_status === "in_review" &&
+                  "bg-status-atrisk/20 text-status-atrisk",
+                doc.approval_status === "draft" &&
+                  "bg-white/[0.08] text-foreground/80",
+              )}
+            >
+              {statusLabel(doc.approval_status)}
+            </span>
+            {doc.is_locked ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-priority-high/15 px-2 py-0.5 text-[11px] text-priority-high">
+                <Lock className="size-3" />
+                Final
+              </span>
+            ) : null}
+            {doc.shared_with_client ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/15 px-2 py-0.5 text-[11px] text-status-ontrack">
+                <Share2 className="size-3" />
+                Client portal
+              </span>
+            ) : null}
+            <span className="text-[11px] text-muted-foreground">
+              v{doc.current_version ?? 1}
+            </span>
+          </div>
+          {doc.is_locked ? (
+            <p className="text-xs text-muted-foreground">
+              Locked as final — view and download only.
             </p>
           ) : null}
         </div>
 
-        {docsLoading && (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading files…</p>
-        )}
-
-        {!docsLoading && documents && documents.length === 0 && (
-          <Card className="space-y-3 p-6">
-            <p className="text-sm text-muted-foreground">This folder is empty.</p>
-            {selectedFolder?.code !== "04" &&
-            folders.some((folder) => folder.code === "04") ? (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  After admin approval, files leave this folder and appear under{" "}
-                  <span className="text-foreground">Approved Documents</span>, marked
-                  locked (final / view-only).
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const approved = folders.find((folder) => folder.code === "04");
-                    if (approved) setSelectedFolderId(approved.id);
-                  }}
-                >
-                  Open Approved Documents
-                </Button>
-              </div>
-            ) : null}
-          </Card>
-        )}
-
-        {!docsLoading && documents && documents.length > 0 && (
-          <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-border">
-              {documents.map((doc) => (
-                <DocumentRow
-                  key={doc.id}
-                  doc={doc}
-                  selected={doc.id === selectedDocumentId}
-                  onSelect={() => setSelectedDocumentId(doc.id)}
-                />
-              ))}
-            </ul>
-          </Card>
-        )}
-
-        {selectedDocument && (
-          <div className="space-y-4 mt-6">
-            <Card className="p-5 flex flex-col gap-4 border-l-4 border-l-tag-blue">
-              <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">{selectedDocument.title}</h3>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">Status:</span>
-                    <Pill className={
-                      selectedDocument.approval_status === "approved" ? "bg-tag-blue text-white" :
-                      selectedDocument.approval_status === "in_review" ? "bg-amber-500/20 text-amber-600" :
-                      "bg-muted text-muted-foreground"
-                    }>
-                      {selectedDocument.approval_status === "approved" ? "Approved" :
-                       selectedDocument.approval_status === "in_review" ? "In Review" : "Draft"}
-                    </Pill>
-                    {selectedDocument.is_locked ? (
-                      <Pill className="bg-priority-high/20 text-foreground">
-                        <Lock className="size-3" />
-                        Locked · final
-                      </Pill>
-                    ) : null}
-                    {selectedDocument.shared_with_client ? (
-                      <Pill className="bg-status-ontrack/20 text-status-ontrack">
-                        <Share2 className="size-3" />
-                        Shared with client
-                      </Pill>
-                    ) : null}
-                  </div>
-                  {selectedDocument.approval_status === "in_review" ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      After approval, this file moves to Approved Documents and locks
-                      (view / download only).
-                    </p>
-                  ) : null}
-                  {selectedDocument.approval_status === "approved" &&
-                  selectedDocument.is_locked ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Approved and locked. Contents are final — view and download only.
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={viewBusyId === selectedDocument.id}
-                    onClick={() => void openDocument(selectedDocument.id)}
-                    className="border-white/15 bg-white/[0.03]"
-                  >
-                    {viewBusyId === selectedDocument.id ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                    View
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={viewBusyId === selectedDocument.id}
-                    onClick={() =>
-                      void openDocument(selectedDocument.id, { download: true })
-                    }
-                    className="border-white/15 bg-white/[0.03]"
-                  >
-                    <Download className="size-4" />
-                    Download
-                  </Button>
-                  {canShareWithClient ? (
-                    <Button
-                      type="button"
-                      variant={selectedDocument.shared_with_client ? "outline" : "default"}
-                      disabled={shareBusy}
-                      onClick={() =>
-                        void handleToggleClientShare(
-                          selectedDocument.id,
-                          selectedDocument.shared_with_client,
-                        )
-                      }
-                      className={
-                        selectedDocument.shared_with_client
-                          ? "border-white/15 bg-white/[0.03]"
-                          : "bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] hover:from-white hover:to-[#d8d8d8]"
-                      }
-                    >
-                      {shareBusy ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Share2 className="size-4" />
-                      )}
-                      {selectedDocument.shared_with_client
-                        ? "Unshare from client"
-                        : "Share with client"}
-                    </Button>
-                  ) : null}
-                  {selectedDocument.approval_status === "draft" && !selectedDocument.is_locked && (
-                    <Button onClick={() => handleSubmit(selectedDocument.id)} className="bg-tag-blue hover:bg-tag-blue/90">
-                      <Bot className="size-4 mr-2" />
-                      Submit for Approval
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-
-            {canShareWithClient ? (
-              <DocumentVisibilityPanel
-                caseId={caseId}
-                documentId={selectedDocument.id}
-                documentTitle={selectedDocument.title}
-              />
-            ) : null}
-
-            {canManageVersions && (
-              <VersionHistoryPanel
-                caseId={caseId}
-                document={selectedDocument}
-                versions={versions ?? []}
-                versionsLoading={versionsLoading}
-                versionFileInputRef={versionFileInputRef}
-                versionNote={versionNote}
-                versionUploading={versionUploading}
-                viewBusyId={viewBusyId}
-                onNoteChange={setVersionNote}
-                onUploadClick={() => versionFileInputRef.current?.click()}
-                onUploadFile={handleVersionFile}
-                onViewVersion={(versionId) =>
-                  void openDocument(selectedDocument.id, { versionId })
-                }
-                onRestore={async (versionId) => {
-                  try {
-                    await restoreVersion({
-                      data: { caseId, documentId: selectedDocument.id, versionId },
-                    });
-                    toast.success("Version restored");
-                    queryClient.invalidateQueries({
-                      queryKey: ["folder-documents", caseId, selectedFolderId],
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ["document-versions", caseId, selectedDocument.id],
-                    });
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Restore failed");
-                  }
-                }}
-              />
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <button type="button" className={BTN_SOFT} disabled={viewBusy} onClick={onView}>
+            {viewBusy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Eye className="size-3.5" />
             )}
-          </div>
-        )}
+            View
+          </button>
+          <button type="button" className={BTN_SOFT} disabled={viewBusy} onClick={onDownload}>
+            <Download className="size-3.5" />
+            Download
+          </button>
+          {canShareWithClient ? (
+            <button
+              type="button"
+              className={doc.shared_with_client ? BTN_SOFT : BTN_LIGHT}
+              disabled={shareBusy}
+              onClick={onToggleShare}
+            >
+              {shareBusy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Share2 className="size-3.5" />
+              )}
+              {doc.shared_with_client ? "Unshare" : "Share with client"}
+            </button>
+          ) : null}
+          {doc.approval_status === "draft" && !doc.is_locked ? (
+            <button type="button" className={BTN_LIGHT} onClick={onSubmit}>
+              <Bot className="size-3.5" />
+              Submit for approval
+            </button>
+          ) : null}
+          {showAccessHint && canShareWithClient ? (
+            <button type="button" className={BTN_BLUE} onClick={onOpenAccess}>
+              Access
+            </button>
+          ) : null}
+          {canManageVersions ? (
+            <button type="button" className={BTN_BLUE} onClick={onOpenVersions}>
+              Versions
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -551,42 +690,72 @@ function DocumentRow({
         type="button"
         onClick={onSelect}
         className={cn(
-          "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-frame/50",
-          selected && "bg-frame/60",
+          "group flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors",
+          selected
+            ? "bg-tag-blue/[0.1]"
+            : "hover:bg-white/[0.03]",
         )}
       >
-        <FileText className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors",
+            selected
+              ? "border-tag-blue/35 bg-tag-blue/15 text-tag-blue"
+              : "border-white/[0.08] bg-white/[0.03] text-muted-foreground group-hover:text-foreground",
+          )}
+        >
+          <FileText className="size-4" />
+        </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-medium text-foreground">{doc.title}</span>
-            {doc.is_locked && (
-              <Pill className="bg-priority-high/20 text-foreground">
-                <Lock className="size-3" />
-                Locked · final
-              </Pill>
-            )}
-            {doc.visibility_mode === "admin_only" && (
-              <Pill className="bg-white/[0.08] text-muted-foreground">Admin only</Pill>
-            )}
-            {doc.visibility_mode === "allowlist" && (
-              <Pill className="bg-white/[0.08] text-muted-foreground">Restricted</Pill>
-            )}
-            {doc.is_archived && <Pill className="bg-frame text-muted-foreground">Archived</Pill>}
-            {doc.shared_with_client && (
-              <Pill className="bg-status-ontrack/20 text-status-ontrack">
-                <Share2 className="size-3" />
-                Client
-              </Pill>
-            )}
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "truncate text-sm tracking-tight",
+                selected ? "font-semibold text-foreground" : "font-medium text-foreground/95",
+              )}
+            >
+              {doc.title}
+            </span>
+            {selected ? (
+              <span className="hidden size-1.5 shrink-0 rounded-full bg-tag-blue sm:inline-block" />
+            ) : null}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {doc.doc_type && <Tag color="blue">{doc.doc_type}</Tag>}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+            {doc.doc_type ? (
+              <span className="rounded-md bg-tag-blue/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tag-blue">
+                {doc.doc_type}
+              </span>
+            ) : null}
             <span>v{doc.current_version ?? 1}</span>
-            <span>·</span>
-            <span>{doc.uploader_name ?? "Unknown"}</span>
-            <span>·</span>
+            <span className="text-white/20">·</span>
+            <span className="truncate">{doc.uploader_name ?? "Unknown"}</span>
+            <span className="text-white/20">·</span>
             <span>{formatDate(doc.created_at)}</span>
           </div>
+        </div>
+        <div className="hidden shrink-0 flex-wrap items-center justify-end gap-1.5 sm:flex">
+          {doc.is_locked ? (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-priority-high/15 px-2 py-1 text-[10px] font-medium text-priority-high">
+              <Lock className="size-3" />
+              Final
+            </span>
+          ) : null}
+          {doc.visibility_mode === "admin_only" ? (
+            <span className="rounded-lg bg-tag-sand/15 px-2 py-1 text-[10px] text-tag-sand">
+              Admin only
+            </span>
+          ) : null}
+          {doc.visibility_mode === "allowlist" ? (
+            <span className="rounded-lg bg-tag-blue/12 px-2 py-1 text-[10px] text-tag-blue/90">
+              Restricted
+            </span>
+          ) : null}
+          {doc.shared_with_client ? (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/15 px-2 py-1 text-[10px] text-status-ontrack">
+              <Share2 className="size-3" />
+              Client
+            </span>
+          ) : null}
         </div>
       </button>
     </li>
@@ -594,7 +763,7 @@ function DocumentRow({
 }
 
 function VersionHistoryPanel({
-  caseId,
+  caseId: _caseId,
   document,
   versions,
   versionsLoading,
@@ -623,15 +792,19 @@ function VersionHistoryPanel({
   onRestore: (versionId: string) => Promise<void>;
 }) {
   return (
-    <Card className="space-y-4 p-5">
+    <div className="space-y-4 rounded-2xl border border-tag-blue/15 bg-gradient-to-br from-tag-blue/[0.08] via-[rgba(18,18,20,0.7)] to-[rgba(18,18,20,0.55)] p-5 shadow-[0_24px_60px_-36px_rgba(0,0,0,0.8)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Version history</h3>
-          <p className="text-sm text-muted-foreground">
-            {document.title} · current version {document.current_version ?? 1}
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-tag-blue/85">
+            Versions
+          </p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-foreground">
+            {document.title}
+          </h3>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Current version {document.current_version ?? 1}
           </p>
         </div>
-        <Pill className="bg-tag-blue/40 text-foreground">Super Admin</Pill>
       </div>
 
       <input
@@ -646,24 +819,28 @@ function VersionHistoryPanel({
         }}
       />
 
-      <div className="space-y-3 rounded-card border border-border bg-frame/40 p-4">
+      <div className="space-y-3 rounded-xl border border-white/[0.1] bg-black/25 p-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">
-            Optional note for the new version
+          <label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Note for new version
           </label>
           <Textarea
             value={versionNote}
             onChange={(e) => onNoteChange(e.target.value)}
-            placeholder="Explain what changed in this version…"
+            placeholder="Explain what changed…"
             rows={3}
+            className="rounded-xl border-white/[0.1] bg-[rgba(18,18,20,0.85)]"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="default" onClick={onUploadClick} disabled={versionUploading}>
-            <Upload className="size-4" />
-            {versionUploading ? "Uploading…" : "Upload new version"}
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={onUploadClick}
+          disabled={versionUploading}
+          className={cn(BTN_LIGHT, "h-10 px-4 text-sm")}
+        >
+          <Upload className="size-4" />
+          {versionUploading ? "Uploading…" : "Upload new version"}
+        </button>
       </div>
 
       {versionsLoading ? (
@@ -671,27 +848,32 @@ function VersionHistoryPanel({
       ) : versions.length === 0 ? (
         <p className="text-sm text-muted-foreground">No version history found.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {versions.map((version) => (
-            <li key={version.id} className="rounded-card border border-border p-4">
+            <li
+              key={version.id}
+              className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">
                       Version {version.version_number}
                     </span>
-                    {version.is_current && (
-                      <Pill className="bg-priority-high/20 text-foreground">Current</Pill>
-                    )}
+                    {version.is_current ? (
+                      <span className="rounded-lg bg-tag-blue/18 px-2 py-0.5 text-[10px] font-medium text-tag-blue">
+                        Current
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {version.uploader_name ?? "Unknown"} · {formatDate(version.uploaded_at)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
+                    type="button"
+                    className={cn(BTN_SOFT, "h-8 px-3")}
                     disabled={viewBusyId === version.id || !version.file_path}
                     onClick={() => onViewVersion(version.id)}
                   >
@@ -701,23 +883,27 @@ function VersionHistoryPanel({
                       <Eye className="size-3.5" />
                     )}
                     View
-                  </Button>
-                  {!version.is_current && (
-                    <Button variant="ghost" size="sm" onClick={() => void onRestore(version.id)}>
+                  </button>
+                  {!version.is_current ? (
+                    <button
+                      type="button"
+                      className={cn(BTN_BLUE, "h-8 px-3")}
+                      onClick={() => void onRestore(version.id)}
+                    >
                       Restore
-                    </Button>
-                  )}
+                    </button>
+                  ) : null}
                 </div>
               </div>
-              {version.note && (
+              {version.note ? (
                 <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
                   {version.note}
                 </p>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
       )}
-    </Card>
+    </div>
   );
 }

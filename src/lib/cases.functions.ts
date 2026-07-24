@@ -441,6 +441,93 @@ export const createCase = createServerFn({ method: "POST" })
     return { id: caseId, case_ref: inserted.case_ref ?? case_ref };
   });
 
+export interface UpdateCaseInput {
+  id: string;
+  title: string;
+  client_id: string;
+  case_type: CaseType;
+}
+
+/**
+ * Update core case details (title, client, type). Admins only.
+ * Status / lead / lifecycle stay on their dedicated flows.
+ */
+export const updateCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: UpdateCaseInput) => {
+    const title = (input.title ?? "").trim();
+    if (!input?.id) throw new Error("A case id is required.");
+    if (!title) throw new Error("Title is required.");
+    if (!input.client_id) throw new Error("A client is required.");
+    if (!CASE_TYPES.includes(input.case_type)) {
+      throw new Error("A valid case type is required.");
+    }
+    return {
+      id: input.id,
+      title,
+      client_id: input.client_id,
+      case_type: input.case_type,
+    };
+  })
+  .handler(async ({ data, context }): Promise<{ id: string }> => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    if (!profile?.is_active) throw new Error("Your account is inactive.");
+    if (profile.role !== "super_admin" && profile.role !== "admin") {
+      throw new Error("Only admins can edit cases.");
+    }
+
+    const { data: existing, error: existingErr } = await supabaseAdmin
+      .from("cases")
+      .select("id, title, client_id, case_type")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (existingErr) throw new Error(existingErr.message);
+    if (!existing) throw new Error("Case not found.");
+
+    const { error: updateError } = await supabaseAdmin
+      .from("cases")
+      .update({
+        title: data.title,
+        client_id: data.client_id,
+        case_type: data.case_type,
+      })
+      .eq("id", data.id);
+    if (updateError) throw new Error(updateError.message);
+
+    const { error: logError } = await supabaseAdmin.from("activity_log").insert({
+      case_id: data.id,
+      actor_id: userId,
+      action: "case_updated",
+      detail: {
+        before: {
+          title: existing.title,
+          client_id: existing.client_id,
+          case_type: existing.case_type,
+        },
+        after: {
+          title: data.title,
+          client_id: data.client_id,
+          case_type: data.case_type,
+        },
+      },
+    });
+    if (logError) {
+      console.warn("[updateCase] activity_log insert skipped:", logError.message);
+    }
+
+    return { id: data.id };
+  });
+
 export interface CaseOverviewActivity {
   id: string;
   action: string | null;

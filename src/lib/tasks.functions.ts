@@ -127,7 +127,7 @@ export const reorderTasks = createServerFn({ method: "POST" })
     const { supabase } = context;
     const nowIso = new Date().toISOString();
 
-    await Promise.all(
+    const results = await Promise.all(
       data.tasks.map((t) =>
         supabase
           .from("tasks")
@@ -139,6 +139,8 @@ export const reorderTasks = createServerFn({ method: "POST" })
           .eq("id", t.id),
       ),
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw new Error(failed.error.message);
 
     return { ok: true };
   });

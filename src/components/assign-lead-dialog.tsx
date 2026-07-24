@@ -50,7 +50,7 @@ export function AssignLeadDialog({
   const assign = useServerFn(reassignLead);
 
   const [selectedId, setSelectedId] = useState<string>(currentLeadId ?? "");
-  const [keepReadOnly, setKeepReadOnly] = useState(true);
+  const [keepOnTeam, setKeepOnTeam] = useState(true);
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["assignable-staff"],
@@ -65,7 +65,7 @@ export function AssignLeadDialog({
         data: {
           caseId,
           newLeadId: selectedId,
-          keepReadOnly: currentLeadId ? keepReadOnly : false,
+          keepOnTeam: currentLeadId ? keepOnTeam : false,
         },
       });
     },
@@ -82,6 +82,7 @@ export function AssignLeadDialog({
       queryClient.invalidateQueries({ queryKey: ["case-overview", caseId] });
       queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
       queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["case-team", caseId] });
       onAssigned?.({ id: selectedId, name });
       onOpenChange(false);
     },
@@ -94,7 +95,7 @@ export function AssignLeadDialog({
       onOpenChange={(next) => {
         if (next) {
           setSelectedId(currentLeadId ?? "");
-          setKeepReadOnly(true);
+          setKeepOnTeam(true);
         }
         onOpenChange(next);
       }}
@@ -107,8 +108,8 @@ export function AssignLeadDialog({
           </DialogTitle>
           <DialogDescription>
             {caseTitle
-              ? `Choose who owns “${caseTitle}”. The lead appears on the cases list and gets the active stage if it is unassigned.`
-              : "Choose who owns this matter."}
+              ? `Choose the lead for “${caseTitle}”. Other lawyers can stay on the team alongside the lead.`
+              : "Choose who leads this matter. You can add more lawyers after."}
             {currentLeadName ? (
               <>
                 {" "}
@@ -166,15 +167,15 @@ export function AssignLeadDialog({
           {currentLeadId ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
               <div className="min-w-0 space-y-0.5">
-                <Label htmlFor="keep-ro">Keep previous lead read-only</Label>
+                <Label htmlFor="keep-on-team">Keep previous lead on the team</Label>
                 <p className="text-xs text-muted-foreground">
-                  Former lead can still view the case.
+                  They stay as another lawyer on this case (not the lead).
                 </p>
               </div>
               <Switch
-                id="keep-ro"
-                checked={keepReadOnly}
-                onCheckedChange={setKeepReadOnly}
+                id="keep-on-team"
+                checked={keepOnTeam}
+                onCheckedChange={setKeepOnTeam}
               />
             </div>
           ) : null}

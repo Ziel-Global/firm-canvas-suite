@@ -26,7 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserRowActions } from "@/components/user-row-actions";
-import type { AppRole } from "@/lib/nav";
+import {
+  STAFF_ROLE_LABELS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,30 +40,14 @@ export const Route = createFileRoute("/users")({
       { title: "Users — SAS Associates" },
       {
         name: "description",
-        content: "Manage firm users, roles, and access.",
+        content: "Manage firm staff users, roles, and access.",
       },
     ],
   }),
   component: UsersPage,
 });
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
-  senior_lawyer: "Senior Lawyer",
-  junior_lawyer: "Junior Lawyer",
-  support: "Support",
-  client: "Client",
-};
-
-const ROLE_OPTIONS: AppRole[] = [
-  "super_admin",
-  "admin",
-  "senior_lawyer",
-  "junior_lawyer",
-  "support",
-  "client",
-];
+const ROLE_OPTIONS = [...STAFF_ROLES];
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -152,8 +140,8 @@ function UsersPage() {
               Users
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Manage everyone with access to the firm system — roles, status,
-              and credentials.
+              Manage firm staff with access to this app — roles, status, and
+              credentials. Clients use a separate portal and are not users here.
             </p>
           </div>
 
@@ -210,7 +198,7 @@ function UsersPage() {
                 <SelectItem value="all">All roles</SelectItem>
                 {ROLE_OPTIONS.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABELS[r]}
+                    {STAFF_ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -318,7 +306,7 @@ function UsersPage() {
                             roleTone(u.role),
                           )}
                         >
-                          {ROLE_LABELS[u.role] ?? u.role}
+                          {STAFF_ROLE_LABELS[u.role as StaffRole] ?? u.role}
                         </span>
                       </TableCell>
                       <TableCell className="tabular-nums tracking-wide text-muted-foreground">

@@ -55,6 +55,8 @@ interface NewEventSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDate?: Date;
+  defaultCaseId?: string | null;
+  lockCase?: boolean;
 }
 
 function combine(date: Date | undefined, time: string): string | null {
@@ -69,6 +71,8 @@ export function NewEventSheet({
   open,
   onOpenChange,
   defaultDate,
+  defaultCaseId,
+  lockCase,
 }: NewEventSheetProps) {
   const queryClient = useQueryClient();
   const { role } = useAuth();
@@ -79,7 +83,7 @@ export function NewEventSheet({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [caseId, setCaseId] = useState<string>(NO_CASE);
+  const [caseId, setCaseId] = useState<string>(defaultCaseId ?? NO_CASE);
   const [eventType, setEventType] = useState("meeting");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState<Date | undefined>(defaultDate);
@@ -101,6 +105,12 @@ export function NewEventSheet({
     enabled: open,
   });
 
+  useEffect(() => {
+    if (!open) return;
+    setCaseId(defaultCaseId ?? NO_CASE);
+    if (defaultDate) setDate(defaultDate);
+  }, [open, defaultCaseId, defaultDate]);
+
   // Pre-fill reminders from the selected event type's defaults until the user edits them.
   useEffect(() => {
     if (!open || remindersTouched || !reminderDefaults) return;
@@ -118,7 +128,7 @@ export function NewEventSheet({
   function reset() {
     setTitle("");
     setDescription("");
-    setCaseId(NO_CASE);
+    setCaseId(defaultCaseId ?? NO_CASE);
     setEventType("meeting");
     setLocation("");
     setDate(defaultDate);
@@ -159,6 +169,12 @@ export function NewEventSheet({
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const lockedCaseLabel = (() => {
+    const match = (cases ?? []).find((c) => c.id === caseId);
+    if (!match) return "This case";
+    return `${match.case_ref} — ${match.title ?? "Untitled"}`;
+  })();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -232,20 +248,29 @@ export function NewEventSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Case (optional)</Label>
-            <Select value={caseId} onValueChange={setCaseId}>
-              <SelectTrigger className={FIELD_CLASS}>
-                <SelectValue placeholder="No case" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_CASE}>No case</SelectItem>
-                {(cases ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.case_ref} — {c.title ?? "Untitled"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Case{lockCase ? "" : " (optional)"}</Label>
+            {lockCase ? (
+              <Input
+                readOnly
+                value={lockedCaseLabel}
+                className={`${FIELD_CLASS} text-muted-foreground`}
+                tabIndex={-1}
+              />
+            ) : (
+              <Select value={caseId} onValueChange={setCaseId}>
+                <SelectTrigger className={FIELD_CLASS}>
+                  <SelectValue placeholder="No case" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_CASE}>No case</SelectItem>
+                  {(cases ?? []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.case_ref} — {c.title ?? "Untitled"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">

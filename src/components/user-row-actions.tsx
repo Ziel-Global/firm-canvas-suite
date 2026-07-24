@@ -46,25 +46,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AppRole } from "@/lib/nav";
+import {
+  STAFF_ROLE_LABELS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@/lib/roles";
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
-  senior_lawyer: "Senior Lawyer",
-  junior_lawyer: "Junior Lawyer",
-  support: "Support",
-  client: "Client",
-};
-
-const ROLE_OPTIONS: AppRole[] = [
-  "super_admin",
-  "admin",
-  "senior_lawyer",
-  "junior_lawyer",
-  "support",
-  "client",
-];
+const ROLE_OPTIONS = [...STAFF_ROLES];
 
 type Confirm = "deactivate" | "reactivate" | "reset" | null;
 
@@ -74,7 +62,7 @@ export function UserRowActions({ user }: { user: ProfileRow }) {
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [fullName, setFullName] = useState(user.full_name ?? "");
   const [phone, setPhone] = useState(user.phone ?? "");
-  const [roleValue, setRoleValue] = useState<AppRole>(user.role as AppRole);
+  const [roleValue, setRoleValue] = useState<StaffRole>(user.role as StaffRole);
 
   const update = useServerFn(updateUserDetails);
   const deactivate = useServerFn(deactivateUser);
@@ -191,14 +179,17 @@ export function UserRowActions({ user }: { user: ProfileRow }) {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-role">Role</Label>
-              <Select value={roleValue} onValueChange={(v) => setRoleValue(v as AppRole)}>
+              <Select
+                value={roleValue}
+                onValueChange={(v) => setRoleValue(v as StaffRole)}
+              >
                 <SelectTrigger id="edit-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {ROLE_OPTIONS.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
+                      {STAFF_ROLE_LABELS[r]}
                     </SelectItem>
                   ))}
                 </SelectContent>

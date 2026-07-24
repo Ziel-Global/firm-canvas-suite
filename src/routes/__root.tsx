@@ -173,7 +173,7 @@ function RootComponent() {
           </>
         ) : (
           <AppSidebarProvider>
-            <div className="min-h-screen min-w-0 overflow-x-clip bg-canvas">
+            <div className="min-h-screen min-w-0 max-w-[100vw] overflow-x-hidden bg-canvas">
               <GlobalLoadingBar />
               <AppSidebar />
               <AppMain>

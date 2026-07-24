@@ -23,28 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AppRole } from "@/lib/nav";
+import {
+  CREATE_USER_ROLES,
+  STAFF_ROLE_LABELS,
+  type CreateUserRole,
+} from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 const FIELD =
   "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin: "Admin",
-  senior_lawyer: "Senior Lawyer",
-  junior_lawyer: "Junior Lawyer",
-  support: "Support",
-  client: "Client",
-};
-
-const ROLE_OPTIONS: AppRole[] = [
-  "admin",
-  "senior_lawyer",
-  "junior_lawyer",
-  "support",
-  "client",
-];
+const ROLE_OPTIONS = [...CREATE_USER_ROLES];
 
 interface NewUserSheetProps {
   open: boolean;
@@ -148,7 +137,9 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
             <Label htmlFor="role">Role</Label>
             <Select
               value={form.role}
-              onValueChange={(v) => setForm((f) => ({ ...f, role: v as AppRole }))}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, role: v as CreateUserRole }))
+              }
             >
               <SelectTrigger id="role" className={cn(FIELD, "w-full")}>
                 <SelectValue placeholder="Select a role" />
@@ -156,7 +147,7 @@ export function NewUserSheet({ open, onOpenChange }: NewUserSheetProps) {
               <SelectContent>
                 {ROLE_OPTIONS.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {ROLE_LABELS[r]}
+                    {STAFF_ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
               </SelectContent>

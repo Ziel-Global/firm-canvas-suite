@@ -27,6 +27,7 @@ import { CaseOverviewTab } from "@/components/case-overview-tab";
 import { CaseNotesTab } from "@/components/case-notes-tab";
 import { CaseActivityTab } from "@/components/case-activity-tab";
 import { CaseAccessTab } from "@/components/case-access-tab";
+import { CaseTeamTab } from "@/components/case-team-tab";
 import { CaseTasksTab } from "@/components/case-tasks-tab";
 import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseDocumentsTab } from "@/components/case-documents-tab";
@@ -43,6 +44,7 @@ const TABS = [
   "documents",
   "calendar",
   "notes",
+  "team",
   "access",
   "activity",
 ] as const;
@@ -363,6 +365,7 @@ function CaseDetailPage() {
               currentLeadName={data.lead_name}
               onAssigned={() => {
                 queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+                queryClient.invalidateQueries({ queryKey: ["case-team", caseId] });
               }}
             />
             <NewTaskSheet
@@ -383,7 +386,13 @@ function CaseDetailPage() {
               {TABS.map((t) => (
                 <TabsContent key={t} value={t}>
                   {t === "overview" ? (
-                    <CaseOverviewTab caseId={caseId} role={role} />
+                    <CaseOverviewTab
+                      caseId={caseId}
+                      role={role}
+                      onOpenDocuments={() => {
+                        setTab("documents");
+                      }}
+                    />
                   ) : t === "stages" ? (
                     <CaseStagesTab caseId={caseId} />
                   ) : t === "notes" ? (
@@ -394,6 +403,19 @@ function CaseDetailPage() {
                     <CaseTasksTab caseId={caseId} />
                   ) : t === "documents" ? (
                     <CaseDocumentsTab caseId={caseId} />
+                  ) : t === "team" ? (
+                    role === "super_admin" || role === "admin" ? (
+                      <CaseTeamTab
+                        caseId={caseId}
+                        onChangeLead={() => setAssignOpen(true)}
+                      />
+                    ) : (
+                      <Card className="p-6">
+                        <p className="text-sm text-muted-foreground">
+                          Only admins can manage the case team.
+                        </p>
+                      </Card>
+                    )
                   ) : t === "access" ? (
                     role === "super_admin" || role === "admin" ? (
                       <CaseAccessTab caseId={caseId} />

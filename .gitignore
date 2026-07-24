@@ -21,6 +21,12 @@ dist-ssr
 .env.*
 !.env.example
 
+# Local probe / credential scripts
+test-login.*
+test-create*.mjs
+test-users.mjs
+test-keys.mjs
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

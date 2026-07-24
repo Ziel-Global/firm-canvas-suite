@@ -12,7 +12,6 @@ import {
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
@@ -22,10 +21,12 @@ import {
   getApprovalQueueReportData,
   getClientFollowUpReportData,
 } from "@/lib/reports.functions";
+import { exportReport } from "@/lib/report-export";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/premium-loader";
 import { TableSkeleton } from "@/components/loading-skeletons";
+import { toast } from "sonner";
 
 // ─── Data Layer ─────────────────────────────────────────────────────────────
 
@@ -218,7 +219,7 @@ function ReportsPage() {
   });
 
   const handleExport = async (format: "pdf" | "excel") => {
-    let reportData: any = casesData;
+    let reportData: unknown[] | undefined = casesData;
     let title = "Active_Cases_Status_Report";
 
     if (activeTab === "productivity") {
@@ -234,32 +235,23 @@ function ReportsPage() {
       reportData = followupData;
       title = "Client_Follow_Up_Report";
     }
-    
-    if (!reportData) return;
+
+    if (!reportData) {
+      toast.error("No report data loaded yet.");
+      return;
+    }
+
     setExporting(format);
     try {
-      const { data: blob, error } = await supabase.functions.invoke("export-report", {
-        body: {
-          format,
-          title,
-          reportData,
-        },
-      });
-
-      if (error) throw error;
-
-      // Trigger download
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title}.${format === "excel" ? "csv" : "pdf"}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
+      await exportReport(format, title, reportData);
+      toast.success(
+        format === "excel" ? "CSV downloaded" : "PDF downloaded",
+      );
+    } catch (err: unknown) {
       console.error("Export failed:", err);
-      alert(`Export failed: ${err.message}`);
+      toast.error(
+        err instanceof Error ? err.message : "Export failed.",
+      );
     } finally {
       setExporting(null);
     }

@@ -2,17 +2,13 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ShieldCheck } from "lucide-react";
+import { Pencil, ShieldCheck } from "lucide-react";
 
 import { getCaseAccessMatrix, type CaseAccessRow } from "@/lib/cases.functions";
 import {
   setCaseAccessOverride,
   clearCaseAccessOverride,
 } from "@/lib/case-access.functions";
-import { Card } from "@/components/ui/card";
-import { Tag } from "@/components/ui/tag";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -60,14 +57,13 @@ const FOLDER_NAME: Record<string, string> = Object.fromEntries(
   FOLDERS.map((f) => [f.code, f.name]),
 );
 
-// Override choices, including "default" which clears any override.
 type OverrideChoice = "default" | "full" | "read_only" | "none";
 
-function levelTagColor(level: string): "green" | "blue" | "sand" {
-  if (level === "full") return "green";
-  if (level === "read_only") return "blue";
-  return "sand";
-}
+const BTN_SOFT =
+  "inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-white/[0.12] bg-white/[0.05] px-3 text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/[0.18] hover:bg-white/[0.1] hover:text-foreground disabled:pointer-events-none disabled:opacity-50";
+
+const BTN_LIGHT =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-xl border-0 bg-gradient-to-b from-[#F8F8F8] to-[#D4D4D4] px-4 text-xs font-semibold text-[#14161a] shadow-[0_8px_20px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.85)] transition-[filter,transform] hover:brightness-110 hover:text-[#14161a] active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:text-[#14161a]";
 
 function formatScope(scope: string | null): string {
   const codes = (scope ?? "")
@@ -76,6 +72,42 @@ function formatScope(scope: string | null): string {
     .filter(Boolean);
   if (codes.length === 0) return "All folders";
   return codes.map((c) => FOLDER_NAME[c] ?? c).join(", ");
+}
+
+function LevelChip({
+  level,
+  muted = false,
+}: {
+  level: string;
+  muted?: boolean;
+}) {
+  const label = LEVEL_LABELS[level] ?? level;
+  if (muted) {
+    return (
+      <span className="text-sm text-muted-foreground">{label}</span>
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex whitespace-nowrap items-center rounded-lg px-2 py-0.5 text-[11px] font-medium",
+        level === "full" && "bg-status-ontrack/18 text-status-ontrack",
+        level === "read_only" && "bg-tag-blue/18 text-tag-blue",
+        level === "none" && "bg-tag-sand/18 text-tag-sand",
+        !["full", "read_only", "none"].includes(level) &&
+          "bg-white/[0.08] text-foreground/80",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function initials(name: string | null) {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 export function CaseAccessTab({ caseId }: { caseId: string }) {
@@ -148,92 +180,127 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
   }
 
   return (
-    <Card className="p-0">
-      <div className="border-b border-border p-5">
-        <h3 className="text-sm font-semibold text-foreground">Team access</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Effective access for each team member on this case. Changes are
-          enforced immediately through row-level security.
-        </p>
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-tag-blue/15 bg-gradient-to-br from-tag-blue/[0.08] via-[rgba(18,18,20,0.72)] to-[rgba(18,18,20,0.55)] shadow-[0_24px_60px_-36px_rgba(0,0,0,0.8)]">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-xl border border-tag-blue/30 bg-tag-blue/15 text-tag-blue">
+              <ShieldCheck className="size-4" />
+            </span>
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-tag-blue/85">
+                Permissions
+              </p>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">
+                Team access
+              </h3>
+            </div>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Effective access for each person on this case. Overrides apply
+            immediately through row-level security.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+            Loading access…
+          </p>
+        ) : null}
+        {error && !isLoading ? (
+          <p className="px-5 py-10 text-center text-sm text-destructive">
+            Could not load access matrix.
+          </p>
+        ) : null}
+
+        {data && !isLoading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-5 py-3 font-medium">Member</th>
+                  <th className="px-5 py-3 font-medium">Role default</th>
+                  <th className="px-5 py-3 font-medium">Override</th>
+                  <th className="px-5 py-3 font-medium">Effective</th>
+                  <th className="px-5 py-3 font-medium">Folder scope</th>
+                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row: CaseAccessRow) => (
+                  <tr
+                    key={row.user_id}
+                    className="border-b border-white/[0.05] transition-colors last:border-0 hover:bg-white/[0.02]"
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.05] text-[11px] font-semibold tracking-wide text-foreground/90">
+                          {initials(row.full_name)}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-foreground">
+                            {row.full_name ?? "—"}
+                            {!row.is_active ? (
+                              <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                                Inactive
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {ROLE_LABELS[row.role ?? ""] ?? row.role ?? "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-sm text-muted-foreground">
+                        {LEVEL_LABELS[row.role_default] ?? row.role_default}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {row.override_level ? (
+                        <LevelChip level={row.override_level} />
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <LevelChip level={row.effective_level} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="text-sm text-muted-foreground">
+                        {formatScope(row.folder_scope)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {row.role === "super_admin" ? (
+                        <span className="text-xs text-muted-foreground/60">—</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={BTN_SOFT}
+                          onClick={() => openEditor(row)}
+                        >
+                          <Pencil className="size-3.5" />
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </div>
 
-      {isLoading && (
-        <p className="p-5 text-sm text-muted-foreground">Loading access…</p>
-      )}
-      {error && !isLoading && (
-        <p className="p-5 text-sm text-destructive">Could not load access matrix.</p>
-      )}
-
-      {data && !isLoading && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-5 py-3 font-medium">Member</th>
-                <th className="px-5 py-3 font-medium">Role default</th>
-                <th className="px-5 py-3 font-medium">Override</th>
-                <th className="px-5 py-3 font-medium">Effective</th>
-                <th className="px-5 py-3 font-medium">Folder scope</th>
-                <th className="px-5 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row: CaseAccessRow) => (
-                <tr key={row.user_id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-foreground">
-                      {row.full_name ?? "—"}
-                      {!row.is_active && (
-                        <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {ROLE_LABELS[row.role ?? ""] ?? row.role ?? "—"}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {LEVEL_LABELS[row.role_default] ?? row.role_default}
-                  </td>
-                  <td className="px-5 py-3">
-                    {row.override_level ? (
-                      <Badge>{LEVEL_LABELS[row.override_level] ?? row.override_level}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    <Tag color={levelTagColor(row.effective_level)}>
-                      {LEVEL_LABELS[row.effective_level] ?? row.effective_level}
-                    </Tag>
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {formatScope(row.folder_scope)}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    {row.role === "super_admin" ? (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditor(row)}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="border-white/[0.1] bg-[rgba(18,18,20,0.96)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" />
+              <span className="flex size-8 items-center justify-center rounded-xl border border-tag-blue/30 bg-tag-blue/15 text-tag-blue">
+                <ShieldCheck className="size-4" />
+              </span>
               Edit case access
             </DialogTitle>
             <DialogDescription>
@@ -249,7 +316,7 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
                 value={choice}
                 onValueChange={(v) => setChoice(v as OverrideChoice)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-white/[0.1] bg-white/[0.03]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -261,12 +328,12 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
                   <SelectItem value="none">Restrict — no access</SelectItem>
                 </SelectContent>
               </Select>
-              {choice === "none" && (
+              {choice === "none" ? (
                 <p className="text-xs text-muted-foreground">
                   Blocks this user even if their role would normally grant access.
                   They are signed out of this case immediately.
                 </p>
-              )}
+              ) : null}
             </div>
 
             {(choice === "full" || choice === "read_only") && (
@@ -276,18 +343,18 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
                   Leave all unchecked for every folder this user can reach, or
                   select specific folders to narrow access.
                 </p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 sm:grid-cols-2">
                   {FOLDERS.map((f) => (
                     <label
                       key={f.code}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-white/[0.03]"
                     >
                       <Checkbox
                         checked={scope.includes(f.code)}
                         onCheckedChange={(c) => toggleFolder(f.code, c === true)}
                       />
-                      <span>
-                        {f.code} {f.name}
+                      <span className="text-foreground/90">
+                        <span className="text-tag-blue/80">{f.code}</span> {f.name}
                       </span>
                     </label>
                   ))}
@@ -303,20 +370,31 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Reason for this change"
                 rows={2}
+                className="rounded-xl border-white/[0.1] bg-black/20"
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)} disabled={saving}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button
+              type="button"
+              className={BTN_SOFT}
+              onClick={() => setEditing(null)}
+              disabled={saving}
+            >
               Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            </button>
+            <button
+              type="button"
+              className={BTN_LIGHT}
+              onClick={() => void handleSave()}
+              disabled={saving}
+            >
               {saving ? "Saving…" : "Save access"}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

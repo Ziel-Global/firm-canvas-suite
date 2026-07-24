@@ -3,6 +3,42 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 
+/** Store and compare client emails as trimmed lowercase. Empty → null. */
+function normalizeClientEmail(email: string | null | undefined): string | null {
+  const value = (email ?? "").trim().toLowerCase();
+  return value || null;
+}
+
+function isUniqueViolation(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return (
+    error.code === "23505" ||
+    /clients_email_unique/i.test(error.message ?? "") ||
+    /duplicate key/i.test(error.message ?? "")
+  );
+}
+
+async function assertClientEmailAvailable(
+  // Caller-scoped client is fine for admins; unique index is the hard guarantee.
+  supabase: {
+    from: (table: "clients") => any;
+  },
+  email: string | null,
+  excludeId?: string,
+) {
+  if (!email) return;
+
+  let query = supabase.from("clients").select("id, client_ref").eq("email", email);
+  if (excludeId) query = query.neq("id", excludeId);
+
+  const { data, error } = await query.limit(1);
+  if (error) throw new Error(error.message);
+  if (data?.[0]) {
+    const ref = data[0].client_ref ? ` (${data[0].client_ref})` : "";
+    throw new Error(`A client with this email already exists${ref}.`);
+  }
+}
+
 export interface ClientRow {
   id: string;
   client_ref: string;
@@ -111,7 +147,7 @@ export const createClient = createServerFn({ method: "POST" })
     if (!full_name) throw new Error("Full name is required.");
     return {
       full_name,
-      email: input.email?.trim() || null,
+      email: normalizeClientEmail(input.email),
       phone: input.phone?.trim() || null,
       address: input.address?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -119,6 +155,8 @@ export const createClient = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ id: string; client_ref: string }> => {
     const { supabase, userId } = context;
+
+    await assertClientEmailAvailable(supabase, data.email);
 
     const { data: refData, error: refError } = await supabase.rpc("next_client_ref");
     if (refError) throw new Error(refError.message);
@@ -137,7 +175,12 @@ export const createClient = createServerFn({ method: "POST" })
       })
       .select("id, client_ref")
       .single();
-    if (insertError) throw new Error(insertError.message);
+    if (insertError) {
+      if (isUniqueViolation(insertError)) {
+        throw new Error("A client with this email already exists.");
+      }
+      throw new Error(insertError.message);
+    }
 
     const { error: logError } = await supabase.from("activity_log").insert({
       actor_id: userId,
@@ -303,7 +346,7 @@ export const updateClient = createServerFn({ method: "POST" })
     return {
       id: input.id,
       full_name,
-      email: input.email?.trim() || null,
+      email: normalizeClientEmail(input.email),
       phone: input.phone?.trim() || null,
       address: input.address?.trim() || null,
       notes: input.notes?.trim() || null,
@@ -311,6 +354,8 @@ export const updateClient = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const { supabase, userId } = context;
+
+    await assertClientEmailAvailable(supabase, data.email, data.id);
 
     const { data: before, error: beforeError } = await supabase
       .from("clients")
@@ -329,7 +374,12 @@ export const updateClient = createServerFn({ method: "POST" })
         notes: data.notes,
       })
       .eq("id", data.id);
-    if (updateError) throw new Error(updateError.message);
+    if (updateError) {
+      if (isUniqueViolation(updateError)) {
+        throw new Error("A client with this email already exists.");
+      }
+      throw new Error(updateError.message);
+    }
 
     const fields = ["full_name", "email", "phone", "address", "notes"] as const;
     const changed: Record<string, { from: Json; to: Json }> = {};

@@ -11,6 +11,7 @@ import {
   Settings,
   Bot,
   Library,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,6 +49,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { title: "AI Lab", url: "/ai-lab", icon: Bot },
     ],
   },
+  {
+    label: "Account",
+    items: [{ title: "Profile", url: "/profile", icon: UserRound }],
+  },
 ];
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
@@ -63,10 +68,37 @@ export type AppRole =
 // Which nav URLs each role may see.
 const ROLE_NAV: Record<AppRole, string[] | "all"> = {
   super_admin: "all",
-  admin: ["/", "/cases", "/calendar", "/tasks", "/documents", "/approvals", "/clients", "/reports", "/knowledge-base", "/settings"],
-  senior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents", "/knowledge-base"],
-  junior_lawyer: ["/", "/cases", "/tasks", "/calendar", "/documents"],
-  support: ["/", "/cases", "/tasks", "/calendar", "/documents"],
+  admin: [
+    "/",
+    "/cases",
+    "/calendar",
+    "/tasks",
+    "/documents",
+    "/approvals",
+    "/clients",
+    "/reports",
+    "/knowledge-base",
+    "/settings",
+    "/profile",
+  ],
+  senior_lawyer: [
+    "/",
+    "/cases",
+    "/tasks",
+    "/calendar",
+    "/documents",
+    "/knowledge-base",
+    "/profile",
+  ],
+  junior_lawyer: [
+    "/",
+    "/cases",
+    "/tasks",
+    "/calendar",
+    "/documents",
+    "/profile",
+  ],
+  support: ["/", "/cases", "/tasks", "/calendar", "/documents", "/profile"],
   // Clients use /portal exclusively — not listed in the internal sidebar.
   client: [],
 };

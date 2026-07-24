@@ -13,6 +13,7 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as KnowledgeBaseRouteImport } from './routes/knowledge-base'
 import { Route as DocumentsRouteImport } from './routes/documents'
@@ -51,6 +52,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRoute = PortalRouteImport.update({
@@ -164,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/portal': typeof PortalRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
+  '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/documents': typeof DocumentsRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/portal': typeof PortalRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/knowledge-base'
     | '/portal'
+    | '/profile'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/documents'
     | '/knowledge-base'
+    | '/profile'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/documents'
     | '/knowledge-base'
     | '/portal'
+    | '/profile'
     | '/reports'
     | '/settings'
     | '/tasks'
@@ -316,6 +328,7 @@ export interface RootRouteChildren {
   DocumentsRoute: typeof DocumentsRoute
   KnowledgeBaseRoute: typeof KnowledgeBaseRoute
   PortalRoute: typeof PortalRouteWithChildren
+  ProfileRoute: typeof ProfileRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   TasksRoute: typeof TasksRoute
@@ -356,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -519,6 +539,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentsRoute: DocumentsRoute,
   KnowledgeBaseRoute: KnowledgeBaseRoute,
   PortalRoute: PortalRouteWithChildren,
+  ProfileRoute: ProfileRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   TasksRoute: TasksRoute,

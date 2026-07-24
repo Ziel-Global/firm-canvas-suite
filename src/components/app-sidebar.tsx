@@ -336,15 +336,17 @@ export function AppSidebar() {
   );
 }
 
-/** Main column that shifts with the sidebar width on desktop only */
+/** Main column: full-width under the fixed sidebar, padded so content starts clear of it. */
 export function AppMain({ children }: { children: ReactNode }) {
   const { collapsed } = useAppSidebar();
 
   return (
     <div
       className={cn(
-        "min-h-dvh min-w-0 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        // Phones: full width (drawer overlays). Desktop: leave room for rail.
+        "relative z-0 min-h-dvh w-full min-w-0 max-w-full transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        // Phones: full width (drawer overlays). Desktop: pad past the rail so scroll can tuck under it.
+        // Keep overflow visible on x so board columns can bleed to the viewport edges.
+        "overflow-x-clip bg-canvas",
         collapsed ? "lg:pl-[4.25rem]" : "lg:pl-64",
       )}
     >

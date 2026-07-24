@@ -62,23 +62,30 @@ export const changeCaseStatus = createServerFn({ method: "POST" })
   });
 
 /**
- * Assign or reassign the case lead. Removes the previous lead's assignment. If
- * `keepReadOnly` is set and there was a previous lead, they get a read-only
- * access override. Admins and super admins may do this.
+ * Assign or reassign the case lead. Previous lead stays on the team as a
+ * non-lead lawyer by default (`keepOnTeam`), or is removed when false.
+ * Admins and super admins may do this. A case may have one lead and many
+ * other assigned lawyers.
  */
 export const reassignLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: {
     caseId: string;
     newLeadId: string;
+    keepOnTeam?: boolean;
+    /** @deprecated use keepOnTeam */
     keepReadOnly?: boolean;
   }) => {
     if (!input?.caseId) throw new Error("A case id is required.");
     if (!input?.newLeadId) throw new Error("A new lead is required.");
+    const keepOnTeam =
+      input.keepOnTeam !== undefined
+        ? input.keepOnTeam !== false
+        : input.keepReadOnly !== false;
     return {
       caseId: input.caseId,
       newLeadId: input.newLeadId,
-      keepReadOnly: input.keepReadOnly !== false,
+      keepOnTeam,
     };
   })
   .handler(async ({ data, context }) => {
@@ -125,50 +132,55 @@ export const reassignLead = createServerFn({ method: "POST" })
       };
     }
 
-    if (currentLead?.id) {
-      const { error: delErr } = await supabaseAdmin
-        .from("case_assignments")
-        .delete()
-        .eq("id", currentLead.id);
-      if (delErr) throw new Error(delErr.message);
-
-      if (data.keepReadOnly && previousLeadId) {
-        await supabaseAdmin
-          .from("case_access_overrides")
+    if (currentLead?.id && previousLeadId) {
+      if (data.keepOnTeam) {
+        const { error: demoteErr } = await supabaseAdmin
+          .from("case_assignments")
+          .update({
+            is_lead: false,
+            role_on_case: "lawyer",
+          })
+          .eq("id", currentLead.id);
+        if (demoteErr) throw new Error(demoteErr.message);
+      } else {
+        const { error: delErr } = await supabaseAdmin
+          .from("case_assignments")
           .delete()
-          .eq("case_id", data.caseId)
-          .eq("user_id", previousLeadId);
-
-        const { error: ovErr } = await supabaseAdmin
-          .from("case_access_overrides")
-          .insert({
-            case_id: data.caseId,
-            user_id: previousLeadId,
-            access_level: "read_only",
-            granted_by: userId,
-            note: "Retained read-only access after lead reassignment.",
-          });
-        if (ovErr) throw new Error(ovErr.message);
+          .eq("id", currentLead.id);
+        if (delErr) throw new Error(delErr.message);
       }
     }
 
-    const { error: clearErr } = await supabaseAdmin
+    // Promote existing member, or insert as lead.
+    const { data: existingMember } = await supabaseAdmin
       .from("case_assignments")
-      .delete()
+      .select("id")
       .eq("case_id", data.caseId)
-      .eq("user_id", data.newLeadId);
-    if (clearErr) throw new Error(clearErr.message);
+      .eq("user_id", data.newLeadId)
+      .maybeSingle();
 
-    const { error: insErr } = await supabaseAdmin
-      .from("case_assignments")
-      .insert({
-        case_id: data.caseId,
-        user_id: data.newLeadId,
-        role_on_case: "lead",
-        is_lead: true,
-        assigned_by: userId,
-      });
-    if (insErr) throw new Error(insErr.message);
+    if (existingMember?.id) {
+      const { error: promoteErr } = await supabaseAdmin
+        .from("case_assignments")
+        .update({
+          is_lead: true,
+          role_on_case: "lead",
+          assigned_by: userId,
+        })
+        .eq("id", existingMember.id);
+      if (promoteErr) throw new Error(promoteErr.message);
+    } else {
+      const { error: insErr } = await supabaseAdmin
+        .from("case_assignments")
+        .insert({
+          case_id: data.caseId,
+          user_id: data.newLeadId,
+          role_on_case: "lead",
+          is_lead: true,
+          assigned_by: userId,
+        });
+      if (insErr) throw new Error(insErr.message);
+    }
 
     // Also assign the active stage to the new lead when it has no assignee.
     const { data: activeStage } = await supabaseAdmin
@@ -192,7 +204,7 @@ export const reassignLead = createServerFn({ method: "POST" })
         previous_lead: previousLeadId,
         new_lead: data.newLeadId,
         lead_name: leadProfile.full_name,
-        kept_read_only: data.keepReadOnly,
+        kept_on_team: data.keepOnTeam,
       },
     });
 
@@ -204,7 +216,7 @@ export const reassignLead = createServerFn({ method: "POST" })
       detail: {
         previous_lead: previousLeadId,
         new_lead: data.newLeadId,
-        kept_read_only: data.keepReadOnly,
+        kept_on_team: data.keepOnTeam,
       },
     });
 
@@ -213,6 +225,178 @@ export const reassignLead = createServerFn({ method: "POST" })
       lead_name: leadProfile.full_name ?? null,
       lead_id: data.newLeadId,
     };
+  });
+
+export interface CaseTeamMemberRow {
+  userId: string;
+  fullName: string;
+  role: string;
+  isLead: boolean;
+  roleOnCase: string | null;
+  assignedAt: string | null;
+}
+
+/** List everyone assigned to the case (lead + other lawyers). */
+export const listCaseTeam = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    return { caseId: input.caseId };
+  })
+  .handler(async ({ data, context }): Promise<CaseTeamMemberRow[]> => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, userId);
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("case_assignments")
+      .select("user_id, is_lead, role_on_case, assigned_at")
+      .eq("case_id", data.caseId)
+      .order("is_lead", { ascending: false })
+      .order("assigned_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    if (!rows?.length) return [];
+
+    const ids = rows.map((r) => r.user_id).filter(Boolean) as string[];
+    const { data: profiles, error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, role, is_active")
+      .in("id", ids);
+    if (pErr) throw new Error(pErr.message);
+
+    const byId = new Map((profiles ?? []).map((p) => [p.id as string, p]));
+    return rows
+      .map((r) => {
+        const p = byId.get(r.user_id as string);
+        if (!p || p.is_active === false) return null;
+        return {
+          userId: r.user_id as string,
+          fullName: (p.full_name as string) || "Unnamed",
+          role: (p.role as string) || "support",
+          isLead: Boolean(r.is_lead),
+          roleOnCase: (r.role_on_case as string | null) ?? null,
+          assignedAt: (r.assigned_at as string | null) ?? null,
+        };
+      })
+      .filter((m): m is CaseTeamMemberRow => m !== null);
+  });
+
+/**
+ * Add another lawyer (non-lead) to the case team. One lead + many lawyers.
+ */
+export const addCaseTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string; userId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.userId) throw new Error("A user is required.");
+    return { caseId: input.caseId, userId: input.userId };
+  })
+  .handler(async ({ data, context }) => {
+    const { userId: actorId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, actorId);
+
+    const { data: profile, error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name, role, is_active")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!profile?.is_active) {
+      throw new Error("That user is inactive and cannot be assigned.");
+    }
+    const allowed = [
+      "super_admin",
+      "admin",
+      "senior_lawyer",
+      "junior_lawyer",
+    ];
+    if (!allowed.includes(profile.role as string)) {
+      throw new Error("Only lawyers (or admins) can be added to a case team.");
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("case_assignments")
+      .select("id, is_lead")
+      .eq("case_id", data.caseId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (existing) {
+      throw new Error("That person is already on this case team.");
+    }
+
+    const { error: insErr } = await supabaseAdmin.from("case_assignments").insert({
+      case_id: data.caseId,
+      user_id: data.userId,
+      role_on_case: "lawyer",
+      is_lead: false,
+      assigned_by: actorId,
+    });
+    if (insErr) throw new Error(insErr.message);
+
+    await supabaseAdmin.from("activity_log").insert({
+      case_id: data.caseId,
+      actor_id: actorId,
+      action: "team_member_added",
+      detail: {
+        user_id: data.userId,
+        full_name: profile.full_name,
+        role: profile.role,
+      },
+    });
+
+    return { ok: true as const, fullName: profile.full_name ?? null };
+  });
+
+/**
+ * Remove a non-lead lawyer from the case. Lead must be changed first.
+ */
+export const removeCaseTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string; userId: string }) => {
+    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.userId) throw new Error("A user is required.");
+    return { caseId: input.caseId, userId: input.userId };
+  })
+  .handler(async ({ data, context }) => {
+    const { userId: actorId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, actorId);
+
+    const { data: row, error } = await supabaseAdmin
+      .from("case_assignments")
+      .select("id, is_lead, user_id")
+      .eq("case_id", data.caseId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("That person is not on this case team.");
+    if (row.is_lead) {
+      throw new Error(
+        "Assign a different lead before removing the current lead from the team.",
+      );
+    }
+
+    const { error: delErr } = await supabaseAdmin
+      .from("case_assignments")
+      .delete()
+      .eq("id", row.id);
+    if (delErr) throw new Error(delErr.message);
+
+    await supabaseAdmin.from("activity_log").insert({
+      case_id: data.caseId,
+      actor_id: actorId,
+      action: "team_member_removed",
+      detail: { user_id: data.userId },
+    });
+
+    return { ok: true as const };
   });
 
 /**

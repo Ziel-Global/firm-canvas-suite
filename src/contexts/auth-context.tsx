@@ -31,6 +31,7 @@ interface AuthContextValue {
   role: AppRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,6 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setUser(null);
       setProfile(null);
+    },
+    [],
+  );
+
+  const refreshProfile = useMemo(
+    () => async () => {
+      const { data } = await supabase.auth.getSession();
+      const uid = data.session?.user?.id;
+      if (!uid) {
+        setProfile(null);
+        return;
+      }
+      const { data: row } = await supabase
+        .from("profiles")
+        .select("id, full_name, role, is_active, two_factor_enabled, phone")
+        .eq("id", uid)
+        .maybeSingle();
+      setProfile((row as Profile | null) ?? null);
     },
     [],
   );
@@ -276,8 +295,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: profile?.role ?? null,
       loading,
       signOut,
+      refreshProfile,
     }),
-    [user, session, profile, loading, signOut],
+    [user, session, profile, loading, signOut, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -130,14 +130,14 @@ export function BoardSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 overflow-x-auto pb-2 lg:flex-row lg:items-stretch",
+        "flex max-w-full min-w-0 gap-4 overflow-x-auto overscroll-x-contain pb-2",
         className,
       )}
     >
       {Array.from({ length: 4 }).map((_, col) => (
         <Card
           key={col}
-          className="flex min-w-[260px] flex-1 flex-col border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_12px_32px_-20px_rgba(0,0,0,0.5)]"
+          className="flex w-[17.5rem] shrink-0 flex-col border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-3 shadow-[0_12px_32px_-20px_rgba(0,0,0,0.5)]"
         >
           <div className="mb-3 flex items-center justify-between px-1">
             <Skeleton className="h-3 w-20" />
@@ -147,7 +147,7 @@ export function BoardSkeleton({ className }: { className?: string }) {
             {Array.from({ length: 3 - (col % 2) }).map((_, r) => (
               <div
                 key={r}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5 space-y-2.5"
+                className="space-y-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5"
               >
                 <Skeleton className="h-3.5 w-[85%]" />
                 <Skeleton className="h-2.5 w-[50%]" />

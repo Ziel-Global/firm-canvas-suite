@@ -82,14 +82,19 @@ export function TopBar({ title, className }: TopBarProps) {
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             <NotificationsDropdown />
 
-            <div
-              className="hidden items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-1 pr-3 pl-1 sm:flex"
-              title={displayName}
+            <Link
+              to="/profile"
+              title="View profile"
+              className={cn(
+                "flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] py-1 pr-3 pl-1",
+                "transition-colors hover:border-white/15 hover:bg-white/[0.07]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+              )}
             >
               <span className="flex size-7 items-center justify-center rounded-full border border-white/12 bg-gradient-to-b from-white/[0.16] to-white/[0.05] text-[10px] font-semibold tracking-wide text-foreground">
                 {initials}
               </span>
-              <span className="min-w-0">
+              <span className="hidden min-w-0 sm:block">
                 <span className="block max-w-[9rem] truncate text-xs font-medium tracking-tight text-foreground">
                   {displayName}
                 </span>
@@ -99,7 +104,7 @@ export function TopBar({ title, className }: TopBarProps) {
                   </span>
                 ) : null}
               </span>
-            </div>
+            </Link>
 
             {(role === "super_admin" || role === "admin") && (
               <Button

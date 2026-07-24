@@ -21,9 +21,11 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ProfileRow[]> => {
     const { supabase } = context;
 
+    // Internal directory only — client portal accounts are not firm users.
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, role, phone, is_active, created_at")
+      .neq("role", "client")
       .order("created_at", { ascending: true });
 
     if (error) throw new Error(error.message);
