@@ -41,7 +41,7 @@ import { EventDetailSheet } from "@/components/event-detail-sheet";
 export const Route = createFileRoute("/calendar")({
   head: () => ({
     meta: [
-      { title: "Calendar — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content: "Firm calendar with day, week, and month views.",

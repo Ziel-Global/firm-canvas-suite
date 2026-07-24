@@ -23,7 +23,7 @@ import { ListSkeleton } from "@/components/loading-skeletons";
 export const Route = createFileRoute("/approvals")({
   head: () => ({
     meta: [
-      { title: "Approvals — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content: "Review queue for pending document approvals.",

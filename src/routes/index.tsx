@@ -35,7 +35,7 @@ import { PremiumLoaderPanel } from "@/components/premium-loader";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content: "Workspace overview for firm operations.",

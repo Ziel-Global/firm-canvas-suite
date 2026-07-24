@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content: "View and update your personal account details.",

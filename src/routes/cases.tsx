@@ -48,7 +48,7 @@ export const Route = createFileRoute("/cases")({
   }),
   head: () => ({
     meta: [
-      { title: "Cases — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content: "Cases section for the firm operations system.",

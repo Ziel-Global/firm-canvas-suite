@@ -28,7 +28,7 @@ import { ListSkeleton } from "@/components/loading-skeletons";
 export const Route = createFileRoute("/knowledge-base")({
   head: () => ({
     meta: [
-      { title: "Knowledge Base — SAS Associates" },
+      { title: "verdio" },
       {
         name: "description",
         content:
