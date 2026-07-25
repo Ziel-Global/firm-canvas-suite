@@ -19,8 +19,9 @@ export const verifyAccess = createServerFn({ method: "GET" })
 
     const { data, error } = await supabase.rpc("is_active_user");
     if (error) {
-      // If we cannot confirm the user is active, treat as revoked.
-      return { active: false as const };
+      // Transient DB error — we cannot confirm either way. Report "unknown"
+      // so the client does NOT force a sign-out; RLS still blocks all data.
+      return { active: null, userId };
     }
 
     return { active: Boolean(data), userId };

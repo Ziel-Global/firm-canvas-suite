@@ -19,7 +19,8 @@ export interface TaskRow {
   assignee_id: string | null;
   assignee_name: string | null;
   sort_order: number | null;
-
+  /** When set, this task mirrors a case workflow stage. */
+  stage_id: string | null;
 }
 
 /**
@@ -35,7 +36,7 @@ export const listTasks = createServerFn({ method: "GET" })
     let query = supabase
       .from("tasks")
       .select(
-        "id, title, description, status, priority, start_date, due_date, case_id, assignee_id, sort_order, created_at",
+        "id, title, description, status, priority, start_date, due_date, case_id, assignee_id, sort_order, created_at, stage_id",
       );
 
     if (data?.caseId) {
@@ -101,7 +102,7 @@ export const listTasks = createServerFn({ method: "GET" })
         assignee_id: (t.assignee_id as string) ?? null,
         assignee_name: t.assignee_id ? peopleMap.get(t.assignee_id) ?? null : null,
         sort_order: (t.sort_order as number) ?? null,
-
+        stage_id: (t.stage_id as string) ?? null,
       };
     });
   });

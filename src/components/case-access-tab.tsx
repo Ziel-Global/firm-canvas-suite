@@ -171,6 +171,8 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
         );
       }
       await queryClient.invalidateQueries({ queryKey: ["case-access", caseId] });
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
       setEditing(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update access.");

@@ -102,6 +102,17 @@ export const setCaseAccessOverride = createServerFn({ method: "POST" })
       });
     if (insErr) throw new Error(insErr.message);
 
+    if (data.accessLevel === "none") {
+      const { supabaseAdmin } = await import(
+        "@/integrations/supabase/client.server"
+      );
+      const { revokeUserCaseWork } = await import("@/lib/stage-task-sync");
+      await revokeUserCaseWork(supabaseAdmin, {
+        caseId: data.caseId,
+        userId: data.targetUserId,
+      });
+    }
+
     // Audit log (access change).
     const { error: audErr } = await supabase.from("audit_log").insert({
       actor_id: userId,

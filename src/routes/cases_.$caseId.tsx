@@ -54,10 +54,17 @@ export const Route = createFileRoute("/cases_/$caseId")({
   head: () => ({
     meta: [{ title: "Verdio" }],
   }),
-  validateSearch: (search: Record<string, unknown>): { tab?: string } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: string; stageId?: string } => {
     const tab = typeof search.tab === "string" ? search.tab : undefined;
+    const stageId =
+      typeof search.stageId === "string" && search.stageId.trim()
+        ? search.stageId.trim()
+        : undefined;
     return {
       tab: tab && (TABS as readonly string[]).includes(tab) ? tab : undefined,
+      stageId,
     };
   },
   component: CaseDetailPage,
@@ -113,7 +120,7 @@ function formatDate(value: string | null) {
 
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
-  const { tab: tabFromSearch } = Route.useSearch();
+  const { tab: tabFromSearch, stageId: stageIdFromSearch } = Route.useSearch();
   const { role, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const fetchDetail = useServerFn(getCaseDetail);
@@ -127,6 +134,12 @@ function CaseDetailPage() {
   const isFirmAdmin = role === "super_admin" || role === "admin";
   const canAssign = isFirmAdmin;
   const canManageLifecycle = canAssign;
+
+  useEffect(() => {
+    if (tabFromSearch && tabFromSearch !== tab) {
+      setTab(tabFromSearch);
+    }
+  }, [tabFromSearch]);
 
   useEffect(() => {
     if (tab === "activity" && role != null && !isFirmAdmin) {
@@ -401,7 +414,10 @@ function CaseDetailPage() {
                       }}
                     />
                   ) : t === "stages" ? (
-                    <CaseStagesTab caseId={caseId} />
+                    <CaseStagesTab
+                      caseId={caseId}
+                      initialStageId={stageIdFromSearch}
+                    />
                   ) : t === "notes" ? (
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (

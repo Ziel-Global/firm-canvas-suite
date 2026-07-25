@@ -23,9 +23,9 @@ import {
   assignStageAssignee,
   createCaseStage,
   deleteCaseStage,
+  listCaseTeam,
   updateCaseStage,
 } from "@/lib/case-lifecycle.functions";
-import { listAssignableStaff } from "@/lib/users.functions";
 import { useAuth } from "@/contexts/auth-context";
 import { DarkDatePicker } from "@/components/dark-date-picker";
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,13 @@ function StepIcon({ status }: { status: string | null }) {
   return <span className="text-xs font-semibold" />;
 }
 
-export function CaseStagesTab({ caseId }: { caseId: string }) {
+export function CaseStagesTab({
+  caseId,
+  initialStageId,
+}: {
+  caseId: string;
+  initialStageId?: string | null;
+}) {
   const fetchStages = useServerFn(getCaseStages);
   const { data: stages, isLoading } = useQuery({
     queryKey: ["case-stages", caseId],
@@ -108,16 +114,21 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
   const canManage = role === "super_admin" || role === "admin";
   const [adding, setAdding] = useState(false);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialStageId ?? null,
+  );
 
   useEffect(() => {
     if (!stages || stages.length === 0) return;
     setSelectedId((prev) => {
+      if (initialStageId && stages.some((s) => s.id === initialStageId)) {
+        return initialStageId;
+      }
       if (prev && stages.some((s) => s.id === prev)) return prev;
       const active = stages.find((s) => s.status === "active");
       return active?.id ?? stages[0].id;
     });
-  }, [stages]);
+  }, [stages, initialStageId]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
@@ -125,6 +136,8 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
     queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
     queryClient.invalidateQueries({ queryKey: ["case-overview", caseId] });
     queryClient.invalidateQueries({ queryKey: ["cases"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["case-team", caseId] });
   };
 
   if (isLoading) {
@@ -424,7 +437,7 @@ function StageDetail({
   const assignStage = useServerFn(assignStageAssignee);
   const updateStage = useServerFn(updateCaseStage);
   const removeStage = useServerFn(deleteCaseStage);
-  const fetchStaff = useServerFn(listAssignableStaff);
+  const fetchTeam = useServerFn(listCaseTeam);
   const [notes, setNotes] = useState("");
   const [comments, setComments] = useState("");
   const [returning, setReturning] = useState(false);
@@ -447,9 +460,9 @@ function StageDetail({
     setStageNotesDraft(stage.notes ?? "");
   }, [stage.id, stage.name, stage.deadline, stage.notes]);
 
-  const { data: staff = [] } = useQuery({
-    queryKey: ["assignable-staff"],
-    queryFn: () => fetchStaff(),
+  const { data: team = [] } = useQuery({
+    queryKey: ["case-team", caseId],
+    queryFn: () => fetchTeam({ data: { caseId } }),
     enabled: canAssign,
   });
 
@@ -643,13 +656,19 @@ function StageDetail({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>Unassigned</SelectItem>
-                  {staff.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.full_name ?? "Unnamed"}
+                  {team.map((p) => (
+                    <SelectItem key={p.userId} value={p.userId}>
+                      {p.fullName}
+                      {p.isLead ? " (Lead)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {team.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Add lawyers on the Team tab before assigning a stage.
+                </p>
+              ) : null}
               {assigneeDirty ? (
                 <Button
                   type="button"

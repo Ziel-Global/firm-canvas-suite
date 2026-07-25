@@ -62,6 +62,12 @@ export const completeStage = createServerFn({ method: "POST" })
       .eq("id", stage.id);
     if (upErr) throw new Error(upErr.message);
 
+    const {
+      markStageTaskComplete,
+      activateStageTask,
+    } = await import("@/lib/stage-task-sync");
+    await markStageTaskComplete(supabaseAdmin, stage.id);
+
     // Find the next stage by sequence order.
     const { data: nextStage } = await supabaseAdmin
       .from("case_stages")
@@ -81,6 +87,8 @@ export const completeStage = createServerFn({ method: "POST" })
         .from("cases")
         .update({ current_stage_id: nextStage.id })
         .eq("id", data.caseId);
+
+      await activateStageTask(supabaseAdmin, nextStage.id);
 
       if (nextStage.assignee_id) {
         await supabaseAdmin.from("notifications").insert({
@@ -187,6 +195,9 @@ export const returnStage = createServerFn({ method: "POST" })
       .from("cases")
       .update({ current_stage_id: prevStage.id })
       .eq("id", data.caseId);
+
+    const { reactivateStageTask } = await import("@/lib/stage-task-sync");
+    await reactivateStageTask(supabaseAdmin, prevStage.id);
 
     if (prevStage.assignee_id) {
       await supabaseAdmin.from("notifications").insert({

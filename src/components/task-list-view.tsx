@@ -131,7 +131,10 @@ export function TaskListView({
                 }
               >
                 <TableCell className="max-w-[280px]">
-                  <p className="font-medium tracking-tight text-foreground">{task.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium tracking-tight text-foreground">{task.title}</p>
+                    {task.stage_id ? <Tag color="sand">Stage</Tag> : null}
+                  </div>
                   {task.description ? (
                     <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                       {task.description}

@@ -389,6 +389,12 @@ export const removeCaseTeamMember = createServerFn({ method: "POST" })
       .eq("id", row.id);
     if (delErr) throw new Error(delErr.message);
 
+    const { revokeUserCaseWork } = await import("@/lib/stage-task-sync");
+    await revokeUserCaseWork(supabaseAdmin, {
+      caseId: data.caseId,
+      userId: data.userId,
+    });
+
     await supabaseAdmin.from("activity_log").insert({
       case_id: data.caseId,
       actor_id: actorId,
@@ -418,6 +424,14 @@ export const assignStageAssignee = createServerFn({ method: "POST" })
     );
     await assertCaseAdmin(supabaseAdmin, userId);
 
+    const { data: stage, error: stageErr } = await supabaseAdmin
+      .from("case_stages")
+      .select("id, case_id, name, status, deadline, assignee_id")
+      .eq("id", data.stageId)
+      .maybeSingle();
+    if (stageErr) throw new Error(stageErr.message);
+    if (!stage) throw new Error("Stage not found.");
+
     if (data.assigneeId) {
       const { data: person, error } = await supabaseAdmin
         .from("profiles")
@@ -426,21 +440,47 @@ export const assignStageAssignee = createServerFn({ method: "POST" })
         .maybeSingle();
       if (error) throw new Error(error.message);
       if (!person?.is_active) throw new Error("That user is inactive.");
-    }
 
-    const { data: stage, error: stageErr } = await supabaseAdmin
-      .from("case_stages")
-      .select("id, case_id, name, assignee_id")
-      .eq("id", data.stageId)
-      .maybeSingle();
-    if (stageErr) throw new Error(stageErr.message);
-    if (!stage) throw new Error("Stage not found.");
+      const { data: onTeam, error: teamErr } = await supabaseAdmin
+        .from("case_assignments")
+        .select("user_id")
+        .eq("case_id", stage.case_id)
+        .eq("user_id", data.assigneeId)
+        .maybeSingle();
+      if (teamErr) throw new Error(teamErr.message);
+      if (!onTeam) {
+        throw new Error(
+          "Stages can only be assigned to people on this case team. Add them on the Team tab first.",
+        );
+      }
+    }
 
     const { error: updErr } = await supabaseAdmin
       .from("case_stages")
       .update({ assignee_id: data.assigneeId })
       .eq("id", data.stageId);
     if (updErr) throw new Error(updErr.message);
+
+    const { syncStageAssigneeTask } = await import("@/lib/stage-task-sync");
+    await syncStageAssigneeTask(supabaseAdmin, {
+      stageId: stage.id,
+      caseId: stage.case_id,
+      stageName: stage.name,
+      stageStatus: stage.status,
+      deadline: stage.deadline,
+      assigneeId: data.assigneeId,
+      actorId: userId,
+    });
+
+    if (data.assigneeId && data.assigneeId !== stage.assignee_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: data.assigneeId,
+        type: "stage_assigned",
+        title: "Stage assigned to you",
+        body: `"${stage.name ?? "A stage"}" was assigned to you and added to your tasks.`,
+        link: "/tasks",
+      });
+    }
 
     await supabaseAdmin.from("activity_log").insert({
       case_id: stage.case_id,
@@ -676,6 +716,13 @@ export const updateCaseStage = createServerFn({ method: "POST" })
       .eq("id", data.stageId);
     if (updErr) throw new Error(updErr.message);
 
+    const { updateStageTaskMeta } = await import("@/lib/stage-task-sync");
+    await updateStageTaskMeta(supabaseAdmin, {
+      stageId: stage.id,
+      stageName: data.name,
+      deadline: data.deadline,
+    });
+
     await supabaseAdmin.from("activity_log").insert({
       case_id: stage.case_id,
       actor_id: userId,
@@ -736,6 +783,9 @@ export const deleteCaseStage = createServerFn({ method: "POST" })
     if (caseRow?.current_stage_id === stage.id) {
       throw new Error("Cannot delete the case's current stage.");
     }
+
+    const { deleteStageTask } = await import("@/lib/stage-task-sync");
+    await deleteStageTask(supabaseAdmin, stage.id);
 
     const { error: delErr } = await supabaseAdmin
       .from("case_stages")

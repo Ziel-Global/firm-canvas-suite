@@ -53,10 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Tracks which user's profile is loaded so focus-driven auth events
+  // (TOKEN_REFRESHED etc.) don't re-fetch and re-render needlessly.
+  const profileUidRef = useRef<string | null>(null);
 
   const signOut = useMemo(
     () => async () => {
       await supabase.auth.signOut();
+      profileUidRef.current = null;
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -102,7 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.session?.user ?? null);
       if (data.session?.user) {
         const p = await loadProfile(data.session.user.id);
-        if (active) setProfile(p);
+        if (active) {
+          profileUidRef.current = data.session.user.id;
+          setProfile(p);
+        }
       }
       if (active) setLoading(false);
     }
@@ -110,13 +117,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
+      // Supabase fires TOKEN_REFRESHED / SIGNED_IN every time the tab regains
+      // focus. Skip no-op updates so the whole app doesn't re-render (and
+      // effects don't re-run) when nothing meaningful changed.
+      setSession((prev) =>
+        prev?.access_token === newSession?.access_token ? prev : newSession,
+      );
+      setUser((prev) => {
+        const nextUser = newSession?.user ?? null;
+        return prev?.id === nextUser?.id ? prev : nextUser;
+      });
       if (newSession?.user) {
-        loadProfile(newSession.user.id).then((p) => {
-          if (active) setProfile(p);
-        });
+        const uid = newSession.user.id;
+        // Only re-fetch the profile when the signed-in user actually changed.
+        if (profileUidRef.current !== uid) {
+          profileUidRef.current = uid;
+          loadProfile(uid).then((p) => {
+            if (active) setProfile(p);
+          });
+        }
       } else {
+        profileUidRef.current = null;
         setProfile(null);
       }
     });
@@ -190,27 +211,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const check = async () => {
+      // Don't check while the tab is hidden: browsers throttle timers in
+      // background tabs, so the access token may be expired until Supabase
+      // refreshes it on focus. Checking then would fail spuriously.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
       try {
+        // getSession() refreshes an expired token first, so the server call
+        // below never runs with a stale token after returning to the tab.
+        const { data } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (!data.session) return; // redirect effect handles missing sessions
+
         const result = await verifyAccess();
+        // Only an explicit "revoked" answer ends the session. Transient
+        // network/server errors must NOT log the user out — RLS already
+        // blocks all data for a genuinely revoked session.
         if (!cancelled && result && result.active === false) {
           await signOut();
           navigate({ to: "/auth", replace: true });
         }
       } catch {
-        // A failed/unauthorized check means the session is no longer valid.
-        if (!cancelled) {
-          await signOut();
-          navigate({ to: "/auth", replace: true });
-        }
+        // Network hiccup or in-flight token refresh — try again next tick.
       }
     };
 
     void check();
     const interval = setInterval(check, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [session, pathname, navigate, signOut]);
 

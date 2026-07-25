@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { CalendarClock, FolderKanban, User } from "lucide-react";
+import { ArrowUpRight, CalendarClock, FolderKanban, Layers, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import type { TaskRow, TaskStatus } from "@/lib/tasks.functions";
 import { Tag } from "@/components/ui/tag";
 import { AvatarStack } from "@/components/ui/avatar-stack";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -89,6 +90,31 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
 
         {task ? (
           <div className="flex-1 space-y-5 overflow-y-auto py-5">
+            {task.stage_id ? (
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <Layers className="size-3.5" />
+                  Workflow stage
+                </div>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  This task mirrors a case stage. Open it to mark work complete.
+                </p>
+                {task.case_id ? (
+                  <Button asChild className="mt-3 w-full" size="sm">
+                    <Link
+                      to="/cases/$caseId"
+                      params={{ caseId: task.case_id }}
+                      search={{ tab: "stages", stageId: task.stage_id }}
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Open stage
+                      <ArrowUpRight className="size-3.5" />
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
             {task.description ? (
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {task.description}
@@ -155,6 +181,11 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                     <Link
                       to="/cases/$caseId"
                       params={{ caseId: task.case_id }}
+                      search={
+                        task.stage_id
+                          ? { tab: "stages", stageId: task.stage_id }
+                          : { tab: "tasks" }
+                      }
                       onClick={() => onOpenChange(false)}
                       className="text-tag-blue hover:underline"
                     >

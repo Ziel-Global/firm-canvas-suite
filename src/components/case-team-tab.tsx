@@ -63,6 +63,8 @@ export function CaseTeamTab({
     queryClient.invalidateQueries({ queryKey: ["cases"] });
     queryClient.invalidateQueries({ queryKey: ["document-visibility"] });
     queryClient.invalidateQueries({ queryKey: ["case-access", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
   };
 
   const addMutation = useMutation({

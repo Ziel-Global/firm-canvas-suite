@@ -134,6 +134,11 @@ function TaskCardBody({ task }: { task: TaskRow }) {
       <p className="mt-3 text-sm font-semibold leading-snug tracking-tight text-foreground">
         {task.title}
       </p>
+      {task.stage_id ? (
+        <div className="mt-2">
+          <Tag color="sand">Stage</Tag>
+        </div>
+      ) : null}
       {task.description ? (
         <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {task.description}

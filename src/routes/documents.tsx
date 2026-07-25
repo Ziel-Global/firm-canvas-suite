@@ -7,15 +7,21 @@ import {
   BadgeCheck,
   Briefcase,
   ChevronRight,
+  ExternalLink,
   FileSpreadsheet,
   FileText,
   ImageIcon,
   Layers,
+  Loader2,
   Search,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/auth-context";
-import { searchGlobalDocuments } from "@/lib/documents.functions";
+import {
+  getDocumentViewUrl,
+  searchGlobalDocuments,
+} from "@/lib/documents.functions";
 import { listCases } from "@/lib/cases.functions";
 import { PremiumSelect } from "@/components/premium-select";
 import { Card } from "@/components/ui/card";
@@ -107,10 +113,12 @@ function GlobalDocumentsPage() {
   const { role } = useAuth();
   const searchDocs = useServerFn(searchGlobalDocuments);
   const fetchCases = useServerFn(listCases);
+  const fetchViewUrl = useServerFn(getDocumentViewUrl);
 
   const [query, setQuery] = useState("");
   const [caseId, setCaseId] = useState("");
   const [type, setType] = useState("");
+  const [openingId, setOpeningId] = useState<string | null>(null);
 
   const canAccess = role != null && (STAFF_ROLES as readonly string[]).includes(role);
   const isAdmin = role === "super_admin" || role === "admin";
@@ -134,6 +142,24 @@ function GlobalDocumentsPage() {
       }),
     enabled: canAccess,
   });
+
+  async function openDocument(doc: { id: string; case_id: string | null }) {
+    if (!doc.case_id || openingId) return;
+    setOpeningId(doc.id);
+    try {
+      const result = await fetchViewUrl({
+        data: {
+          caseId: doc.case_id,
+          documentId: doc.id,
+        },
+      });
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open document");
+    } finally {
+      setOpeningId(null);
+    }
+  }
 
   const selectedCaseLabel = useMemo(() => {
     if (!caseId) return null;
@@ -224,8 +250,8 @@ function GlobalDocumentsPage() {
             </h1>
             <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
               {isAdmin
-                ? "Browse firm documents you can open. Filter by matter or file type."
-                : "Files from your matters that you are allowed to view."}
+                ? "Click a file to open it. Filter by matter or file type."
+                : "Click a file to open it. Only files from your matters that you can view appear here."}
             </p>
           </div>
           {!isLoading && !error ? (
@@ -308,90 +334,117 @@ function GlobalDocumentsPage() {
                     : doc.case_title && doc.case_title !== "Unknown Case"
                       ? doc.case_title
                       : doc.case_ref ?? "Unlinked case";
-
-                const body = (
-                  <>
-                    <span
-                      className={cn(
-                        "mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl border",
-                        typeTone(doc.doc_type),
-                      )}
-                    >
-                      <TypeGlyph type={doc.doc_type} />
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
-                          {title}
-                        </h3>
-                        <span
-                          className={cn(
-                            "rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
-                            statusTone(doc.approval_status),
-                          )}
-                        >
-                          {statusLabel(doc.approval_status)}
-                        </span>
-                        {doc.is_locked ? (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-status-ontrack">
-                            <BadgeCheck className="size-3" />
-                            Final
-                          </span>
-                        ) : null}
-                        {doc.is_archived ? (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                            <Archive className="size-3" />
-                            Archived
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {doc.doc_type ? (
-                          <span className="font-medium text-foreground/70">{doc.doc_type}</span>
-                        ) : null}
-                        <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
-                          <Briefcase className="size-3 shrink-0 opacity-60" />
-                          <span className="truncate">{caseLine}</span>
-                        </span>
-                        <span className="tabular-nums text-foreground/55">
-                          v{doc.current_version ?? 1}
-                        </span>
-                        <span className="hidden sm:inline text-white/15">·</span>
-                        <span className="hidden truncate sm:inline">
-                          {doc.uploader_name ?? "Unknown uploader"}
-                        </span>
-                        <span className="hidden sm:inline text-white/15">·</span>
-                        <span className="hidden tabular-nums sm:inline">
-                          {formatDate(doc.created_at)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] tabular-nums text-muted-foreground sm:hidden">
-                        {doc.uploader_name ?? "Unknown"} · {formatDate(doc.created_at)}
-                      </p>
-                    </div>
-
-                    <ChevronRight className="mt-3 size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70" />
-                  </>
-                );
+                const isOpening = openingId === doc.id;
+                const canOpen = Boolean(doc.case_id);
 
                 return (
                   <li key={doc.id}>
-                    {doc.case_id ? (
-                      <Link
-                        to="/cases/$caseId"
-                        params={{ caseId: doc.case_id }}
-                        search={{ tab: "documents" }}
-                        className="group flex w-full items-start gap-3.5 px-4 py-4 transition-colors hover:bg-white/[0.035] sm:gap-4 sm:px-5"
+                    <div
+                      role={canOpen ? "button" : undefined}
+                      tabIndex={canOpen ? 0 : undefined}
+                      aria-busy={isOpening || undefined}
+                      aria-disabled={!canOpen || openingId != null || undefined}
+                      onClick={() => {
+                        if (!canOpen || openingId != null) return;
+                        void openDocument(doc);
+                      }}
+                      onKeyDown={(e) => {
+                        if (!canOpen || openingId != null) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          void openDocument(doc);
+                        }
+                      }}
+                      className={cn(
+                        "group flex w-full items-start gap-3.5 px-4 py-4 text-left transition-colors sm:gap-4 sm:px-5",
+                        canOpen
+                          ? "cursor-pointer hover:bg-white/[0.035]"
+                          : "cursor-not-allowed opacity-60",
+                        openingId != null && !isOpening ? "pointer-events-none opacity-70" : null,
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-2xl border",
+                          typeTone(doc.doc_type),
+                        )}
                       >
-                        {body}
-                      </Link>
-                    ) : (
-                      <div className="group flex w-full items-start gap-3.5 px-4 py-4 sm:gap-4 sm:px-5">
-                        {body}
+                        <TypeGlyph type={doc.doc_type} />
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+                            {title}
+                          </h3>
+                          <span
+                            className={cn(
+                              "rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
+                              statusTone(doc.approval_status),
+                            )}
+                          >
+                            {statusLabel(doc.approval_status)}
+                          </span>
+                          {doc.is_locked ? (
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-status-ontrack">
+                              <BadgeCheck className="size-3" />
+                              Final
+                            </span>
+                          ) : null}
+                          {doc.is_archived ? (
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                              <Archive className="size-3" />
+                              Archived
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {doc.doc_type ? (
+                            <span className="font-medium text-foreground/70">{doc.doc_type}</span>
+                          ) : null}
+                          {doc.case_id ? (
+                            <Link
+                              to="/cases/$caseId"
+                              params={{ caseId: doc.case_id }}
+                              search={{ tab: "documents" }}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="inline-flex min-w-0 items-center gap-1.5 truncate hover:text-foreground/85"
+                              title="Open case documents"
+                            >
+                              <Briefcase className="size-3 shrink-0 opacity-60" />
+                              <span className="truncate">{caseLine}</span>
+                            </Link>
+                          ) : (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
+                              <Briefcase className="size-3 shrink-0 opacity-60" />
+                              <span className="truncate">{caseLine}</span>
+                            </span>
+                          )}
+                          <span className="tabular-nums text-foreground/55">
+                            v{doc.current_version ?? 1}
+                          </span>
+                          <span className="hidden sm:inline text-white/15">·</span>
+                          <span className="hidden truncate sm:inline">
+                            {doc.uploader_name ?? "Unknown uploader"}
+                          </span>
+                          <span className="hidden sm:inline text-white/15">·</span>
+                          <span className="hidden tabular-nums sm:inline">
+                            {formatDate(doc.created_at)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] tabular-nums text-muted-foreground sm:hidden">
+                          {doc.uploader_name ?? "Unknown"} · {formatDate(doc.created_at)}
+                        </p>
                       </div>
-                    )}
+
+                      {isOpening ? (
+                        <Loader2 className="mt-3 size-4 shrink-0 animate-spin text-muted-foreground" />
+                      ) : (
+                        <ExternalLink className="mt-3 size-4 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground/70" />
+                      )}
+                    </div>
                   </li>
                 );
               })}
