@@ -728,38 +728,37 @@ export const restoreDocumentVersion = createServerFn({ method: "POST" })
   });
 
 /**
- * Search all documents across the firm.
- * Super Admins and Admins only.
- * Returns only permitted documents because of RLS on documents and document_folders.
+ * Search documents the caller is allowed to see (RLS + can_read_document).
+ * Available to all active staff — not clients.
  */
 export const searchGlobalDocuments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { q?: string; caseId?: string; type?: string; folderId?: string }) => input)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: role } = await supabase.rpc("current_role");
-    
-    if (role !== "super_admin" && role !== "admin") {
-      throw new Error("Only administrators can search documents.");
+    const { supabase } = context;
+    const { data: role, error: roleErr } = await supabase.rpc("current_role");
+    if (roleErr) throw new Error(roleErr.message);
+    if (!role || role === "client") {
+      throw new Error("Staff accounts only.");
     }
 
     let query = supabase.from("documents").select(`
       id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at, visibility_mode,
-      cases(id, title)
+      cases(id, title, case_ref)
     `);
 
     if (data.q) query = query.ilike("title", `%${data.q}%`);
     if (data.caseId) query = query.eq("case_id", data.caseId);
     if (data.type) query = query.eq("doc_type", data.type);
     if (data.folderId) query = query.eq("folder_id", data.folderId);
-    
+
     let docs: any[] | null = null;
     {
       const first = await query.order("created_at", { ascending: false }).limit(100);
       if (first.error && /visibility_mode|document_visibility/i.test(first.error.message)) {
         let fallback = supabase.from("documents").select(`
           id, case_id, folder_id, title, doc_type, current_version, is_locked, is_archived, approval_status, submitted_at, approved_at, approved_by, uploaded_by, created_at,
-          cases(id, title)
+          cases(id, title, case_ref)
         `);
         if (data.q) fallback = fallback.ilike("title", `%${data.q}%`);
         if (data.caseId) fallback = fallback.eq("case_id", data.caseId);
@@ -775,7 +774,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
       }
     }
     if (!docs || docs.length === 0) return [];
-    
+
     const uploaderIds = Array.from(new Set(docs.map((d) => d.uploaded_by).filter((v): v is string => Boolean(v))));
     const nameById = new Map<string, string>();
     if (uploaderIds.length > 0) {
@@ -789,11 +788,12 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
       folder_id: d.folder_id,
       title: d.title ?? "Untitled",
       case_title: d.cases?.title ?? "Unknown Case",
+      case_ref: (d.cases?.case_ref as string | null) ?? null,
       doc_type: d.doc_type,
       current_version: d.current_version,
       is_locked: Boolean(d.is_locked),
       is_archived: Boolean(d.is_archived),
-      approval_status: (d.approval_status as CaseDocument['approval_status']) ?? 'draft',
+      approval_status: (d.approval_status as CaseDocument["approval_status"]) ?? "draft",
       submitted_at: (d.submitted_at as string) ?? null,
       approved_at: (d.approved_at as string) ?? null,
       approved_by: (d.approved_by as string) ?? null,

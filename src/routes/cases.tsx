@@ -10,6 +10,10 @@ import {
   User,
   Plus,
   ChevronRight,
+  Activity,
+  Briefcase,
+  CircleDot,
+  Layers,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,16 +21,10 @@ import { NewCaseSheet } from "@/components/new-case-sheet";
 import { AssignLeadDialog } from "@/components/assign-lead-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { listCases, type CaseRow } from "@/lib/cases.functions";
+import { PremiumSelect } from "@/components/premium-select";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -197,6 +195,111 @@ function CasesPage() {
     [data],
   );
 
+  const statusOptions = useMemo(
+    () => [
+      {
+        value: "all",
+        label: "All statuses",
+        description: "Every lifecycle state",
+        icon: <Layers className="size-3.5" />,
+      },
+      {
+        value: "intake",
+        label: "Intake",
+        description: "Newly opened matters",
+        icon: <CircleDot className="size-3.5" />,
+      },
+      {
+        value: "active",
+        label: "Active",
+        description: "In progress",
+        icon: <CircleDot className="size-3.5" />,
+      },
+      {
+        value: "on_hold",
+        label: "On hold",
+        description: "Paused work",
+        icon: <CircleDot className="size-3.5" />,
+      },
+      {
+        value: "closed",
+        label: "Closed",
+        description: "Completed matters",
+        icon: <CircleDot className="size-3.5" />,
+      },
+    ],
+    [],
+  );
+
+  const typeOptions = useMemo(
+    () => [
+      {
+        value: "all",
+        label: "All types",
+        description: "Every practice area",
+        icon: <Layers className="size-3.5" />,
+      },
+      ...caseTypes.map((t) => ({
+        value: t,
+        label: t
+          .split("_")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" "),
+        description: "Case type",
+        icon: <Briefcase className="size-3.5" />,
+      })),
+    ],
+    [caseTypes],
+  );
+
+  const assigneeOptions = useMemo(
+    () => [
+      {
+        value: "all",
+        label: "All assignees",
+        description: "Any case lead",
+        icon: <Layers className="size-3.5" />,
+      },
+      ...assignees.map((a) => ({
+        value: a,
+        label: a,
+        description: "Case lead",
+        icon: <User className="size-3.5" />,
+      })),
+    ],
+    [assignees],
+  );
+
+  const healthOptions = useMemo(
+    () => [
+      {
+        value: "all",
+        label: "All health",
+        description: "Any risk level",
+        icon: <Layers className="size-3.5" />,
+      },
+      {
+        value: "on_track",
+        label: "On track",
+        description: "Healthy progress",
+        icon: <Activity className="size-3.5" />,
+      },
+      {
+        value: "at_risk",
+        label: "At risk",
+        description: "Needs attention",
+        icon: <Activity className="size-3.5" />,
+      },
+      {
+        value: "overdue",
+        label: "Overdue",
+        description: "Past deadline",
+        icon: <Activity className="size-3.5" />,
+      },
+    ],
+    [],
+  );
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (data ?? []).filter((c) => {
@@ -313,58 +416,50 @@ function CasesPage() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="intake">Intake</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="on_hold">On hold</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
+            <PremiumSelect
+              aria-label="Filter by status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={statusOptions}
+              emptyLabel="All statuses"
+              className="h-10 lg:w-40"
+              contentClassName="lg:w-56"
+            />
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-44">
-                <SelectValue placeholder="Case type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {caseTypes.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PremiumSelect
+              aria-label="Filter by case type"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={typeOptions}
+              emptyLabel="All types"
+              className="h-10 lg:w-44"
+              contentClassName="lg:w-56"
+              searchable={caseTypes.length > 6}
+              searchPlaceholder="Search types…"
+            />
 
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-44">
-                <SelectValue placeholder="Assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All assignees</SelectItem>
-                {assignees.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PremiumSelect
+              aria-label="Filter by assignee"
+              value={assigneeFilter}
+              onChange={setAssigneeFilter}
+              options={assigneeOptions}
+              emptyLabel="All assignees"
+              leadingIcon={<User className="size-3.5" />}
+              className="h-10 lg:w-44"
+              contentClassName="lg:w-60"
+              searchable={assignees.length > 6}
+              searchPlaceholder="Search assignees…"
+            />
 
-            <Select value={healthFilter} onValueChange={setHealthFilter}>
-              <SelectTrigger className="h-10 w-full border-white/[0.08] bg-[#17191D] lg:w-40">
-                <SelectValue placeholder="Health" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All health</SelectItem>
-                <SelectItem value="on_track">On track</SelectItem>
-                <SelectItem value="at_risk">At risk</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
+            <PremiumSelect
+              aria-label="Filter by health"
+              value={healthFilter}
+              onChange={setHealthFilter}
+              options={healthOptions}
+              emptyLabel="All health"
+              className="h-10 lg:w-40"
+              contentClassName="lg:w-56"
+            />
           </div>
         </Card>
 
