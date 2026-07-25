@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, FileText, Lock, Filter, Archive } from "lucide-react";
+import { Search, FileText, BadgeCheck, Filter, Archive } from "lucide-react";
 
 import { useAuth } from "@/contexts/auth-context";
 import { searchGlobalDocuments } from "@/lib/documents.functions";
@@ -226,9 +226,9 @@ function DocumentRowBody({
             {statusLabel}
           </span>
           {doc.is_locked && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-priority-high/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-priority-high">
-              <Lock className="size-3" />
-              Locked
+            <span className="inline-flex items-center gap-1 rounded-md bg-status-ontrack/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-ontrack">
+              <BadgeCheck className="size-3" />
+              Final
             </span>
           )}
           {doc.is_archived && (

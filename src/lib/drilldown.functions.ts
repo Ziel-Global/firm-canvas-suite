@@ -154,9 +154,17 @@ export const getCaseDrillDown = createServerFn({ method: "GET" })
     return input;
   })
   .handler(async ({ data, context }): Promise<CaseDrillDown> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { caseId } = data;
     const todayStr = new Date().toISOString().slice(0, 10);
+
+    const { data: caller } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    const canViewActivity =
+      caller?.role === "super_admin" || caller?.role === "admin";
 
     const [caseRes, activityRes, tasksRes, stagesRes] = await Promise.all([
       supabase
@@ -165,12 +173,14 @@ export const getCaseDrillDown = createServerFn({ method: "GET" })
         .eq("id", caseId)
         .single(),
 
-      supabase
-        .from("activity_log")
-        .select("action, created_at, actor_id, profiles(full_name)")
-        .eq("case_id", caseId)
-        .order("created_at", { ascending: false })
-        .limit(8),
+      canViewActivity
+        ? supabase
+            .from("activity_log")
+            .select("action, created_at, actor_id, profiles(full_name)")
+            .eq("case_id", caseId)
+            .order("created_at", { ascending: false })
+            .limit(8)
+        : Promise.resolve({ data: [] as never[], error: null }),
 
       supabase
         .from("tasks")

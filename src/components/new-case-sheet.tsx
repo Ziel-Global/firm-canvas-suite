@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import {
   createCase,
   listClientOptions,
-  listWorkflowTemplateOptions,
   CASE_TYPES,
   type CaseType,
 } from "@/lib/cases.functions";
@@ -57,7 +56,6 @@ const CASE_TYPE_LABELS: Record<CaseType, string> = {
   other: "Other",
 };
 
-const NO_TEMPLATE = "__none__";
 const FIELD_CLASS =
   "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
 
@@ -65,12 +63,10 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
   const queryClient = useQueryClient();
   const create = useServerFn(createCase);
   const fetchClients = useServerFn(listClientOptions);
-  const fetchTemplates = useServerFn(listWorkflowTemplateOptions);
 
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [caseType, setCaseType] = useState<CaseType | "">("");
-  const [templateId, setTemplateId] = useState<string>(NO_TEMPLATE);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -80,30 +76,18 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
     queryFn: () => fetchClients(),
     enabled: open,
   });
-  const templatesQuery = useQuery({
-    queryKey: ["workflow-template-options"],
-    queryFn: () => fetchTemplates(),
-    enabled: open,
-  });
 
   const clients = clientsQuery.data ?? [];
-  const templates = templatesQuery.data ?? [];
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === clientId) ?? null,
     [clients, clientId],
   );
 
-  const selectedTemplateLabel =
-    templateId === NO_TEMPLATE
-      ? "No template"
-      : (templates.find((t) => t.id === templateId)?.name ?? "No template");
-
   const reset = () => {
     setTitle("");
     setClientId("");
     setCaseType("");
-    setTemplateId(NO_TEMPLATE);
     setFormError(null);
   };
 
@@ -114,7 +98,6 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
           title: title.trim(),
           client_id: clientId,
           case_type: caseType as CaseType,
-          workflow_template_id: templateId === NO_TEMPLATE ? null : templateId,
         },
       }),
     onSuccess: (result) => {
@@ -171,7 +154,8 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
             <SheetTitle>New case</SheetTitle>
             <SheetDescription>
               A unique reference (CASE-YYYY-NNNN) and standard folders are
-              created automatically on save.
+              created automatically on save. Add stages and deadlines from the
+              case Stages tab.
             </SheetDescription>
           </SheetHeader>
 
@@ -292,51 +276,6 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Workflow template</Label>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-between font-normal",
-                      FIELD_CLASS,
-                    )}
-                  >
-                    <span className="truncate">{selectedTemplateLabel}</span>
-                    <ChevronDown className="size-4 shrink-0 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                  <DropdownMenuItem
-                    onSelect={() => setTemplateId(NO_TEMPLATE)}
-                    className="justify-between gap-2"
-                  >
-                    No template
-                    {templateId === NO_TEMPLATE ? (
-                      <Check className="size-4 shrink-0" />
-                    ) : null}
-                  </DropdownMenuItem>
-                  {templates.map((t) => (
-                    <DropdownMenuItem
-                      key={t.id}
-                      onSelect={() => setTemplateId(t.id)}
-                      className="justify-between gap-2"
-                    >
-                      <span className="truncate">{t.name}</span>
-                      {templateId === t.id ? (
-                        <Check className="size-4 shrink-0" />
-                      ) : null}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <p className="text-xs text-muted-foreground">
-                Optional — copies the template&apos;s stages into the case.
-              </p>
             </div>
 
             {formError ? (

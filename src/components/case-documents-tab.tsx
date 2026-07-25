@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Folder, FolderOpen, FileText, Lock, Upload, Bot, Loader2, Share2, Eye, Download } from "lucide-react";
+import { Folder, FolderOpen, FileText, BadgeCheck, Upload, Bot, Loader2, Share2, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -440,6 +440,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       key={doc.id}
                       doc={doc}
                       selected={doc.id === selectedDocumentId}
+                      showAccessBadges={canShareWithClient}
                       onSelect={() => setSelectedDocumentId(doc.id)}
                     />
                   ))}
@@ -603,8 +604,8 @@ function SelectedDocumentBar({
               {statusLabel(doc.approval_status)}
             </span>
             {doc.is_locked ? (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-priority-high/15 px-2 py-0.5 text-[11px] text-priority-high">
-                <Lock className="size-3" />
+              <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/15 px-2 py-0.5 text-[11px] text-status-ontrack">
+                <BadgeCheck className="size-3" />
                 Final
               </span>
             ) : null}
@@ -620,7 +621,7 @@ function SelectedDocumentBar({
           </div>
           {doc.is_locked ? (
             <p className="text-xs text-muted-foreground">
-              Locked as final — view and download only.
+              Approved as final — view and download only (not an access restriction).
             </p>
           ) : null}
         </div>
@@ -678,10 +679,12 @@ function SelectedDocumentBar({
 function DocumentRow({
   doc,
   selected,
+  showAccessBadges,
   onSelect,
 }: {
   doc: CaseDocument;
   selected: boolean;
+  showAccessBadges: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -735,17 +738,17 @@ function DocumentRow({
         </div>
         <div className="hidden shrink-0 flex-wrap items-center justify-end gap-1.5 sm:flex">
           {doc.is_locked ? (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-priority-high/15 px-2 py-1 text-[10px] font-medium text-priority-high">
-              <Lock className="size-3" />
+            <span className="inline-flex items-center gap-1 rounded-lg bg-status-ontrack/15 px-2 py-1 text-[10px] font-medium text-status-ontrack">
+              <BadgeCheck className="size-3" />
               Final
             </span>
           ) : null}
-          {doc.visibility_mode === "admin_only" ? (
+          {showAccessBadges && doc.visibility_mode === "admin_only" ? (
             <span className="rounded-lg bg-tag-sand/15 px-2 py-1 text-[10px] text-tag-sand">
               Admin only
             </span>
           ) : null}
-          {doc.visibility_mode === "allowlist" ? (
+          {showAccessBadges && doc.visibility_mode === "allowlist" ? (
             <span className="rounded-lg bg-tag-blue/12 px-2 py-1 text-[10px] text-tag-blue/90">
               Restricted
             </span>

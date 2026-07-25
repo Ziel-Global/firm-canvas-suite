@@ -457,6 +457,305 @@ export const assignStageAssignee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function parseOptionalDate(value: string | null | undefined, fieldLabel: string) {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(`${fieldLabel} must be a valid date.`);
+  }
+  return trimmed;
+}
+
+type StageDeadlineRow = {
+  name: string | null;
+  sequence_order: number | null;
+  deadline: string | null;
+};
+
+/**
+ * Earlier stages must deadline before later stages when both dates are set.
+ * Empty deadlines are ignored (they do not block neighbouring stages).
+ */
+function assertStageDeadlinesInOrder(stages: StageDeadlineRow[]) {
+  const ordered = [...stages].sort(
+    (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0),
+  );
+  const dated = ordered
+    .map((s, index) => ({
+      index,
+      name: (s.name ?? "").trim() || `Stage ${index + 1}`,
+      deadline: s.deadline,
+    }))
+    .filter((s): s is { index: number; name: string; deadline: string } =>
+      Boolean(s.deadline),
+    );
+
+  for (let i = 0; i < dated.length - 1; i += 1) {
+    const earlier = dated[i];
+    const later = dated[i + 1];
+    if (earlier.deadline >= later.deadline) {
+      throw new Error(
+        `Deadline for “${earlier.name}” (${earlier.deadline}) must be before “${later.name}” (${later.deadline}). Stages run in order, so earlier phases cannot collide with later ones.`,
+      );
+    }
+  }
+}
+
+/**
+ * Add a workflow stage to a case with an optional absolute deadline.
+ * Admins set stages manually — nothing is auto-copied from templates on create.
+ */
+export const createCaseStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      caseId: string;
+      name: string;
+      deadline?: string | null;
+      notes?: string | null;
+    }) => {
+      if (!input?.caseId) throw new Error("A case id is required.");
+      const name = (input.name ?? "").trim();
+      if (!name) throw new Error("Stage name is required.");
+      return {
+        caseId: input.caseId,
+        name,
+        deadline: parseOptionalDate(input.deadline, "Deadline"),
+        notes: (input.notes ?? "").trim() || null,
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, userId);
+
+    const { data: caseRow, error: caseErr } = await supabaseAdmin
+      .from("cases")
+      .select("id, current_stage_id")
+      .eq("id", data.caseId)
+      .maybeSingle();
+    if (caseErr) throw new Error(caseErr.message);
+    if (!caseRow) throw new Error("Case not found.");
+
+    const { data: existing, error: listErr } = await supabaseAdmin
+      .from("case_stages")
+      .select("id, name, sequence_order, status, deadline")
+      .eq("case_id", data.caseId)
+      .order("sequence_order", { ascending: true });
+    if (listErr) throw new Error(listErr.message);
+
+    const stages = existing ?? [];
+    const maxOrder = stages.reduce(
+      (max, row) => Math.max(max, row.sequence_order ?? 0),
+      0,
+    );
+    const nextOrder = maxOrder + 1;
+    assertStageDeadlinesInOrder([
+      ...stages.map((row) => ({
+        name: row.name,
+        sequence_order: row.sequence_order,
+        deadline: row.deadline,
+      })),
+      {
+        name: data.name,
+        sequence_order: nextOrder,
+        deadline: data.deadline,
+      },
+    ]);
+
+    const isFirst = stages.length === 0;
+    const hasActive = stages.some((row) => row.status === "active");
+
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from("case_stages")
+      .insert({
+        case_id: data.caseId,
+        name: data.name,
+        sequence_order: nextOrder,
+        status: isFirst || !hasActive ? "active" : "pending",
+        deadline: data.deadline,
+        notes: data.notes,
+        started_at: isFirst || !hasActive ? new Date().toISOString() : null,
+      })
+      .select("id")
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+
+    if (isFirst || !caseRow.current_stage_id || !hasActive) {
+      await supabaseAdmin
+        .from("cases")
+        .update({ current_stage_id: inserted.id })
+        .eq("id", data.caseId);
+    }
+
+    await supabaseAdmin.from("activity_log").insert({
+      case_id: data.caseId,
+      actor_id: userId,
+      action: "stage_created",
+      detail: {
+        stage_id: inserted.id,
+        stage_name: data.name,
+        deadline: data.deadline,
+      },
+    });
+
+    return { id: inserted.id };
+  });
+
+/**
+ * Update stage name, deadline, and notes. Admins only.
+ */
+export const updateCaseStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      stageId: string;
+      name: string;
+      deadline?: string | null;
+      notes?: string | null;
+    }) => {
+      if (!input?.stageId) throw new Error("A stage id is required.");
+      const name = (input.name ?? "").trim();
+      if (!name) throw new Error("Stage name is required.");
+      return {
+        stageId: input.stageId,
+        name,
+        deadline: parseOptionalDate(input.deadline, "Deadline"),
+        notes: (input.notes ?? "").trim() || null,
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, userId);
+
+    const { data: stage, error: stageErr } = await supabaseAdmin
+      .from("case_stages")
+      .select("id, case_id, name, deadline, notes, sequence_order")
+      .eq("id", data.stageId)
+      .maybeSingle();
+    if (stageErr) throw new Error(stageErr.message);
+    if (!stage) throw new Error("Stage not found.");
+
+    const { data: siblings, error: listErr } = await supabaseAdmin
+      .from("case_stages")
+      .select("id, name, sequence_order, deadline")
+      .eq("case_id", stage.case_id)
+      .order("sequence_order", { ascending: true });
+    if (listErr) throw new Error(listErr.message);
+
+    assertStageDeadlinesInOrder(
+      (siblings ?? []).map((row) =>
+        row.id === stage.id
+          ? {
+              name: data.name,
+              sequence_order: row.sequence_order,
+              deadline: data.deadline,
+            }
+          : {
+              name: row.name,
+              sequence_order: row.sequence_order,
+              deadline: row.deadline,
+            },
+      ),
+    );
+
+    const { error: updErr } = await supabaseAdmin
+      .from("case_stages")
+      .update({
+        name: data.name,
+        deadline: data.deadline,
+        notes: data.notes,
+      })
+      .eq("id", data.stageId);
+    if (updErr) throw new Error(updErr.message);
+
+    await supabaseAdmin.from("activity_log").insert({
+      case_id: stage.case_id,
+      actor_id: userId,
+      action: "stage_updated",
+      detail: {
+        stage_id: stage.id,
+        from: {
+          name: stage.name,
+          deadline: stage.deadline,
+          notes: stage.notes,
+        },
+        to: {
+          name: data.name,
+          deadline: data.deadline,
+          notes: data.notes,
+        },
+      },
+    });
+
+    return { ok: true };
+  });
+
+/**
+ * Delete a pending stage. Blocks removing the active stage or completed work.
+ */
+export const deleteCaseStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { stageId: string }) => {
+    if (!input?.stageId) throw new Error("A stage id is required.");
+    return { stageId: input.stageId };
+  })
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, userId);
+
+    const { data: stage, error: stageErr } = await supabaseAdmin
+      .from("case_stages")
+      .select("id, case_id, name, status")
+      .eq("id", data.stageId)
+      .maybeSingle();
+    if (stageErr) throw new Error(stageErr.message);
+    if (!stage) throw new Error("Stage not found.");
+    if (stage.status === "active") {
+      throw new Error("Mark the stage complete or return it before deleting.");
+    }
+    if (stage.status === "complete") {
+      throw new Error("Completed stages cannot be deleted.");
+    }
+
+    const { data: caseRow } = await supabaseAdmin
+      .from("cases")
+      .select("current_stage_id")
+      .eq("id", stage.case_id)
+      .maybeSingle();
+    if (caseRow?.current_stage_id === stage.id) {
+      throw new Error("Cannot delete the case's current stage.");
+    }
+
+    const { error: delErr } = await supabaseAdmin
+      .from("case_stages")
+      .delete()
+      .eq("id", data.stageId);
+    if (delErr) throw new Error(delErr.message);
+
+    await supabaseAdmin.from("activity_log").insert({
+      case_id: stage.case_id,
+      actor_id: userId,
+      action: "stage_deleted",
+      detail: {
+        stage_id: stage.id,
+        stage_name: stage.name,
+      },
+    });
+
+    return { ok: true };
+  });
+
 /**
  * Close a case: records a closure summary, sets closed_at, derives
  * retention_until from firm_settings.retention_days, archives all case

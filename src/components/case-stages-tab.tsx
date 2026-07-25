@@ -8,7 +8,9 @@ import {
   FileOutput,
   Loader2,
   Lock,
+  Plus,
   StickyNote,
+  Trash2,
   Undo2,
   User,
   UserPlus,
@@ -17,11 +19,18 @@ import { toast } from "sonner";
 
 import { getCaseStages, type CaseStageRow } from "@/lib/cases.functions";
 import { completeStage, returnStage } from "@/lib/stage-transitions.functions";
-import { assignStageAssignee } from "@/lib/case-lifecycle.functions";
+import {
+  assignStageAssignee,
+  createCaseStage,
+  deleteCaseStage,
+  updateCaseStage,
+} from "@/lib/case-lifecycle.functions";
 import { listAssignableStaff } from "@/lib/users.functions";
 import { useAuth } from "@/contexts/auth-context";
+import { DarkDatePicker } from "@/components/dark-date-picker";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -33,6 +42,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const FIELD_CLASS =
+  "border-border bg-surface shadow-none focus-visible:ring-1 focus-visible:ring-white/15";
+
+function parseIsoDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}
+
+function toIsoDate(date: Date | undefined): string | null {
+  if (!date) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 const STATUS_TAG: Record<
   string,
@@ -78,6 +105,8 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
   });
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
+  const canManage = role === "super_admin" || role === "admin";
+  const [adding, setAdding] = useState(false);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -90,19 +119,52 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
     });
   }, [stages]);
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["case-overview", caseId] });
+    queryClient.invalidateQueries({ queryKey: ["cases"] });
+  };
+
   if (isLoading) {
     return <Card className="p-6 text-sm text-muted-foreground">Loading stages…</Card>;
   }
 
   if (!stages || stages.length === 0) {
     return (
-      <Card className="p-6">
-        <h3 className="text-sm font-semibold text-foreground">Stages</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This case has no workflow stages yet. Stages are added when a workflow template is
-          applied.
-        </p>
-      </Card>
+      <div className="space-y-4">
+        <Card className="p-6">
+          <h3 className="text-sm font-semibold text-foreground">Stages</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This case has no workflow stages yet.
+            {canManage
+              ? " Add stages and set each deadline here — nothing is created automatically."
+              : " An admin needs to add stages and deadlines for this case."}
+          </p>
+          {canManage ? (
+            <Button
+              type="button"
+              className="mt-4 gap-1.5"
+              onClick={() => setAdding(true)}
+            >
+              <Plus className="size-4" />
+              Add stage
+            </Button>
+          ) : null}
+        </Card>
+        {canManage && adding ? (
+          <AddStageCard
+            caseId={caseId}
+            onCancel={() => setAdding(false)}
+            onCreated={(id) => {
+              setAdding(false);
+              setSelectedId(id);
+              invalidate();
+            }}
+          />
+        ) : null}
+      </div>
     );
   }
 
@@ -110,6 +172,37 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {canManage
+            ? "Set each stage deadline manually. Calendar deadline events update when you save a date."
+            : "Stage progress and deadlines for this case."}
+        </p>
+        {canManage ? (
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Plus className="size-3.5" />
+            {adding ? "Hide form" : "Add stage"}
+          </Button>
+        ) : null}
+      </div>
+
+      {canManage && adding ? (
+        <AddStageCard
+          caseId={caseId}
+          onCancel={() => setAdding(false)}
+          onCreated={(id) => {
+            setAdding(false);
+            setSelectedId(id);
+            invalidate();
+          }}
+        />
+      ) : null}
+
       {/* Horizontal stepper */}
       <Card className="overflow-x-auto p-5">
         <ol className="flex min-w-max items-start gap-2">
@@ -179,18 +272,14 @@ export function CaseStagesTab({ caseId }: { caseId: string }) {
         caseId={caseId}
         isFirst={stages[0]?.id === selected.id}
         isSuperAdmin={role === "super_admin"}
-        canAssign={role === "super_admin" || role === "admin"}
+        canAssign={canManage}
         canAct={
           role === "super_admin" ||
           role === "admin" ||
           role === "senior_lawyer" ||
           selected.assignee_id === user?.id
         }
-        onChanged={() => {
-          queryClient.invalidateQueries({ queryKey: ["case-stages", caseId] });
-          queryClient.invalidateQueries({ queryKey: ["case", caseId] });
-          queryClient.invalidateQueries({ queryKey: ["case-activity", caseId] });
-        }}
+        onChanged={invalidate}
       />
     </div>
   );
@@ -202,6 +291,110 @@ function MetaLine({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-foreground/80">{label}:</span>
       <span className="truncate">{value}</span>
     </div>
+  );
+}
+
+function AddStageCard({
+  caseId,
+  onCancel,
+  onCreated,
+}: {
+  caseId: string;
+  onCancel: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const create = useServerFn(createCaseStage);
+  const [name, setName] = useState("");
+  const [deadline, setDeadline] = useState<Date | undefined>();
+  const [notes, setNotes] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      create({
+        data: {
+          caseId,
+          name: name.trim(),
+          deadline: toIsoDate(deadline),
+          notes: notes.trim() || null,
+        },
+      }),
+    onSuccess: (result) => {
+      toast.success("Stage added.");
+      onCreated(result.id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card className="space-y-4 p-5">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">New stage</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Name the stage and set its deadline. Leave the date empty if it is not fixed yet.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="new-stage-name">Stage name</Label>
+          <Input
+            id="new-stage-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Drafting, Filing, Hearing"
+            className={FIELD_CLASS}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Deadline</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <DarkDatePicker
+              value={deadline}
+              onChange={setDeadline}
+              className={cn("flex-1", FIELD_CLASS)}
+              placeholder="Set deadline"
+            />
+            {deadline ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeadline(undefined)}
+              >
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="new-stage-notes">Notes (optional)</Label>
+          <Textarea
+            id="new-stage-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            className={FIELD_CLASS}
+            placeholder="Internal notes for this stage…"
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          disabled={mutation.isPending || !name.trim()}
+          onClick={() => mutation.mutate()}
+        >
+          {mutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
+          Save stage
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={mutation.isPending}>
+          Cancel
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -229,6 +422,8 @@ function StageDetail({
   const complete = useServerFn(completeStage);
   const sendBack = useServerFn(returnStage);
   const assignStage = useServerFn(assignStageAssignee);
+  const updateStage = useServerFn(updateCaseStage);
+  const removeStage = useServerFn(deleteCaseStage);
   const fetchStaff = useServerFn(listAssignableStaff);
   const [notes, setNotes] = useState("");
   const [comments, setComments] = useState("");
@@ -236,10 +431,21 @@ function StageDetail({
   const [assigneeDraft, setAssigneeDraft] = useState<string>(
     stage.assignee_id ?? NONE,
   );
+  const [nameDraft, setNameDraft] = useState(stage.name ?? "");
+  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined>(
+    parseIsoDate(stage.deadline),
+  );
+  const [stageNotesDraft, setStageNotesDraft] = useState(stage.notes ?? "");
 
   useEffect(() => {
     setAssigneeDraft(stage.assignee_id ?? NONE);
   }, [stage.id, stage.assignee_id]);
+
+  useEffect(() => {
+    setNameDraft(stage.name ?? "");
+    setDeadlineDraft(parseIsoDate(stage.deadline));
+    setStageNotesDraft(stage.notes ?? "");
+  }, [stage.id, stage.name, stage.deadline, stage.notes]);
 
   const { data: staff = [] } = useQuery({
     queryKey: ["assignable-staff"],
@@ -290,17 +496,142 @@ function StageDetail({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const saveDetailsMutation = useMutation({
+    mutationFn: () =>
+      updateStage({
+        data: {
+          stageId: stage.id,
+          name: nameDraft.trim(),
+          deadline: toIsoDate(deadlineDraft),
+          notes: stageNotesDraft.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Stage details saved.");
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => removeStage({ data: { stageId: stage.id } }),
+    onSuccess: () => {
+      toast.success("Stage removed.");
+      onChanged();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const isActive = status === "active";
   const isPrincipalApproval = /principal\s+approval/i.test(stage.name ?? "");
   const principalLocked = isPrincipalApproval && !isSuperAdmin;
   const assigneeDirty = (stage.assignee_id ?? NONE) !== assigneeDraft;
+  const detailsDirty =
+    (stage.name ?? "") !== nameDraft.trim() ||
+    (stage.deadline ?? null) !== toIsoDate(deadlineDraft) ||
+    (stage.notes ?? "") !== stageNotesDraft.trim();
+  const canDelete = canAssign && status !== "active" && status !== "complete";
 
   return (
     <Card className="space-y-5 border-white/[0.08] bg-[rgba(18,18,20,0.78)] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-foreground">{stage.name ?? "Stage"}</h3>
-        <Tag color={tag.color}>{tag.label}</Tag>
+        <h3 className="text-lg font-semibold text-foreground">
+          {canAssign ? "Stage details" : (stage.name ?? "Stage")}
+        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <Tag color={tag.color}>{tag.label}</Tag>
+          {canDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-priority-high hover:text-priority-high"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Remove stage “${stage.name ?? "Untitled"}”? This cannot be undone.`,
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="size-3.5" />
+              )}
+              Delete
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {canAssign ? (
+        <div className="space-y-4 rounded-card border border-border bg-frame/40 p-4">
+          <div className="space-y-1.5">
+            <Label htmlFor={`stage-name-${stage.id}`}>Name</Label>
+            <Input
+              id={`stage-name-${stage.id}`}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              className={FIELD_CLASS}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Deadline</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <DarkDatePicker
+                value={deadlineDraft}
+                onChange={setDeadlineDraft}
+                className={cn("min-w-[14rem] flex-1", FIELD_CLASS)}
+                placeholder="Set deadline"
+              />
+              {deadlineDraft ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeadlineDraft(undefined)}
+                >
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Must fall before the next stage’s deadline (and after the previous
+              one) when those dates are set.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`stage-notes-${stage.id}`}>Notes</Label>
+            <Textarea
+              id={`stage-notes-${stage.id}`}
+              value={stageNotesDraft}
+              onChange={(e) => setStageNotesDraft(e.target.value)}
+              rows={3}
+              className={FIELD_CLASS}
+              placeholder="Internal notes for this stage…"
+            />
+          </div>
+          {detailsDirty ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={saveDetailsMutation.isPending || !nameDraft.trim()}
+              onClick={() => saveDetailsMutation.mutate()}
+            >
+              {saveDetailsMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              Save stage details
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field icon={<User className="size-4" />} label="Assignee">
@@ -340,9 +671,11 @@ function StageDetail({
             stage.assignee_name || "Unassigned"
           )}
         </Field>
-        <Field icon={<Clock className="size-4" />} label="Deadline">
-          {formatDate(stage.deadline)}
-        </Field>
+        {!canAssign ? (
+          <Field icon={<Clock className="size-4" />} label="Deadline">
+            {formatDate(stage.deadline)}
+          </Field>
+        ) : null}
         <Field icon={<Clock className="size-4" />} label="Started">
           {formatDate(stage.started_at)}
         </Field>
@@ -361,15 +694,17 @@ function StageDetail({
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <StickyNote className="size-4 text-muted-foreground" />
-          Notes
+      {!canAssign ? (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <StickyNote className="size-4 text-muted-foreground" />
+            Notes
+          </div>
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+            {stage.notes || "No notes on this stage."}
+          </p>
         </div>
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-          {stage.notes || "No notes on this stage."}
-        </p>
-      </div>
+      ) : null}
 
       {isActive && principalLocked && (
         <div className="flex items-start gap-2 rounded-card border border-priority-high/40 bg-priority-high/10 p-4 text-sm text-foreground">

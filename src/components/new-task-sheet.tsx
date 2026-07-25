@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
@@ -88,15 +88,28 @@ export function NewTaskSheet({
   const [tagLabel, setTagLabel] = useState("");
   const [tagColor, setTagColor] = useState<TagColor>("purple");
 
+  const optionsCaseId = caseId === NO_CASE ? null : caseId;
+
   const optionsQuery = useQuery({
-    queryKey: ["task-form-options"],
-    queryFn: () => fetchOptions(),
+    queryKey: ["task-form-options", optionsCaseId],
+    queryFn: () =>
+      fetchOptions({
+        data: { caseId: optionsCaseId },
+      }),
     enabled: open,
   });
 
   const options = optionsQuery.data;
   const assignees = options?.assignees ?? [];
   const cases = options?.cases ?? [];
+
+  // Drop a stale assignee when the case (and therefore the team list) changes.
+  useEffect(() => {
+    if (!open) return;
+    if (!assigneeId) return;
+    if (assignees.some((a) => a.id === assigneeId)) return;
+    setAssigneeId("");
+  }, [open, assigneeId, assignees]);
 
   function reset() {
     setTitle("");
@@ -201,7 +214,14 @@ export function NewTaskSheet({
 
           <div className="space-y-1.5">
             <Label>Case (optional)</Label>
-            <Select value={caseId} onValueChange={setCaseId} disabled={lockCase}>
+            <Select
+              value={caseId}
+              onValueChange={(value) => {
+                setCaseId(value);
+                setAssigneeId("");
+              }}
+              disabled={lockCase}
+            >
               <SelectTrigger className={FIELD_CLASS}>
                 <SelectValue placeholder="No case" />
               </SelectTrigger>
@@ -220,22 +240,44 @@ export function NewTaskSheet({
 
           <div className="space-y-1.5">
             <Label>Assignee</Label>
-            <Select value={assigneeId} onValueChange={setAssigneeId}>
+            <Select
+              value={assigneeId}
+              onValueChange={setAssigneeId}
+              disabled={optionsQuery.isLoading}
+            >
               <SelectTrigger className={FIELD_CLASS}>
-                <SelectValue placeholder="Select assignee" />
+                <SelectValue
+                  placeholder={
+                    optionsCaseId
+                      ? "Select someone on this case"
+                      : "Select assignee"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {assignees.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.full_name}
-                    {ROLE_LABELS[a.role] ? ` · ${ROLE_LABELS[a.role]}` : ""}
+                {assignees.length === 0 ? (
+                  <SelectItem value="__none_available__" disabled>
+                    {optionsCaseId
+                      ? "No team members on this case yet"
+                      : "No assignees available"}
                   </SelectItem>
-                ))}
+                ) : (
+                  assignees.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.full_name}
+                      {ROLE_LABELS[a.role] ? ` · ${ROLE_LABELS[a.role]}` : ""}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {options && !options.canAssignOthers ? (
               <p className="text-xs text-muted-foreground">
                 You can only assign tasks to yourself.
+              </p>
+            ) : optionsCaseId ? (
+              <p className="text-xs text-muted-foreground">
+                Only people assigned to this case can be selected.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">

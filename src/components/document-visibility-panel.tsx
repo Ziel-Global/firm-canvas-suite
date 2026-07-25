@@ -42,7 +42,7 @@ const MODE_OPTIONS: {
   },
   {
     mode: "admin_only",
-    title: "Lock for everyone",
+    title: "Admins only",
     description: "Hidden from the whole case team. Only admins can see it.",
   },
 ];
@@ -110,7 +110,7 @@ export function DocumentVisibilityPanel({
   }, [data]);
 
   const summary = useMemo(() => {
-    if (mode === "admin_only") return "Locked for everyone except admins";
+    if (mode === "admin_only") return "Visible to admins only";
     if (mode === "allowlist") {
       const n = allowedUsers.size + allowedRoles.size;
       if (n === 0) return "Allowlist empty — only admins / uploader see it";

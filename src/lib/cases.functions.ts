@@ -303,15 +303,14 @@ export interface CreateCaseInput {
   title: string;
   client_id: string;
   case_type: CaseType;
-  workflow_template_id?: string | null;
 }
 
 /**
  * Create a new case. Generates a unique case_ref (CASE-YYYY-NNNN) via the
  * `next_case_ref` DB function. The DB trigger auto-creates the seven standard
- * folders. If a workflow template is chosen, its stages are copied into
- * case_stages and current_stage_id is set to the first stage. Writes to
- * activity_log (also covered by the case-insert trigger).
+ * folders. Stages are not auto-created — admins add them (with deadlines) on
+ * the case Stages tab. Writes to activity_log (also covered by the case-insert
+ * trigger).
  *
  * Authorization is checked against the caller's profile (JWT sub). The write
  * uses the service-role client so RLS WITH CHECK / RETURNING quirks cannot
@@ -330,7 +329,6 @@ export const createCase = createServerFn({ method: "POST" })
       title,
       client_id: input.client_id,
       case_type: input.case_type,
-      workflow_template_id: input.workflow_template_id || null,
     };
   })
   .handler(async ({ data, context }): Promise<{ id: string; case_ref: string }> => {
@@ -371,54 +369,6 @@ export const createCase = createServerFn({ method: "POST" })
     if (insertError) throw new Error(insertError.message);
 
     const caseId = inserted.id;
-    let firstStageId: string | null = null;
-
-    if (data.workflow_template_id) {
-      const { data: tplStages, error: tplError } = await supabaseAdmin
-        .from("workflow_template_stages")
-        .select("name, sequence_order, responsible_role, deadline_days")
-        .eq("template_id", data.workflow_template_id)
-        .order("sequence_order", { ascending: true });
-      if (tplError) throw new Error(tplError.message);
-
-      if (tplStages && tplStages.length > 0) {
-        const today = new Date();
-        const rows = tplStages.map((s, index) => {
-          let deadline: string | null = null;
-          if (typeof s.deadline_days === "number") {
-            const d = new Date(today);
-            d.setDate(d.getDate() + s.deadline_days);
-            deadline = d.toISOString().slice(0, 10);
-          }
-          return {
-            case_id: caseId,
-            name: s.name as string,
-            sequence_order: s.sequence_order as number,
-            status: (index === 0 ? "active" : "pending") as
-              | "active"
-              | "pending",
-            deadline,
-          };
-        });
-
-        const { data: createdStages, error: stageError } = await supabaseAdmin
-          .from("case_stages")
-          .insert(rows)
-          .select("id, sequence_order");
-        if (stageError) throw new Error(stageError.message);
-
-        const sorted = (createdStages ?? []).sort(
-          (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0),
-        );
-        if (sorted.length > 0) {
-          firstStageId = sorted[0].id;
-          await supabaseAdmin
-            .from("cases")
-            .update({ current_stage_id: firstStageId })
-            .eq("id", caseId);
-        }
-      }
-    }
 
     const { error: logError } = await supabaseAdmin.from("activity_log").insert({
       case_id: caseId,
@@ -430,7 +380,6 @@ export const createCase = createServerFn({ method: "POST" })
         title: data.title,
         client_id: data.client_id,
         case_type: data.case_type,
-        workflow_template_id: data.workflow_template_id,
       },
     });
     // Trigger already logs case_created; don't fail the create if a second write is blocked.
@@ -562,7 +511,15 @@ export const getCaseOverview = createServerFn({ method: "GET" })
     return { id: input.id };
   })
   .handler(async ({ data, context }): Promise<CaseOverview> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+
+    const { data: caller } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    const canViewActivity =
+      caller?.role === "super_admin" || caller?.role === "admin";
 
     const { data: c, error } = await supabase
       .from("cases")
@@ -624,15 +581,20 @@ export const getCaseOverview = createServerFn({ method: "GET" })
       (t) => t.status !== "done",
     ).length;
 
-    // Recent activity
-    const { data: acts } = await supabase
-      .from("activity_log")
-      .select("id, action, actor_id, created_at")
-      .eq("case_id", c.id)
-      .order("created_at", { ascending: false })
-      .limit(6);
-    for (const a of acts ?? []) {
-      if (a.actor_id) profileIds.add(a.actor_id as string);
+    // Recent activity — admins / super_admins only
+    let acts: { id: string; action: string | null; actor_id: string | null; created_at: string }[] =
+      [];
+    if (canViewActivity) {
+      const { data: activityRows } = await supabase
+        .from("activity_log")
+        .select("id, action, actor_id, created_at")
+        .eq("case_id", c.id)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      acts = (activityRows ?? []) as typeof acts;
+      for (const a of acts) {
+        if (a.actor_id) profileIds.add(a.actor_id);
+      }
     }
 
     if (profileIds.size > 0) {
@@ -643,7 +605,7 @@ export const getCaseOverview = createServerFn({ method: "GET" })
       for (const p of profiles ?? []) profileName.set(p.id, p.full_name as string);
     }
 
-    const activity: CaseOverviewActivity[] = (acts ?? []).map((a) => ({
+    const activity: CaseOverviewActivity[] = acts.map((a) => ({
       id: a.id as string,
       action: (a.action as string) ?? null,
       actor_name: a.actor_id ? profileName.get(a.actor_id as string) ?? null : null,
@@ -779,9 +741,7 @@ export interface CaseActivityEntry {
 }
 
 /**
- * Full activity_log timeline for a case. RLS on activity_log scopes rows to
- * the cases the caller is allowed to read, so each role only sees permitted
- * entries.
+ * Full activity_log timeline for a case. Admins and super_admins only.
  */
 export const getCaseActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -790,7 +750,16 @@ export const getCaseActivity = createServerFn({ method: "GET" })
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseActivityEntry[]> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+
+    const { data: caller } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    if (caller?.role !== "super_admin" && caller?.role !== "admin") {
+      throw new Error("Only admins can view case activity.");
+    }
 
     const { data: acts, error } = await supabase
       .from("activity_log")

@@ -178,12 +178,16 @@ function roleCanAssignOthers(role: string) {
 }
 
 /**
- * Options for the New Task sheet. Only super_admin/admin may assign to others,
- * so non-privileged roles receive only their own profile as an assignee option.
+ * Options for the New Task sheet. Only super_admin/admin/senior_lawyer may
+ * assign to others. When `caseId` is set, assignees are limited to people on
+ * that case team (case_assignments).
  */
 export const getTaskFormOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<TaskFormOptions> => {
+  .validator((input?: { caseId?: string | null }) => ({
+    caseId: input?.caseId?.trim() || null,
+  }))
+  .handler(async ({ data, context }): Promise<TaskFormOptions> => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import(
       "@/integrations/supabase/client.server"
@@ -198,21 +202,50 @@ export const getTaskFormOptions = createServerFn({ method: "GET" })
     if (!me?.is_active) throw new Error("Your account is inactive.");
 
     const canAssignOthers = roleCanAssignOthers(me.role as string);
+    const caseId = data.caseId;
 
     let assignees: TaskAssigneeOption[];
     if (canAssignOthers) {
-      const { data: people, error } = await supabaseAdmin
+      let allowedIds: string[] | null = null;
+      if (caseId) {
+        const { data: team, error: teamErr } = await supabaseAdmin
+          .from("case_assignments")
+          .select("user_id")
+          .eq("case_id", caseId);
+        if (teamErr) throw new Error(teamErr.message);
+        allowedIds = (team ?? [])
+          .map((r) => r.user_id as string)
+          .filter(Boolean);
+      }
+
+      let peopleQuery = supabaseAdmin
         .from("profiles")
         .select("id, full_name, role")
         .eq("is_active", true)
         .in("role", [...TASK_ASSIGNEE_ROLES])
         .order("full_name", { ascending: true });
-      if (error) throw new Error(error.message);
-      assignees = (people ?? []).map((p) => ({
-        id: p.id as string,
-        full_name: (p.full_name as string) ?? "",
-        role: p.role as string,
-      }));
+
+      if (allowedIds !== null) {
+        if (allowedIds.length === 0) {
+          assignees = [];
+        } else {
+          const { data: people, error } = await peopleQuery.in("id", allowedIds);
+          if (error) throw new Error(error.message);
+          assignees = (people ?? []).map((p) => ({
+            id: p.id as string,
+            full_name: (p.full_name as string) ?? "",
+            role: p.role as string,
+          }));
+        }
+      } else {
+        const { data: people, error } = await peopleQuery;
+        if (error) throw new Error(error.message);
+        assignees = (people ?? []).map((p) => ({
+          id: p.id as string,
+          full_name: (p.full_name as string) ?? "",
+          role: p.role as string,
+        }));
+      }
     } else {
       assignees = [
         {
@@ -317,6 +350,21 @@ export const createTask = createServerFn({ method: "POST" })
       if (accessErr) throw new Error(accessErr.message);
       if (access !== "full") {
         throw new Error("You can only assign case tasks on matters you fully access.");
+      }
+    }
+
+    if (caseId) {
+      const { data: onTeam, error: teamErr } = await supabaseAdmin
+        .from("case_assignments")
+        .select("user_id")
+        .eq("case_id", caseId)
+        .eq("user_id", assigneeId)
+        .maybeSingle();
+      if (teamErr) throw new Error(teamErr.message);
+      if (!onTeam) {
+        throw new Error(
+          "Tasks on a case can only be assigned to people on that case team.",
+        );
       }
     }
 

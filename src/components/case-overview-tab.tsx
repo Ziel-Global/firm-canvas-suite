@@ -243,33 +243,35 @@ export function CaseOverviewTab({
         </div>
       </Card>
 
-      {/* Recent activity */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Recent activity</h3>
-        </div>
-        {data.activity.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No activity recorded.</p>
-        ) : (
-          <ol className="mt-4 space-y-4">
-            {data.activity.map((a) => (
-              <li key={a.id} className="flex gap-3">
-                <span className="mt-1.5 size-2 shrink-0 rounded-pill bg-primary" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {actionLabel(a.action)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDateTime(a.created_at)}
-                    {a.actor_name ? ` · ${a.actor_name}` : ""}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Card>
+      {/* Recent activity — admins only */}
+      {canEditCase ? (
+        <Card className="p-5">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="size-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Recent activity</h3>
+          </div>
+          {data.activity.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No activity recorded.</p>
+          ) : (
+            <ol className="mt-4 space-y-4">
+              {data.activity.map((a) => (
+                <li key={a.id} className="flex gap-3">
+                  <span className="mt-1.5 size-2 shrink-0 rounded-pill bg-primary" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {actionLabel(a.action)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(a.created_at)}
+                      {a.actor_name ? ` · ${a.actor_name}` : ""}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+      ) : null}
 
       {/* Role-appropriate quick actions */}
       {canManage && (

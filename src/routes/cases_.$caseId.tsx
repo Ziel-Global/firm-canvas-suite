@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -127,6 +127,12 @@ function CaseDetailPage() {
   const isFirmAdmin = role === "super_admin" || role === "admin";
   const canAssign = isFirmAdmin;
   const canManageLifecycle = canAssign;
+
+  useEffect(() => {
+    if (tab === "activity" && role != null && !isFirmAdmin) {
+      setTab("overview");
+    }
+  }, [tab, role, isFirmAdmin]);
 
   const { data: myAccess, isLoading: accessLoading } = useQuery({
     queryKey: ["my-case-access", caseId],
@@ -377,7 +383,7 @@ function CaseDetailPage() {
             />
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex w-full flex-wrap justify-start gap-1">
-                {TABS.map((t) => (
+                {TABS.filter((t) => t !== "activity" || isFirmAdmin).map((t) => (
                   <TabsTrigger key={t} value={t} className="capitalize">
                     {t}
                   </TabsTrigger>
@@ -399,7 +405,15 @@ function CaseDetailPage() {
                   ) : t === "notes" ? (
                     <CaseNotesTab caseId={caseId} role={role} />
                   ) : t === "activity" ? (
-                    <CaseActivityTab caseId={caseId} />
+                    isFirmAdmin ? (
+                      <CaseActivityTab caseId={caseId} />
+                    ) : (
+                      <Card className="p-6">
+                        <p className="text-sm text-muted-foreground">
+                          Only admins can view case activity.
+                        </p>
+                      </Card>
+                    )
                   ) : t === "tasks" ? (
                     <CaseTasksTab caseId={caseId} />
                   ) : t === "documents" ? (

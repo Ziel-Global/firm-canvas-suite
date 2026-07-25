@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { X, User, Layers, CalendarDays, Activity, AlertTriangle, Clock, ExternalLink, Tag } from "lucide-react";
 import { getCaseDrillDown } from "@/lib/drilldown.functions";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ interface CaseDrillDownSheetProps {
 
 export function CaseDrillDownSheet({ caseId, caseTitle, onClose }: CaseDrillDownSheetProps) {
   const fetchCase = useServerFn(getCaseDrillDown);
+  const { role } = useAuth();
+  const canViewActivity = role === "super_admin" || role === "admin";
 
   const { data, isLoading } = useQuery({
     queryKey: ["case-drilldown", caseId],
@@ -150,28 +153,30 @@ export function CaseDrillDownSheet({ caseId, caseTitle, onClose }: CaseDrillDown
               )}
             </Section>
 
-            {/* Recent activity */}
-            <Section title="Recent Activity" icon={<Activity className="size-3.5" />}>
-              {data.activity.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-1">No recent activity.</p>
-              ) : (
-                <ol className="relative border-l border-border ml-2 space-y-3 pl-4">
-                  {data.activity.map((a, i) => (
-                    <li key={i} className="relative">
-                      <span className="absolute -left-[1.125rem] top-1 size-2 rounded-full bg-muted-foreground/40 ring-2 ring-canvas" />
-                      <p className="text-sm text-foreground capitalize">{a.action}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {a.actor_name ? `${a.actor_name} · ` : ""}
-                        {new Date(a.created_at).toLocaleString(undefined, {
-                          day: "numeric", month: "short",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </Section>
+            {/* Recent activity — admins only */}
+            {canViewActivity ? (
+              <Section title="Recent Activity" icon={<Activity className="size-3.5" />}>
+                {data.activity.length === 0 ? (
+                  <p className="text-xs text-muted-foreground px-1">No recent activity.</p>
+                ) : (
+                  <ol className="relative border-l border-border ml-2 space-y-3 pl-4">
+                    {data.activity.map((a, i) => (
+                      <li key={i} className="relative">
+                        <span className="absolute -left-[1.125rem] top-1 size-2 rounded-full bg-muted-foreground/40 ring-2 ring-canvas" />
+                        <p className="text-sm text-foreground capitalize">{a.action}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {a.actor_name ? `${a.actor_name} · ` : ""}
+                          {new Date(a.created_at).toLocaleString(undefined, {
+                            day: "numeric", month: "short",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </Section>
+            ) : null}
           </div>
         )}
       </aside>
