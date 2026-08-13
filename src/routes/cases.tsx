@@ -49,7 +49,7 @@ export const Route = createFileRoute("/cases")({
       { title: "Verdio" },
       {
         name: "description",
-        content: "Cases section for the firm operations system.",
+        content: "Matters section for the firm operations system.",
       },
     ],
   }),
@@ -245,7 +245,7 @@ function CasesPage() {
           .split("_")
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(" "),
-        description: "Case type",
+        description: "Matter type",
         icon: <Briefcase className="size-3.5" />,
       })),
     ],
@@ -257,13 +257,13 @@ function CasesPage() {
       {
         value: "all",
         label: "All assignees",
-        description: "Any case lead",
+        description: "Any matter lead",
         icon: <Layers className="size-3.5" />,
       },
       ...assignees.map((a) => ({
         value: a,
         label: a,
-        description: "Case lead",
+        description: "Matter lead",
         icon: <User className="size-3.5" />,
       })),
     ],
@@ -325,7 +325,7 @@ function CasesPage() {
     return (
       <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          Cases
+          Matters
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to view this page.
@@ -344,7 +344,7 @@ function CasesPage() {
               Workspace
             </p>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
-              Cases
+              Matters
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Role-scoped matters across the firm portfolio
@@ -382,7 +382,7 @@ function CasesPage() {
                 className="gap-1.5 border-0 bg-gradient-to-b from-[#F8F8F8] to-[#CFCFCF] text-[#1a1c20] shadow-[0_8px_20px_rgba(0,0,0,0.22)] hover:from-white hover:to-[#d8d8d8]"
               >
                 <Plus className="size-4" />
-                New case
+                New matter
               </Button>
             )}
           </div>
@@ -427,7 +427,7 @@ function CasesPage() {
             />
 
             <PremiumSelect
-              aria-label="Filter by case type"
+              aria-label="Filter by matter type"
               value={typeFilter}
               onChange={setTypeFilter}
               options={typeOptions}
@@ -471,12 +471,12 @@ function CasesPage() {
           ))}
         {error && !isLoading && (
           <p className="py-10 text-center text-sm text-destructive">
-            Could not load cases.
+            Could not load matters.
           </p>
         )}
         {!isLoading && !error && rows.length === 0 && (
           <Card className="border-white/[0.08] bg-[rgba(18,18,20,0.72)] px-6 py-14 text-center">
-            <p className="text-sm font-medium text-foreground">No cases found</p>
+            <p className="text-sm font-medium text-foreground">No matters found</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Adjust filters or create a new matter to get started.
             </p>
@@ -493,7 +493,7 @@ function CasesPage() {
             <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Case register
+                  Matter register
                 </span>
                 <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/80">
                   {rows.length}

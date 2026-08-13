@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activity_log: {
@@ -313,6 +338,7 @@ export type Database = {
         Row: {
           assigned_at: string | null
           assigned_by: string | null
+          billing_rate: number | null
           case_id: string | null
           id: string
           is_lead: boolean | null
@@ -322,6 +348,7 @@ export type Database = {
         Insert: {
           assigned_at?: string | null
           assigned_by?: string | null
+          billing_rate?: number | null
           case_id?: string | null
           id?: string
           is_lead?: boolean | null
@@ -331,6 +358,7 @@ export type Database = {
         Update: {
           assigned_at?: string | null
           assigned_by?: string | null
+          billing_rate?: number | null
           case_id?: string | null
           id?: string
           is_lead?: boolean | null
@@ -463,15 +491,21 @@ export type Database = {
           client_id: string | null
           closed_at: string | null
           closure_summary: string | null
+          contingency_percentage: number | null
           created_at: string
           created_by: string | null
           current_stage_id: string | null
+          default_hourly_rate: number | null
+          fee_structure: Database["public"]["Enums"]["fee_structure_type"]
+          flat_fee_amount: number | null
           health: Database["public"]["Enums"]["health_status"] | null
           id: string
           is_private: boolean
           opened_at: string | null
           retention_until: string | null
           status: Database["public"]["Enums"]["case_status"] | null
+          subscription_amount: number | null
+          subscription_period: string | null
           title: string
         }
         Insert: {
@@ -480,15 +514,21 @@ export type Database = {
           client_id?: string | null
           closed_at?: string | null
           closure_summary?: string | null
+          contingency_percentage?: number | null
           created_at?: string
           created_by?: string | null
           current_stage_id?: string | null
+          default_hourly_rate?: number | null
+          fee_structure?: Database["public"]["Enums"]["fee_structure_type"]
+          flat_fee_amount?: number | null
           health?: Database["public"]["Enums"]["health_status"] | null
           id?: string
           is_private?: boolean
           opened_at?: string | null
           retention_until?: string | null
           status?: Database["public"]["Enums"]["case_status"] | null
+          subscription_amount?: number | null
+          subscription_period?: string | null
           title: string
         }
         Update: {
@@ -497,15 +537,21 @@ export type Database = {
           client_id?: string | null
           closed_at?: string | null
           closure_summary?: string | null
+          contingency_percentage?: number | null
           created_at?: string
           created_by?: string | null
           current_stage_id?: string | null
+          default_hourly_rate?: number | null
+          fee_structure?: Database["public"]["Enums"]["fee_structure_type"]
+          flat_fee_amount?: number | null
           health?: Database["public"]["Enums"]["health_status"] | null
           id?: string
           is_private?: boolean
           opened_at?: string | null
           retention_until?: string | null
           status?: Database["public"]["Enums"]["case_status"] | null
+          subscription_amount?: number | null
+          subscription_period?: string | null
           title?: string
         }
         Relationships: [
@@ -689,8 +735,52 @@ export type Database = {
           },
         ]
       }
+      document_visibility_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: string
+          effect: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"] | null
+          subject_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          effect: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
+          subject_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          effect?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
+          subject_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_visibility_rules_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           case_id: string | null
           created_at: string
           current_version: number | null
@@ -700,16 +790,16 @@ export type Database = {
           id: string
           is_archived: boolean | null
           is_locked: boolean | null
-          title: string | null
-          uploaded_by: string | null
-          approval_status: string
           submitted_at: string | null
           submitted_by: string | null
-          approved_at: string | null
-          approved_by: string | null
+          title: string | null
+          uploaded_by: string | null
           visibility_mode: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           case_id?: string | null
           created_at?: string
           current_version?: number | null
@@ -719,16 +809,16 @@ export type Database = {
           id?: string
           is_archived?: boolean | null
           is_locked?: boolean | null
-          title?: string | null
-          uploaded_by?: string | null
-          approval_status?: string
           submitted_at?: string | null
           submitted_by?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
+          title?: string | null
+          uploaded_by?: string | null
           visibility_mode?: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           case_id?: string | null
           created_at?: string
           current_version?: number | null
@@ -738,13 +828,10 @@ export type Database = {
           id?: string
           is_archived?: boolean | null
           is_locked?: boolean | null
-          title?: string | null
-          uploaded_by?: string | null
-          approval_status?: string
           submitted_at?: string | null
           submitted_by?: string | null
-          approved_at?: string | null
-          approved_by?: string | null
+          title?: string | null
+          uploaded_by?: string | null
           visibility_mode?: string
         }
         Relationships: [
@@ -760,47 +847,6 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "document_folders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      document_visibility_rules: {
-        Row: {
-          id: string
-          document_id: string
-          effect: string
-          subject_type: string
-          user_id: string | null
-          role: Database["public"]["Enums"]["user_role"] | null
-          created_at: string
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          document_id: string
-          effect: string
-          subject_type: string
-          user_id?: string | null
-          role?: Database["public"]["Enums"]["user_role"] | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          document_id?: string
-          effect?: string
-          subject_type?: string
-          user_id?: string | null
-          role?: Database["public"]["Enums"]["user_role"] | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "document_visibility_rules_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -864,6 +910,83 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          case_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_date: string
+          expense_type: Database["public"]["Enums"]["expense_type"]
+          id: string
+          incurred_by: string | null
+          invoice_id: string | null
+          receipt_path: string | null
+          status: Database["public"]["Enums"]["expense_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_date?: string
+          expense_type?: Database["public"]["Enums"]["expense_type"]
+          id?: string
+          incurred_by?: string | null
+          invoice_id?: string | null
+          receipt_path?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          expense_type?: Database["public"]["Enums"]["expense_type"]
+          id?: string
+          incurred_by?: string | null
+          invoice_id?: string | null
+          receipt_path?: string | null
+          status?: Database["public"]["Enums"]["expense_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_incurred_by_fkey"
+            columns: ["incurred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       firm_settings: {
         Row: {
           id: string
@@ -881,6 +1004,190 @@ export type Database = {
           value?: Json | null
         }
         Relationships: []
+      }
+      invoice_line_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          expense_id: string | null
+          id: string
+          invoice_id: string
+          quantity: number | null
+          rate: number | null
+          sort_order: number
+          source_type: string
+          time_entry_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          expense_id?: string | null
+          id?: string
+          invoice_id: string
+          quantity?: number | null
+          rate?: number | null
+          sort_order?: number
+          source_type: string
+          time_entry_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          expense_id?: string | null
+          id?: string
+          invoice_id?: string
+          quantity?: number | null
+          rate?: number | null
+          sort_order?: number
+          source_type?: string
+          time_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_reminders: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          invoice_id: string
+          offset_days: number
+          sent: boolean
+          sent_at: string | null
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          offset_days: number
+          sent?: boolean
+          sent_at?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          offset_days?: number
+          sent?: boolean
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_paid: number
+          case_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          fee_structure_snapshot: Database["public"]["Enums"]["fee_structure_type"]
+          id: string
+          invoice_number: string
+          issue_date: string | null
+          notes: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          voided_at: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          case_id: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          fee_structure_snapshot: Database["public"]["Enums"]["fee_structure_type"]
+          id?: string
+          invoice_number: string
+          issue_date?: string | null
+          notes?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          case_id?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          fee_structure_snapshot?: Database["public"]["Enums"]["fee_structure_type"]
+          id?: string
+          invoice_number?: string
+          issue_date?: string | null
+          notes?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       login_attempts: {
         Row: {
@@ -947,10 +1254,59 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          method: string
+          note: string | null
+          paid_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          method: string
+          note?: string | null
+          paid_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          method?: string
+          note?: string | null
+          paid_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
           created_by: string | null
+          default_hourly_rate: number | null
           full_name: string | null
           id: string
           is_active: boolean | null
@@ -961,6 +1317,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          default_hourly_rate?: number | null
           full_name?: string | null
           id: string
           is_active?: boolean | null
@@ -971,6 +1328,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          default_hourly_rate?: number | null
           full_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -1102,6 +1460,89 @@ export type Database = {
           },
         ]
       }
+      time_entries: {
+        Row: {
+          case_id: string
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          duration_minutes: number | null
+          entry_date: string
+          id: string
+          invoice_id: string | null
+          is_billable: boolean
+          rate: number | null
+          status: Database["public"]["Enums"]["time_entry_status"]
+          timekeeper_id: string | null
+          timer_started_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          duration_minutes?: number | null
+          entry_date?: string
+          id?: string
+          invoice_id?: string | null
+          is_billable?: boolean
+          rate?: number | null
+          status?: Database["public"]["Enums"]["time_entry_status"]
+          timekeeper_id?: string | null
+          timer_started_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          duration_minutes?: number | null
+          entry_date?: string
+          id?: string
+          invoice_id?: string | null
+          is_billable?: boolean
+          rate?: number | null
+          status?: Database["public"]["Enums"]["time_entry_status"]
+          timekeeper_id?: string | null
+          timer_started_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_timekeeper_id_fkey"
+            columns: ["timekeeper_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_template_stages: {
         Row: {
           deadline_days: number | null
@@ -1175,6 +1616,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_document: {
+        Args: { _document_id: string; _note?: string }
+        Returns: Json
+      }
       can_access_folder: {
         Args: { _case_id: string; _folder_code: string }
         Returns: boolean
@@ -1182,11 +1627,15 @@ export type Database = {
       can_read_case: { Args: { _case_id: string }; Returns: boolean }
       can_read_document: { Args: { _doc_id: string }; Returns: boolean }
       case_override_level: { Args: { _case_id: string }; Returns: string }
+      current_client_id: { Args: never; Returns: string }
       current_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      current_client_id: { Args: never; Returns: string }
+      document_visibility_allows: {
+        Args: { _doc_id: string }
+        Returns: boolean
+      }
       effective_case_access: { Args: { _case_id: string }; Returns: string }
       effective_case_access_for: {
         Args: { _case_id: string; _user_id: string }
@@ -1196,6 +1645,11 @@ export type Database = {
           override_level: string
           role_default: string
         }[]
+      }
+      escalate_overdue_stages: { Args: never; Returns: undefined }
+      folder_has_allowlisted_document: {
+        Args: { _folder_id: string }
+        Returns: boolean
       }
       folder_scope_for_case: { Args: { _case_id: string }; Returns: string }
       has_role: {
@@ -1208,19 +1662,100 @@ export type Database = {
       is_active_staff: { Args: { _user_id: string }; Returns: boolean }
       is_active_user: { Args: never; Returns: boolean }
       is_assigned_to_case: { Args: { _case_id: string }; Returns: boolean }
+      mark_overdue_invoices: { Args: never; Returns: undefined }
       next_case_ref: { Args: never; Returns: string }
       next_client_ref: { Args: never; Returns: string }
+      next_invoice_number: { Args: never; Returns: string }
       role_can_read_folder: { Args: { _code: string }; Returns: boolean }
       role_can_write_folder: { Args: { _code: string }; Returns: boolean }
+      send_invoice: {
+        Args: { _invoice_id: string }
+        Returns: {
+          amount_paid: number
+          case_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          fee_structure_snapshot: Database["public"]["Enums"]["fee_structure_type"]
+          id: string
+          invoice_number: string
+          issue_date: string | null
+          notes: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          voided_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      staff_lost_case_access: {
+        Args: { _case_id: string; _user_id: string }
+        Returns: boolean
+      }
       stage_assigned_to_user: { Args: { _case_id: string }; Returns: number }
+      submit_document_for_approval: {
+        Args: { _document_id: string; _note?: string }
+        Returns: Json
+      }
+      trigger_escalate_overdue_stages: { Args: never; Returns: undefined }
+      trigger_process_invoice_reminders: { Args: never; Returns: undefined }
+      trigger_process_reminders: { Args: never; Returns: undefined }
+      trigger_send_morning_digest: { Args: never; Returns: undefined }
+      void_invoice: {
+        Args: { _invoice_id: string; _reason?: string }
+        Returns: {
+          amount_paid: number
+          case_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          fee_structure_snapshot: Database["public"]["Enums"]["fee_structure_type"]
+          id: string
+          invoice_number: string
+          issue_date: string | null
+          notes: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          voided_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       approval_status: "pending" | "approved" | "returned" | "locked"
       case_status: "intake" | "active" | "on_hold" | "closed"
+      expense_status: "unbilled" | "billed" | "written_off"
+      expense_type: "hard_cost" | "soft_cost"
+      fee_structure_type: "hourly" | "flat" | "contingency" | "subscription"
       health_status: "on_track" | "at_risk" | "overdue"
+      invoice_status:
+        | "draft"
+        | "sent"
+        | "partially_paid"
+        | "paid"
+        | "overdue"
+        | "void"
       priority: "low" | "medium" | "high"
       stage_status: "pending" | "active" | "complete" | "returned"
       task_status: "todo" | "in_progress" | "in_review" | "done"
+      time_entry_status: "unbilled" | "billed" | "written_off"
       user_role:
         | "super_admin"
         | "admin"
@@ -1353,14 +1888,29 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       approval_status: ["pending", "approved", "returned", "locked"],
       case_status: ["intake", "active", "on_hold", "closed"],
+      expense_status: ["unbilled", "billed", "written_off"],
+      expense_type: ["hard_cost", "soft_cost"],
+      fee_structure_type: ["hourly", "flat", "contingency", "subscription"],
       health_status: ["on_track", "at_risk", "overdue"],
+      invoice_status: [
+        "draft",
+        "sent",
+        "partially_paid",
+        "paid",
+        "overdue",
+        "void",
+      ],
       priority: ["low", "medium", "high"],
       stage_status: ["pending", "active", "complete", "returned"],
       task_status: ["todo", "in_progress", "in_review", "done"],
+      time_entry_status: ["unbilled", "billed", "written_off"],
       user_role: [
         "super_admin",
         "admin",

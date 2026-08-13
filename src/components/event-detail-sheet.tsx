@@ -105,7 +105,7 @@ export function EventDetailSheet({
               {event.case_id ? (
                 <DetailRow
                   icon={<FolderKanban className="size-3.5" />}
-                  label="Case"
+                  label="Matter"
                   value={
                     <Link
                       to="/cases/$caseId"
@@ -113,7 +113,7 @@ export function EventDetailSheet({
                       onClick={() => onOpenChange(false)}
                       className="text-tag-blue hover:underline"
                     >
-                      {event.case_ref ?? "Open case"}
+                      {event.case_ref ?? "Open matter"}
                     </Link>
                   }
                 />

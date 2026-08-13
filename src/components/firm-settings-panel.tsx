@@ -167,7 +167,7 @@ export function FirmSettingsPanel() {
     <SettingsSection
       eyebrow="Firm policy"
       title="Firm settings"
-      description="These values are stored in firm_settings and read live by session, login lockout, case retention, reminders, and the morning digest."
+      description="These values are stored in firm_settings and read live by session, login lockout, matter retention, reminders, and the morning digest."
       action={
         <Button
           type="button"
@@ -182,7 +182,7 @@ export function FirmSettingsPanel() {
     >
       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
         <Field
-          label="Document retention (closed cases)"
+          label="Document retention (closed matters)"
           hint="Days after close before documents become eligible for purge. Default 2555 (~7 years)."
         >
           <Input

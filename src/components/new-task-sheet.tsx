@@ -213,7 +213,7 @@ export function NewTaskSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Case (optional)</Label>
+            <Label>Matter (optional)</Label>
             <Select
               value={caseId}
               onValueChange={(value) => {
@@ -223,10 +223,10 @@ export function NewTaskSheet({
               disabled={lockCase}
             >
               <SelectTrigger className={FIELD_CLASS}>
-                <SelectValue placeholder="No case" />
+                <SelectValue placeholder="No matter" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_CASE}>No case</SelectItem>
+                <SelectItem value={NO_CASE}>No matter</SelectItem>
                 {cases.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.case_ref ? `${c.case_ref} — ` : ""}
@@ -249,7 +249,7 @@ export function NewTaskSheet({
                 <SelectValue
                   placeholder={
                     optionsCaseId
-                      ? "Select someone on this case"
+                      ? "Select someone on this matter"
                       : "Select assignee"
                   }
                 />
@@ -258,7 +258,7 @@ export function NewTaskSheet({
                 {assignees.length === 0 ? (
                   <SelectItem value="__none_available__" disabled>
                     {optionsCaseId
-                      ? "No team members on this case yet"
+                      ? "No team members on this matter yet"
                       : "No assignees available"}
                   </SelectItem>
                 ) : (
@@ -277,7 +277,7 @@ export function NewTaskSheet({
               </p>
             ) : optionsCaseId ? (
               <p className="text-xs text-muted-foreground">
-                Only people assigned to this case can be selected.
+                Only people assigned to this matter can be selected.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">

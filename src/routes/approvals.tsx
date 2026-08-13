@@ -248,7 +248,7 @@ function ApprovalsQueuePage() {
                 to="/cases"
                 className="text-foreground/80 underline-offset-2 hover:underline"
               >
-                case
+                matter
               </Link>{" "}
               Documents tab to start a review.
             </p>

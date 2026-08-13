@@ -10,7 +10,7 @@ export const Route = createFileRoute("/portal")({
       { title: "Verdio" },
       {
         name: "description",
-        content: "View your case status, shared documents, and upcoming hearings.",
+        content: "View your matter status, shared documents, and upcoming hearings.",
       },
     ],
   }),

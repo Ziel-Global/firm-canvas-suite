@@ -114,7 +114,7 @@ export const searchKnowledgeBase = createServerFn({ method: "GET" })
 export const generateClosureSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("Case ID required.");
+    if (!input?.caseId) throw new Error("Matter ID required.");
     return input;
   })
   .handler(async ({ data, context }): Promise<{ summary: string }> => {

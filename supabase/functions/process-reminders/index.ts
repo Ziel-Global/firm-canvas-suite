@@ -148,7 +148,7 @@ serve(async (_req) => {
 
       const title = `Reminder: ${eventTitle}`;
       const body = `${eventTitle} starts ${eventTime} (${offsetLabel} from now)${locationSuffix}${
-        caseLabel ? `. Case: ${caseLabel}.` : "."
+        caseLabel ? `. Matter: ${caseLabel}.` : "."
       }`;
 
       try {

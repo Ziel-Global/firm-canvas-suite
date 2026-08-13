@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Activity,
   Users,
+  Receipt,
 } from "lucide-react";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -20,9 +21,14 @@ import {
   getWorkloadDistributionData,
   getApprovalQueueReportData,
   getClientFollowUpReportData,
+  getArAgingReportData,
+  getBillingHistoryReportData,
+  getMatterBalanceReportData,
+  getRevenueReportData,
 } from "@/lib/reports.functions";
 import { exportReport } from "@/lib/report-export";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/premium-loader";
 import { TableSkeleton } from "@/components/loading-skeletons";
@@ -150,6 +156,10 @@ function PanelHeader({
   );
 }
 
+function money(n: number | null | undefined) {
+  return (n ?? 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+
 function healthBadge(health: string, stalled: boolean) {
   const label = `${health.replace("_", " ")}${stalled ? " · stalled" : ""}`;
   return (
@@ -175,10 +185,15 @@ function ReportsPage() {
   const fetchWorkload = useServerFn(getWorkloadDistributionData);
   const fetchApprovalQueue = useServerFn(getApprovalQueueReportData);
   const fetchClientFollowUp = useServerFn(getClientFollowUpReportData);
+  const fetchArAging = useServerFn(getArAgingReportData);
+  const fetchBillingHistory = useServerFn(getBillingHistoryReportData);
+  const fetchMatterBalance = useServerFn(getMatterBalanceReportData);
+  const fetchRevenue = useServerFn(getRevenueReportData);
   
   const [exporting, setExporting] = useState<"pdf" | "excel" | null>(null);
   const [activeTab, setActiveTab] = useState("cases");
   const [timeRange, setTimeRange] = useState<"daily" | "weekly" | "monthly">("weekly");
+  const [billingView, setBillingView] = useState<"aging" | "history" | "balance" | "revenue">("aging");
 
   const { data: casesData, isLoading: loadingCases, isFetching: fetchingCases, refetch: refetchCases } = useQuery({
     queryKey: ["reports-data", "cases"],
@@ -218,9 +233,39 @@ function ReportsPage() {
     refetchInterval: 30_000,
   });
 
+  const isBillingAdmin = role === "super_admin" || role === "admin";
+
+  const { data: agingData, isLoading: loadingAging, isFetching: fetchingAging, refetch: refetchAging } = useQuery({
+    queryKey: ["reports-data", "ar-aging"],
+    queryFn: () => fetchArAging(),
+    enabled: isBillingAdmin && activeTab === "billing" && billingView === "aging",
+    staleTime: 30_000,
+  });
+
+  const { data: historyData, isLoading: loadingHistory, isFetching: fetchingHistory, refetch: refetchHistory } = useQuery({
+    queryKey: ["reports-data", "billing-history"],
+    queryFn: () => fetchBillingHistory({ data: {} }),
+    enabled: isBillingAdmin && activeTab === "billing" && billingView === "history",
+    staleTime: 30_000,
+  });
+
+  const { data: balanceData, isLoading: loadingBalance, isFetching: fetchingBalance, refetch: refetchBalance } = useQuery({
+    queryKey: ["reports-data", "matter-balance"],
+    queryFn: () => fetchMatterBalance(),
+    enabled: isBillingAdmin && activeTab === "billing" && billingView === "balance",
+    staleTime: 30_000,
+  });
+
+  const { data: revenueData, isLoading: loadingRevenue, isFetching: fetchingRevenue, refetch: refetchRevenue } = useQuery({
+    queryKey: ["reports-data", "revenue"],
+    queryFn: () => fetchRevenue({ data: {} }),
+    enabled: isBillingAdmin && activeTab === "billing" && billingView === "revenue",
+    staleTime: 30_000,
+  });
+
   const handleExport = async (format: "pdf" | "excel") => {
     let reportData: unknown[] | undefined = casesData;
-    let title = "Active_Cases_Status_Report";
+    let title = "Active_Matters_Status_Report";
 
     if (activeTab === "productivity") {
       reportData = prodData;
@@ -234,6 +279,20 @@ function ReportsPage() {
     } else if (activeTab === "followup") {
       reportData = followupData;
       title = "Client_Follow_Up_Report";
+    } else if (activeTab === "billing") {
+      if (billingView === "aging") {
+        reportData = agingData;
+        title = "AR_Aging_Report";
+      } else if (billingView === "history") {
+        reportData = historyData;
+        title = "Billing_History_Report";
+      } else if (billingView === "balance") {
+        reportData = balanceData;
+        title = "Matter_Balance_Report";
+      } else {
+        reportData = revenueData?.byTimekeeper;
+        title = "Revenue_Report";
+      }
     }
 
     if (!reportData) {
@@ -262,10 +321,22 @@ function ReportsPage() {
     fetchingProd ||
     fetchingWorkload ||
     fetchingQueue ||
-    fetchingFollowup;
+    fetchingFollowup ||
+    fetchingAging ||
+    fetchingHistory ||
+    fetchingBalance ||
+    fetchingRevenue;
 
   const canExport = Boolean(
-    casesData || prodData || workloadData || queueData || followupData,
+    casesData ||
+      prodData ||
+      workloadData ||
+      queueData ||
+      followupData ||
+      agingData ||
+      historyData ||
+      balanceData ||
+      revenueData,
   );
 
   return (
@@ -293,7 +364,12 @@ function ReportsPage() {
                 else if (activeTab === "workload") refetchWorkload();
                 else if (activeTab === "queue") refetchQueue();
                 else if (activeTab === "followup") refetchFollowup();
-                else refetchCases();
+                else if (activeTab === "billing") {
+                  if (billingView === "aging") refetchAging();
+                  else if (billingView === "history") refetchHistory();
+                  else if (billingView === "balance") refetchBalance();
+                  else refetchRevenue();
+                } else refetchCases();
               }}
               disabled={isSyncing}
               className="h-9 border border-white/[0.08] bg-white/[0.03] px-3 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
@@ -341,7 +417,7 @@ function ReportsPage() {
                 className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
                 <Activity className="size-3.5" />
-                Case progress
+                Matter progress
               </TabsTrigger>
               {(role === "super_admin" || role === "admin") && (
                 <TabsTrigger
@@ -379,16 +455,25 @@ function ReportsPage() {
                   Approval queue
                 </TabsTrigger>
               )}
+              {isBillingAdmin && (
+                <TabsTrigger
+                  value="billing"
+                  className="gap-1.5 rounded-lg px-3 py-2 text-xs data-[state=active]:bg-white/[0.1] data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Receipt className="size-3.5" />
+                  Billing
+                </TabsTrigger>
+              )}
             </TabsList>
           </Card>
 
           <TabsContent value="cases" className="mt-4">
             <Card className={PANEL}>
               <PanelHeader
-                title="Case progress report"
+                title="Matter progress report"
                 meta={
                   casesData
-                    ? `${casesData.length} active cases`
+                    ? `${casesData.length} active matters`
                     : "Loading…"
                 }
               />
@@ -397,7 +482,7 @@ function ReportsPage() {
                   <thead>
                     <tr className="border-b border-white/[0.06]">
                       <th className={TH}>Ref</th>
-                      <th className={TH}>Case title</th>
+                      <th className={TH}>Matter title</th>
                       <th className={TH}>Current stage</th>
                       <th className={TH}>Assigned</th>
                       <th className={TH}>Next deadline</th>
@@ -422,7 +507,7 @@ function ReportsPage() {
                           colSpan={7}
                           className="px-4 py-12 text-center text-sm text-muted-foreground"
                         >
-                          No active cases found.
+                          No active matters found.
                         </td>
                       </tr>
                     ) : (
@@ -666,7 +751,7 @@ function ReportsPage() {
                       <tr className="border-b border-white/[0.06]">
                         <th className={TH}>Member</th>
                         <th className={TH}>Role</th>
-                        <th className={cn(TH, "text-right")}>Active cases</th>
+                        <th className={cn(TH, "text-right")}>Active matters</th>
                         <th className={cn(TH, "text-right")}>Active tasks</th>
                         <th className={cn(TH, "text-right")}>Est. hours</th>
                         <th className={cn(TH, "text-right")}>Bandwidth</th>
@@ -777,8 +862,8 @@ function ReportsPage() {
                     <thead>
                       <tr className="border-b border-white/[0.06]">
                         <th className={TH}>Document</th>
-                        <th className={TH}>Case ref</th>
-                        <th className={TH}>Case title</th>
+                        <th className={TH}>Matter ref</th>
+                        <th className={TH}>Matter title</th>
                         <th className={TH}>Submitted by</th>
                         <th className={TH}>Submitted at</th>
                         <th className={cn(TH, "text-right")}>Wait (days)</th>
@@ -875,7 +960,7 @@ function ReportsPage() {
                       <tr className="border-b border-white/[0.06]">
                         <th className={TH}>Client</th>
                         <th className={TH}>Email</th>
-                        <th className={cn(TH, "text-right")}>Active cases</th>
+                        <th className={cn(TH, "text-right")}>Active matters</th>
                         <th className={cn(TH, "text-right")}>Last comm.</th>
                         <th className={cn(TH, "text-right")}>Next hearing</th>
                         <th className={cn(TH, "text-right")}>Billing</th>
@@ -988,6 +1073,246 @@ function ReportsPage() {
                   </table>
                 </div>
               </Card>
+            </TabsContent>
+          )}
+
+          {isBillingAdmin && (
+            <TabsContent value="billing" className="mt-4 space-y-4">
+              <ToggleGroup
+                type="single"
+                value={billingView}
+                onValueChange={(v) => v && setBillingView(v as typeof billingView)}
+                className="w-fit rounded-xl border border-white/[0.08] bg-[rgba(18,18,20,0.72)] p-1"
+              >
+                <ToggleGroupItem value="aging" className="text-xs">
+                  AR aging
+                </ToggleGroupItem>
+                <ToggleGroupItem value="history" className="text-xs">
+                  Billing history
+                </ToggleGroupItem>
+                <ToggleGroupItem value="balance" className="text-xs">
+                  Matter balance
+                </ToggleGroupItem>
+                <ToggleGroupItem value="revenue" className="text-xs">
+                  Revenue
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              {billingView === "aging" ? (
+                <Card className={PANEL}>
+                  <PanelHeader
+                    title="Accounts receivable aging"
+                    meta={agingData ? `${agingData.length} unpaid invoices` : "Loading…"}
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className={TH}>Invoice</th>
+                          <th className={TH}>Matter</th>
+                          <th className={TH}>Client</th>
+                          <th className={cn(TH, "text-right")}>Balance</th>
+                          <th className={cn(TH, "text-right")}>Days overdue</th>
+                          <th className={cn(TH, "text-right")}>Bucket</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingAging ? (
+                          <tr>
+                            <td colSpan={6} className="p-0">
+                              <TableSkeleton rows={5} cols={6} className="rounded-none border-0 shadow-none" />
+                            </td>
+                          </tr>
+                        ) : !agingData || agingData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                              Nothing outstanding.
+                            </td>
+                          </tr>
+                        ) : (
+                          agingData.map((row) => (
+                            <tr key={row.invoiceId} className={ROW}>
+                              <td className={cn(TD, "font-mono text-xs")}>{row.invoiceNumber}</td>
+                              <td className={cn(TD, "max-w-[200px] truncate")}>{row.caseTitle ?? "—"}</td>
+                              <td className={cn(TD, "text-muted-foreground")}>{row.clientName ?? "—"}</td>
+                              <td className={cn(TD, "text-right tabular-nums")}>{money(row.balance)}</td>
+                              <td className={cn(TD, "text-right tabular-nums text-muted-foreground")}>
+                                {row.daysOverdue}
+                              </td>
+                              <td className={cn(TD, "text-right")}>
+                                <span
+                                  className={cn(
+                                    "inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                                    row.bucket === "90+" || row.bucket === "61-90"
+                                      ? "bg-priority-high/15 text-priority-high"
+                                      : row.bucket === "31-60"
+                                        ? "bg-amber-500/15 text-amber-200/90"
+                                        : "bg-white/[0.1] text-foreground",
+                                  )}
+                                >
+                                  {row.bucket}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              ) : billingView === "history" ? (
+                <Card className={PANEL}>
+                  <PanelHeader
+                    title="Billing history"
+                    meta={historyData ? `${historyData.length} invoices` : "Loading…"}
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className={TH}>Invoice</th>
+                          <th className={TH}>Matter</th>
+                          <th className={TH}>Client</th>
+                          <th className={TH}>Status</th>
+                          <th className={TH}>Issued</th>
+                          <th className={cn(TH, "text-right")}>Total</th>
+                          <th className={cn(TH, "text-right")}>Paid</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingHistory ? (
+                          <tr>
+                            <td colSpan={7} className="p-0">
+                              <TableSkeleton rows={5} cols={7} className="rounded-none border-0 shadow-none" />
+                            </td>
+                          </tr>
+                        ) : !historyData || historyData.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                              No invoices found.
+                            </td>
+                          </tr>
+                        ) : (
+                          historyData.map((row) => (
+                            <tr key={row.invoiceId} className={ROW}>
+                              <td className={cn(TD, "font-mono text-xs")}>{row.invoiceNumber}</td>
+                              <td className={cn(TD, "max-w-[200px] truncate")}>{row.caseTitle ?? "—"}</td>
+                              <td className={cn(TD, "text-muted-foreground")}>{row.clientName ?? "—"}</td>
+                              <td className={cn(TD, "text-xs capitalize text-muted-foreground")}>
+                                {row.status.replace(/_/g, " ")}
+                              </td>
+                              <td className={cn(TD, "text-muted-foreground")}>{row.issueDate ?? "—"}</td>
+                              <td className={cn(TD, "text-right tabular-nums")}>{money(row.total)}</td>
+                              <td className={cn(TD, "text-right tabular-nums text-muted-foreground")}>
+                                {money(row.amountPaid)}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              ) : billingView === "balance" ? (
+                <Card className={PANEL}>
+                  <PanelHeader
+                    title="Matter balance summary"
+                    meta={balanceData ? `${balanceData.length} matters` : "Loading…"}
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className={TH}>Matter</th>
+                          <th className={cn(TH, "text-right")}>Billed</th>
+                          <th className={cn(TH, "text-right")}>Paid</th>
+                          <th className={cn(TH, "text-right")}>Outstanding</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingBalance ? (
+                          <tr>
+                            <td colSpan={4} className="p-0">
+                              <TableSkeleton rows={5} cols={4} className="rounded-none border-0 shadow-none" />
+                            </td>
+                          </tr>
+                        ) : !balanceData || balanceData.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                              No billed matters yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          balanceData.map((row) => (
+                            <tr key={row.caseId} className={ROW}>
+                              <td className={cn(TD, "max-w-[260px] truncate")}>
+                                {row.caseRef ? `${row.caseRef} · ` : ""}
+                                {row.caseTitle}
+                              </td>
+                              <td className={cn(TD, "text-right tabular-nums")}>{money(row.totalBilled)}</td>
+                              <td className={cn(TD, "text-right tabular-nums text-muted-foreground")}>
+                                {money(row.totalPaid)}
+                              </td>
+                              <td
+                                className={cn(
+                                  TD,
+                                  "text-right tabular-nums",
+                                  row.outstanding > 0 ? "text-priority-high" : "text-foreground",
+                                )}
+                              >
+                                {money(row.outstanding)}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              ) : (
+                <Card className={PANEL}>
+                  <PanelHeader
+                    title="Revenue by timekeeper"
+                    meta={revenueData ? `Total ${money(revenueData.totalRevenue)}` : "Loading…"}
+                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className={TH}>Timekeeper</th>
+                          <th className={cn(TH, "text-right")}>Billed hours</th>
+                          <th className={cn(TH, "text-right")}>Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingRevenue ? (
+                          <tr>
+                            <td colSpan={3} className="p-0">
+                              <TableSkeleton rows={5} cols={3} className="rounded-none border-0 shadow-none" />
+                            </td>
+                          </tr>
+                        ) : !revenueData || revenueData.byTimekeeper.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                              No billed time yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          revenueData.byTimekeeper.map((row) => (
+                            <tr key={row.timekeeperId} className={ROW}>
+                              <td className={cn(TD, "font-medium text-foreground")}>{row.timekeeperName}</td>
+                              <td className={cn(TD, "text-right tabular-nums text-muted-foreground")}>
+                                {row.billedHours}
+                              </td>
+                              <td className={cn(TD, "text-right tabular-nums")}>{money(row.revenue)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
             </TabsContent>
           )}
         </Tabs>

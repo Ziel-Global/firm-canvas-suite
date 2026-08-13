@@ -101,7 +101,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
         },
       }),
     onSuccess: (result) => {
-      toast.success(`Case created — ${result.case_ref}`);
+      toast.success(`Matter created — ${result.case_ref}`);
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       queryClient.invalidateQueries({ queryKey: ["my-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["ops-dashboard"] });
@@ -110,7 +110,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
     },
     onError: (err: unknown) => {
       const message =
-        err instanceof Error ? err.message : "Could not create case.";
+        err instanceof Error ? err.message : "Could not create matter.";
       setFormError(message);
       toast.error(message);
     },
@@ -132,7 +132,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
       return;
     }
     if (!caseType) {
-      const message = "Please select a case type.";
+      const message = "Please select a matter type.";
       setFormError(message);
       toast.error(message);
       return;
@@ -151,11 +151,11 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
       >
         <SheetContent className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>New case</SheetTitle>
+            <SheetTitle>New matter</SheetTitle>
             <SheetDescription>
               A unique reference (CASE-YYYY-NNNN) and standard folders are
               created automatically on save. Add stages and deadlines from the
-              case Stages tab.
+              matter Stages tab.
             </SheetDescription>
           </SheetHeader>
 
@@ -246,7 +246,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Case type *</Label>
+              <Label>Matter type *</Label>
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -258,7 +258,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                     )}
                   >
                     <span className={cn(!caseType && "text-muted-foreground")}>
-                      {caseType ? CASE_TYPE_LABELS[caseType] : "Select a case type"}
+                      {caseType ? CASE_TYPE_LABELS[caseType] : "Select a matter type"}
                     </span>
                     <ChevronDown className="size-4 opacity-50" />
                   </Button>
@@ -295,7 +295,7 @@ export function NewCaseSheet({ open, onOpenChange }: NewCaseSheetProps) {
                 Cancel
               </Button>
               <Button type="submit" className="flex-1" disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving…" : "Save case"}
+                {mutation.isPending ? "Saving…" : "Save matter"}
               </Button>
             </SheetFooter>
           </form>

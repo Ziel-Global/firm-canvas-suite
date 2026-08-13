@@ -104,7 +104,7 @@ export function AssignLeadDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="size-4" />
-            {currentLeadId ? "Change case lead" : "Assign case lead"}
+            {currentLeadId ? "Change matter lead" : "Assign matter lead"}
           </DialogTitle>
           <DialogDescription>
             {caseTitle
@@ -169,7 +169,7 @@ export function AssignLeadDialog({
               <div className="min-w-0 space-y-0.5">
                 <Label htmlFor="keep-on-team">Keep previous lead on the team</Label>
                 <p className="text-xs text-muted-foreground">
-                  They stay as another lawyer on this case (not the lead).
+                  They stay as another lawyer on this matter (not the lead).
                 </p>
               </div>
               <Switch

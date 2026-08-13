@@ -96,7 +96,7 @@ export const createCalendarEvent = createServerFn({ method: "POST" })
     // be linked to a case and not marked private.
     if (eventType === "hearing") {
       if (!caseId) {
-        throw new Error("Court hearings must be linked to a case.");
+        throw new Error("Court hearings must be linked to a matter.");
       }
       if (isPrivate) {
         throw new Error(

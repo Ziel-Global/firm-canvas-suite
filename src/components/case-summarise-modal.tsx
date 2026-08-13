@@ -26,7 +26,7 @@ export function CaseSummariseModal({
     try {
       const data = await runSummary({ data: { caseId } });
       setSummary(data);
-      toast.success("Case summary generated.");
+      toast.success("Matter summary generated.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate summary");
     } finally {
@@ -45,7 +45,7 @@ export function CaseSummariseModal({
 
   const handleCopy = () => {
     if (!summary) return;
-    const text = `CASE SUMMARY: ${summary.case_title}\n` +
+    const text = `MATTER SUMMARY: ${summary.case_title}\n` +
       `Client: ${summary.client_name}\n` +
       `Type: ${summary.case_type} | Stage: ${summary.current_stage}\n` +
       `Responsible Member: ${summary.responsible_member}\n\n` +
@@ -60,7 +60,7 @@ export function CaseSummariseModal({
 
   const handleExport = () => {
     if (!summary) return;
-    const text = `CASE SUMMARY: ${summary.case_title}\n` +
+    const text = `MATTER SUMMARY: ${summary.case_title}\n` +
       `Client: ${summary.client_name}\n` +
       `Type: ${summary.case_type} | Stage: ${summary.current_stage}\n` +
       `Responsible Member: ${summary.responsible_member}\n\n` +
@@ -85,7 +85,7 @@ export function CaseSummariseModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="size-5 text-tag-blue" />
-            AI Case Summary
+            AI Matter Summary
           </DialogTitle>
           <DialogDescription>
             Structured overview based on notes, activity logs, and metadata you have access to.
@@ -96,7 +96,7 @@ export function CaseSummariseModal({
           {isGenerating ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground">
               <Loader2 className="size-8 animate-spin text-tag-blue" />
-              <p className="text-sm animate-pulse">Reading case data, notes, and activity logs...</p>
+              <p className="text-sm animate-pulse">Reading matter data, notes, and activity logs...</p>
             </div>
           ) : summary ? (
             <div className="space-y-6">
@@ -109,7 +109,7 @@ export function CaseSummariseModal({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Case Type</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Matter Type</p>
                   <p className="font-medium text-foreground">{summary.case_type}</p>
                 </div>
                 <div>

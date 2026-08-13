@@ -32,6 +32,7 @@ import { CaseTasksTab } from "@/components/case-tasks-tab";
 import { CaseStagesTab } from "@/components/case-stages-tab";
 import { CaseDocumentsTab } from "@/components/case-documents-tab";
 import { CaseCalendarTab } from "@/components/case-calendar-tab";
+import { CaseBillingTab } from "@/components/case-billing-tab";
 import { CaseLifecycleActions } from "@/components/case-lifecycle-actions";
 import { CaseSummariseModal } from "@/components/case-summarise-modal";
 import { AssignLeadDialog } from "@/components/assign-lead-dialog";
@@ -44,6 +45,7 @@ const TABS = [
   "tasks",
   "documents",
   "calendar",
+  "billing",
   "notes",
   "team",
   "access",
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/cases_/$caseId")({
   ),
   notFoundComponent: () => (
     <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
-      <p className="text-sm text-muted-foreground">Case not found.</p>
+      <p className="text-sm text-muted-foreground">Matter not found.</p>
     </main>
   ),
 });
@@ -168,7 +170,7 @@ function CaseDetailPage() {
   if (authLoading) {
     return (
       <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
-        <p className="mt-8 text-center text-sm text-muted-foreground">Loading case…</p>
+        <p className="mt-8 text-center text-sm text-muted-foreground">Loading matter…</p>
       </main>
     );
   }
@@ -176,7 +178,7 @@ function CaseDetailPage() {
   if (!canView) {
     return (
       <main className="dashboard-shell px-3 py-4 sm:px-5 sm:py-6 md:px-7 lg:px-8 xl:px-10">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Case</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Matter</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           You do not have permission to view this page.
         </p>
@@ -192,13 +194,13 @@ function CaseDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back to cases
+          Back to matters
         </Link>
         <h2 className="mt-6 text-2xl font-semibold tracking-tight text-foreground">
           Access removed
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your access to this case has been revoked. You no longer have
+          Your access to this matter has been revoked. You no longer have
           permission to view its contents.
         </p>
       </main>
@@ -212,14 +214,14 @@ function CaseDetailPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        Back to cases
+        Back to matters
       </Link>
 
       {isLoading && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">Loading case…</p>
+        <p className="mt-8 text-center text-sm text-muted-foreground">Loading matter…</p>
       )}
       {error && !isLoading && (
-        <p className="mt-8 text-center text-sm text-destructive">Could not load case.</p>
+        <p className="mt-8 text-center text-sm text-destructive">Could not load matter.</p>
       )}
 
       {data && (
@@ -360,7 +362,7 @@ function CaseDetailPage() {
                   onClick={() => setSummariseModalOpen(true)}
                 >
                   <Bot className="size-4" />
-                  Summarise case
+                  Summarise matter
                 </Button>
               </div>
             </Card>
@@ -426,7 +428,7 @@ function CaseDetailPage() {
                     ) : (
                       <Card className="p-6">
                         <p className="text-sm text-muted-foreground">
-                          Only admins can view case activity.
+                          Only admins can view matter activity.
                         </p>
                       </Card>
                     )
@@ -436,6 +438,8 @@ function CaseDetailPage() {
                     <CaseDocumentsTab caseId={caseId} />
                   ) : t === "calendar" ? (
                     <CaseCalendarTab caseId={caseId} />
+                  ) : t === "billing" ? (
+                    <CaseBillingTab caseId={caseId} role={role} />
                   ) : t === "team" ? (
                     role === "super_admin" || role === "admin" ? (
                       <CaseTeamTab
@@ -445,7 +449,7 @@ function CaseDetailPage() {
                     ) : (
                       <Card className="p-6">
                         <p className="text-sm text-muted-foreground">
-                          Only admins can manage the case team.
+                          Only admins can manage the matter team.
                         </p>
                       </Card>
                     )
@@ -455,7 +459,7 @@ function CaseDetailPage() {
                     ) : (
                       <Card className="p-6">
                         <p className="text-sm text-muted-foreground">
-                          Only admins can view case access.
+                          Only admins can view matter access.
                         </p>
                       </Card>
                     )

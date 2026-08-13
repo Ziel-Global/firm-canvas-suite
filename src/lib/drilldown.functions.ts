@@ -150,7 +150,7 @@ export const getMemberDrillDown = createServerFn({ method: "GET" })
 export const getCaseDrillDown = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("Case ID required.");
+    if (!input?.caseId) throw new Error("Matter ID required.");
     return input;
   })
   .handler(async ({ data, context }): Promise<CaseDrillDown> => {

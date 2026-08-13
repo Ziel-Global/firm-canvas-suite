@@ -11,7 +11,7 @@ const ELEVATED_ROLES = ["super_admin", "admin", "senior_lawyer"];
 export const completeStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; stageId: string; notes?: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.stageId) throw new Error("A stage id is required.");
     return {
       caseId: input.caseId,
@@ -31,7 +31,7 @@ export const completeStage = createServerFn({ method: "POST" })
       .eq("id", data.stageId)
       .single();
     if (stageErr || !stage) throw new Error("Stage not found.");
-    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this case.");
+    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this matter.");
     if (stage.status === "complete") throw new Error("This stage is already complete.");
     if (!elevated && stage.assignee_id !== userId)
       throw new Error("Only the stage assignee can complete this stage.");
@@ -105,13 +105,13 @@ export const completeStage = createServerFn({ method: "POST" })
           
         if (authUser?.user?.email) {
           const { data: cData } = await supabaseAdmin.from("cases").select("title").eq("id", data.caseId).single();
-          const cTitle = cData?.title ?? "Unknown Case";
+          const cTitle = cData?.title ?? "Unknown Matter";
 
           supabaseAdmin.functions.invoke("send-email", {
             body: {
               to: authUser.user.email,
               subject: `Stage Ready: ${nextStage.name}`,
-              html: `<p>Hi ${(assigneeProf as any)?.full_name || 'Team Member'},</p><p>The stage <strong>${nextStage.name}</strong> on case <strong>${cTitle}</strong> is now active and assigned to you.</p><p><a href="https://firmcanvas.app/cases/${data.caseId}">View Case</a></p>`
+              html: `<p>Hi ${(assigneeProf as any)?.full_name || 'Team Member'},</p><p>The stage <strong>${nextStage.name}</strong> on matter <strong>${cTitle}</strong> is now active and assigned to you.</p><p><a href="https://firmcanvas.app/cases/${data.caseId}">View Matter</a></p>`
             }
           }).catch(err => console.error("Failed to send stage email:", err));
         }
@@ -145,7 +145,7 @@ export const completeStage = createServerFn({ method: "POST" })
 export const returnStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; stageId: string; comments: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.stageId) throw new Error("A stage id is required.");
     if (!input?.comments?.trim())
       throw new Error("Please add comments explaining why you are returning.");
@@ -167,7 +167,7 @@ export const returnStage = createServerFn({ method: "POST" })
       .eq("id", data.stageId)
       .single();
     if (stageErr || !stage) throw new Error("Stage not found.");
-    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this case.");
+    if (stage.case_id !== data.caseId) throw new Error("Stage does not belong to this matter.");
     if (!elevated && stage.assignee_id !== userId)
       throw new Error("Only the stage assignee can return this stage.");
 

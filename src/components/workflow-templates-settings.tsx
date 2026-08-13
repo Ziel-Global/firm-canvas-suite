@@ -109,7 +109,7 @@ export function WorkflowTemplatesSettings() {
       <SettingsSection
         eyebrow="Workflows"
         title="Workflow templates"
-        description="Reusable stage workflows applied when creating cases, grouped by case type."
+        description="Reusable stage workflows applied when creating matters, grouped by matter type."
         action={
           <Button
             onClick={() => setNewOpen(true)}
@@ -228,7 +228,7 @@ export function WorkflowTemplatesSettings() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                Case type
+                Matter type
               </Label>
               <Input
                 value={newCaseType}
@@ -277,7 +277,7 @@ export function WorkflowTemplatesSettings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete template?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the template and all its stages. Cases already created
+              This removes the template and all its stages. Matters already created
               from it are unaffected.
             </AlertDialogDescription>
           </AlertDialogHeader>

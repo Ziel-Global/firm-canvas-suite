@@ -12,6 +12,7 @@ import {
   Bot,
   Library,
   UserRound,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,7 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Workspace",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard },
-      { title: "Cases", url: "/cases", icon: Briefcase },
+      { title: "Matters", url: "/cases", icon: Briefcase },
       { title: "Calendar", url: "/calendar", icon: Calendar },
       { title: "Tasks", url: "/tasks", icon: CheckSquare },
       { title: "Documents", url: "/documents", icon: FileText },
@@ -42,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Firm",
     items: [
       { title: "Clients", url: "/clients", icon: Users },
+      { title: "Billing", url: "/billing", icon: Receipt },
       { title: "Reports", url: "/reports", icon: BarChart3 },
       { title: "Knowledge Base", url: "/knowledge-base", icon: Library },
       { title: "Users", url: "/users", icon: UserCog },
@@ -76,6 +78,7 @@ const ROLE_NAV: Record<AppRole, string[] | "all"> = {
     "/documents",
     "/approvals",
     "/clients",
+    "/billing",
     "/reports",
     "/knowledge-base",
     "/settings",

@@ -21,14 +21,18 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CasesRouteImport } from './routes/cases'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as BootstrapRouteImport } from './routes/bootstrap'
+import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AiLabRouteImport } from './routes/ai-lab'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortalIndexRouteImport } from './routes/portal.index'
+import { Route as PortalInvoicesRouteImport } from './routes/portal.invoices'
 import { Route as ClientsClientIdRouteImport } from './routes/clients_.$clientId'
 import { Route as CasesCaseIdRouteImport } from './routes/cases_.$caseId'
+import { Route as BillingInvoiceIdRouteImport } from './routes/billing_.$invoiceId'
 import { Route as ApprovalsApprovalIdRouteImport } from './routes/approvals_.$approvalId'
+import { Route as PortalInvoicesInvoiceIdRouteImport } from './routes/portal.invoices.$invoiceId'
 import { Route as PortalCasesCaseIdRouteImport } from './routes/portal.cases.$caseId'
 import { Route as ApiPublicHooksSendMorningDigestRouteImport } from './routes/api/public/hooks/send-morning-digest'
 import { Route as ApiPublicHooksProcessRemindersRouteImport } from './routes/api/public/hooks/process-reminders'
@@ -94,6 +98,11 @@ const BootstrapRoute = BootstrapRouteImport.update({
   path: '/bootstrap',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -119,6 +128,11 @@ const PortalIndexRoute = PortalIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PortalRoute,
 } as any)
+const PortalInvoicesRoute = PortalInvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
+  getParentRoute: () => PortalRoute,
+} as any)
 const ClientsClientIdRoute = ClientsClientIdRouteImport.update({
   id: '/clients_/$clientId',
   path: '/clients/$clientId',
@@ -129,10 +143,20 @@ const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
   path: '/cases/$caseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillingInvoiceIdRoute = BillingInvoiceIdRouteImport.update({
+  id: '/billing_/$invoiceId',
+  path: '/billing/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApprovalsApprovalIdRoute = ApprovalsApprovalIdRouteImport.update({
   id: '/approvals_/$approvalId',
   path: '/approvals/$approvalId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PortalInvoicesInvoiceIdRoute = PortalInvoicesInvoiceIdRouteImport.update({
+  id: '/$invoiceId',
+  path: '/$invoiceId',
+  getParentRoute: () => PortalInvoicesRoute,
 } as any)
 const PortalCasesCaseIdRoute = PortalCasesCaseIdRouteImport.update({
   id: '/cases/$caseId',
@@ -163,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/ai-lab': typeof AiLabRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/billing': typeof BillingRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
@@ -176,10 +201,13 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
   '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
+  '/billing/$invoiceId': typeof BillingInvoiceIdRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
+  '/portal/invoices': typeof PortalInvoicesRouteWithChildren
   '/portal/': typeof PortalIndexRoute
   '/portal/cases/$caseId': typeof PortalCasesCaseIdRoute
+  '/portal/invoices/$invoiceId': typeof PortalInvoicesInvoiceIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
   '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
   '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
@@ -189,6 +217,7 @@ export interface FileRoutesByTo {
   '/ai-lab': typeof AiLabRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/billing': typeof BillingRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
@@ -201,10 +230,13 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
   '/approvals/$approvalId': typeof ApprovalsApprovalIdRoute
+  '/billing/$invoiceId': typeof BillingInvoiceIdRoute
   '/cases/$caseId': typeof CasesCaseIdRoute
   '/clients/$clientId': typeof ClientsClientIdRoute
+  '/portal/invoices': typeof PortalInvoicesRouteWithChildren
   '/portal': typeof PortalIndexRoute
   '/portal/cases/$caseId': typeof PortalCasesCaseIdRoute
+  '/portal/invoices/$invoiceId': typeof PortalInvoicesInvoiceIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
   '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
   '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
@@ -215,6 +247,7 @@ export interface FileRoutesById {
   '/ai-lab': typeof AiLabRoute
   '/approvals': typeof ApprovalsRoute
   '/auth': typeof AuthRoute
+  '/billing': typeof BillingRoute
   '/bootstrap': typeof BootstrapRoute
   '/calendar': typeof CalendarRoute
   '/cases': typeof CasesRoute
@@ -228,10 +261,13 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRoute
   '/users': typeof UsersRoute
   '/approvals_/$approvalId': typeof ApprovalsApprovalIdRoute
+  '/billing_/$invoiceId': typeof BillingInvoiceIdRoute
   '/cases_/$caseId': typeof CasesCaseIdRoute
   '/clients_/$clientId': typeof ClientsClientIdRoute
+  '/portal/invoices': typeof PortalInvoicesRouteWithChildren
   '/portal/': typeof PortalIndexRoute
   '/portal/cases/$caseId': typeof PortalCasesCaseIdRoute
+  '/portal/invoices/$invoiceId': typeof PortalInvoicesInvoiceIdRoute
   '/api/public/hooks/escalate-overdue-stages': typeof ApiPublicHooksEscalateOverdueStagesRoute
   '/api/public/hooks/process-reminders': typeof ApiPublicHooksProcessRemindersRoute
   '/api/public/hooks/send-morning-digest': typeof ApiPublicHooksSendMorningDigestRoute
@@ -243,6 +279,7 @@ export interface FileRouteTypes {
     | '/ai-lab'
     | '/approvals'
     | '/auth'
+    | '/billing'
     | '/bootstrap'
     | '/calendar'
     | '/cases'
@@ -256,10 +293,13 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/approvals/$approvalId'
+    | '/billing/$invoiceId'
     | '/cases/$caseId'
     | '/clients/$clientId'
+    | '/portal/invoices'
     | '/portal/'
     | '/portal/cases/$caseId'
+    | '/portal/invoices/$invoiceId'
     | '/api/public/hooks/escalate-overdue-stages'
     | '/api/public/hooks/process-reminders'
     | '/api/public/hooks/send-morning-digest'
@@ -269,6 +309,7 @@ export interface FileRouteTypes {
     | '/ai-lab'
     | '/approvals'
     | '/auth'
+    | '/billing'
     | '/bootstrap'
     | '/calendar'
     | '/cases'
@@ -281,10 +322,13 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/approvals/$approvalId'
+    | '/billing/$invoiceId'
     | '/cases/$caseId'
     | '/clients/$clientId'
+    | '/portal/invoices'
     | '/portal'
     | '/portal/cases/$caseId'
+    | '/portal/invoices/$invoiceId'
     | '/api/public/hooks/escalate-overdue-stages'
     | '/api/public/hooks/process-reminders'
     | '/api/public/hooks/send-morning-digest'
@@ -294,6 +338,7 @@ export interface FileRouteTypes {
     | '/ai-lab'
     | '/approvals'
     | '/auth'
+    | '/billing'
     | '/bootstrap'
     | '/calendar'
     | '/cases'
@@ -307,10 +352,13 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/users'
     | '/approvals_/$approvalId'
+    | '/billing_/$invoiceId'
     | '/cases_/$caseId'
     | '/clients_/$clientId'
+    | '/portal/invoices'
     | '/portal/'
     | '/portal/cases/$caseId'
+    | '/portal/invoices/$invoiceId'
     | '/api/public/hooks/escalate-overdue-stages'
     | '/api/public/hooks/process-reminders'
     | '/api/public/hooks/send-morning-digest'
@@ -321,6 +369,7 @@ export interface RootRouteChildren {
   AiLabRoute: typeof AiLabRoute
   ApprovalsRoute: typeof ApprovalsRoute
   AuthRoute: typeof AuthRoute
+  BillingRoute: typeof BillingRoute
   BootstrapRoute: typeof BootstrapRoute
   CalendarRoute: typeof CalendarRoute
   CasesRoute: typeof CasesRoute
@@ -334,6 +383,7 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   UsersRoute: typeof UsersRoute
   ApprovalsApprovalIdRoute: typeof ApprovalsApprovalIdRoute
+  BillingInvoiceIdRoute: typeof BillingInvoiceIdRoute
   CasesCaseIdRoute: typeof CasesCaseIdRoute
   ClientsClientIdRoute: typeof ClientsClientIdRoute
   ApiPublicHooksEscalateOverdueStagesRoute: typeof ApiPublicHooksEscalateOverdueStagesRoute
@@ -427,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BootstrapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -462,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalIndexRouteImport
       parentRoute: typeof PortalRoute
     }
+    '/portal/invoices': {
+      id: '/portal/invoices'
+      path: '/invoices'
+      fullPath: '/portal/invoices'
+      preLoaderRoute: typeof PortalInvoicesRouteImport
+      parentRoute: typeof PortalRoute
+    }
     '/clients_/$clientId': {
       id: '/clients_/$clientId'
       path: '/clients/$clientId'
@@ -476,12 +540,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesCaseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing_/$invoiceId': {
+      id: '/billing_/$invoiceId'
+      path: '/billing/$invoiceId'
+      fullPath: '/billing/$invoiceId'
+      preLoaderRoute: typeof BillingInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/approvals_/$approvalId': {
       id: '/approvals_/$approvalId'
       path: '/approvals/$approvalId'
       fullPath: '/approvals/$approvalId'
       preLoaderRoute: typeof ApprovalsApprovalIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/portal/invoices/$invoiceId': {
+      id: '/portal/invoices/$invoiceId'
+      path: '/$invoiceId'
+      fullPath: '/portal/invoices/$invoiceId'
+      preLoaderRoute: typeof PortalInvoicesInvoiceIdRouteImport
+      parentRoute: typeof PortalInvoicesRoute
     }
     '/portal/cases/$caseId': {
       id: '/portal/cases/$caseId'
@@ -514,12 +592,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PortalInvoicesRouteChildren {
+  PortalInvoicesInvoiceIdRoute: typeof PortalInvoicesInvoiceIdRoute
+}
+
+const PortalInvoicesRouteChildren: PortalInvoicesRouteChildren = {
+  PortalInvoicesInvoiceIdRoute: PortalInvoicesInvoiceIdRoute,
+}
+
+const PortalInvoicesRouteWithChildren = PortalInvoicesRoute._addFileChildren(
+  PortalInvoicesRouteChildren,
+)
+
 interface PortalRouteChildren {
+  PortalInvoicesRoute: typeof PortalInvoicesRouteWithChildren
   PortalIndexRoute: typeof PortalIndexRoute
   PortalCasesCaseIdRoute: typeof PortalCasesCaseIdRoute
 }
 
 const PortalRouteChildren: PortalRouteChildren = {
+  PortalInvoicesRoute: PortalInvoicesRouteWithChildren,
   PortalIndexRoute: PortalIndexRoute,
   PortalCasesCaseIdRoute: PortalCasesCaseIdRoute,
 }
@@ -532,6 +624,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiLabRoute: AiLabRoute,
   ApprovalsRoute: ApprovalsRoute,
   AuthRoute: AuthRoute,
+  BillingRoute: BillingRoute,
   BootstrapRoute: BootstrapRoute,
   CalendarRoute: CalendarRoute,
   CasesRoute: CasesRoute,
@@ -545,6 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRoute,
   UsersRoute: UsersRoute,
   ApprovalsApprovalIdRoute: ApprovalsApprovalIdRoute,
+  BillingInvoiceIdRoute: BillingInvoiceIdRoute,
   CasesCaseIdRoute: CasesCaseIdRoute,
   ClientsClientIdRoute: ClientsClientIdRoute,
   ApiPublicHooksEscalateOverdueStagesRoute:

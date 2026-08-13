@@ -51,7 +51,7 @@ export const setCaseAccessOverride = createServerFn({ method: "POST" })
     folderScope?: string[] | string | null;
     note?: string | null;
   }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.targetUserId) throw new Error("A user is required.");
     if (!ACCESS_LEVELS.includes(input.accessLevel)) {
       throw new Error("Invalid access level.");
@@ -141,7 +141,7 @@ export const setCaseAccessOverride = createServerFn({ method: "POST" })
 export const clearCaseAccessOverride = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; targetUserId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.targetUserId) throw new Error("A user is required.");
     return { caseId: input.caseId, targetUserId: input.targetUserId };
   })
@@ -190,7 +190,7 @@ export const clearCaseAccessOverride = createServerFn({ method: "POST" })
 export const getMyCaseAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<{ level: string }> => {

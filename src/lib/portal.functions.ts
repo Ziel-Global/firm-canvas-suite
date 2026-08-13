@@ -150,7 +150,7 @@ export const getPortalHome = createServerFn({ method: "GET" })
 export const getPortalCase = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => {
-    if (!input?.id) throw new Error("A case id is required.");
+    if (!input?.id) throw new Error("A matter id is required.");
     return { id: input.id };
   })
   .handler(async ({ data, context }): Promise<PortalCaseRow> => {
@@ -163,7 +163,7 @@ export const getPortalCase = createServerFn({ method: "GET" })
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!c) throw new Error("Case not found.");
+    if (!c) throw new Error("Matter not found.");
     return c as PortalCaseRow;
   });
 
@@ -231,4 +231,93 @@ export const getPortalDocumentDownloadUrl = createServerFn({ method: "POST" })
     if (!signed?.signedUrl) throw new Error("Could not create download link.");
 
     return { url: signed.signedUrl };
+  });
+
+export interface PortalInvoiceRow {
+  id: string;
+  invoice_number: string;
+  status: string;
+  case_title: string | null;
+  case_ref: string | null;
+  issue_date: string | null;
+  due_date: string | null;
+  total: number;
+  amount_paid: number;
+}
+
+/** Invoices for the logged-in client's own matters. RLS already excludes drafts. */
+export const getPortalInvoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PortalInvoiceRow[]> => {
+    const { supabase, userId } = context;
+    await requireClientRole(supabase, userId);
+
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, status, issue_date, due_date, total, amount_paid, cases(title, case_ref)")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      invoice_number: r.invoice_number,
+      status: r.status,
+      case_title: (r.cases as { title: string | null } | null)?.title ?? null,
+      case_ref: (r.cases as { case_ref: string | null } | null)?.case_ref ?? null,
+      issue_date: r.issue_date,
+      due_date: r.due_date,
+      total: r.total,
+      amount_paid: r.amount_paid,
+    }));
+  });
+
+export interface PortalInvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number | null;
+  rate: number | null;
+  amount: number;
+}
+
+export interface PortalInvoiceDetail extends PortalInvoiceRow {
+  line_items: PortalInvoiceLineItem[];
+}
+
+/** Read-only invoice detail for the client portal. No payment action — staff record payments manually. */
+export const getPortalInvoiceDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { invoiceId: string }) => {
+    if (!input?.invoiceId) throw new Error("An invoice id is required.");
+    return { invoiceId: input.invoiceId };
+  })
+  .handler(async ({ data, context }): Promise<PortalInvoiceDetail> => {
+    const { supabase, userId } = context;
+    await requireClientRole(supabase, userId);
+
+    const { data: invoice, error } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, status, issue_date, due_date, total, amount_paid, cases(title, case_ref)")
+      .eq("id", data.invoiceId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!invoice) throw new Error("Invoice not found.");
+
+    const { data: lineItems, error: lineItemsError } = await supabase
+      .from("invoice_line_items")
+      .select("id, description, quantity, rate, amount")
+      .eq("invoice_id", data.invoiceId)
+      .order("sort_order", { ascending: true });
+    if (lineItemsError) throw new Error(lineItemsError.message);
+
+    return {
+      id: invoice.id,
+      invoice_number: invoice.invoice_number,
+      status: invoice.status,
+      case_title: (invoice.cases as { title: string | null } | null)?.title ?? null,
+      case_ref: (invoice.cases as { case_ref: string | null } | null)?.case_ref ?? null,
+      issue_date: invoice.issue_date,
+      due_date: invoice.due_date,
+      total: invoice.total,
+      amount_paid: invoice.amount_paid,
+      line_items: lineItems ?? [],
+    };
   });

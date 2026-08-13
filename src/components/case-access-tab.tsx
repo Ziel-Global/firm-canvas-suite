@@ -166,7 +166,7 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
         });
         toast.success(
           choice === "none"
-            ? "Access revoked. The user is signed out of this case immediately."
+            ? "Access revoked. The user is signed out of this matter immediately."
             : "Access updated — takes effect immediately.",
         );
       }

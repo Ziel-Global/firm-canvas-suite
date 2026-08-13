@@ -113,7 +113,7 @@ export function TopBar({ title, className }: TopBarProps) {
               >
                 <Link to="/cases" search={{ new: true }}>
                   <Plus className="size-3.5" />
-                  New case
+                  New matter
                 </Link>
               </Button>
             )}

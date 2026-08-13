@@ -43,7 +43,7 @@ const MODE_OPTIONS: {
   {
     mode: "admin_only",
     title: "Admins only",
-    description: "Hidden from the whole case team. Only admins can see it.",
+    description: "Hidden from the whole matter team. Only admins can see it.",
   },
 ];
 
@@ -118,7 +118,7 @@ export function DocumentVisibilityPanel({
         allowedRoles.size === ROLE_OPTIONS.length &&
         allowedUsers.size === 0
       ) {
-        return "All case roles can see";
+        return "All matter roles can see";
       }
       return `Allowed: ${n} selection(s)`;
     }
@@ -236,7 +236,7 @@ export function DocumentVisibilityPanel({
             <h3 className="text-base font-semibold text-foreground">Document access</h3>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Control who on this case can see <span className="text-foreground">{documentTitle}</span>.
+            Control who on this matter can see <span className="text-foreground">{documentTitle}</span>.
             Admins always retain access.
           </p>
         </div>
@@ -276,7 +276,7 @@ export function DocumentVisibilityPanel({
                 className="border-white/[0.12] bg-white/[0.04]"
                 onClick={allowEveryoneOnCase}
               >
-                Allow everyone on this case
+                Allow everyone on this matter
               </Button>
             </div>
           ) : null}
@@ -313,7 +313,7 @@ export function DocumentVisibilityPanel({
             <div className="max-h-48 space-y-2 overflow-y-auto rounded-[var(--radius-control)] border border-white/[0.08] p-3">
               {team.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  No one is appointed on this case yet. Assign people on the Access tab first.
+                  No one is appointed on this matter yet. Assign people on the Access tab first.
                 </p>
               ) : (
                 team.map((member) => (

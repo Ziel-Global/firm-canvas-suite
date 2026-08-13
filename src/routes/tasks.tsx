@@ -579,7 +579,7 @@ function TasksPage() {
               Tasks
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Track work across every case · drag cards to update status
+              Track work across every matter · drag cards to update status
             </p>
           </div>
 

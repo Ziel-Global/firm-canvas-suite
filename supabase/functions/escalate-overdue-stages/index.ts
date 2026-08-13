@@ -156,7 +156,7 @@ serve(async (_req) => {
               html: `<p>Hi ${admin.full_name || "Principal"},</p>
 <p><strong>${title}</strong></p>
 <p>${body}</p>
-<p><a href="https://firmcanvas.app${link}">Open case</a></p>
+<p><a href="https://firmcanvas.app${link}">Open matter</a></p>
 <p style="color:#666;font-size:12px;">This is an automated escalation from Firm Operations Portal.</p>`,
             }),
           });

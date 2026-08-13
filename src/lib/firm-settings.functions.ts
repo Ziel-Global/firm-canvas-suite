@@ -16,6 +16,11 @@ export const FIRM_SETTING_KEYS = [
   "morning_digest_time",
   "max_failed_logins",
   "lockout_minutes",
+  "default_hourly_rate",
+  "invoice_number_prefix",
+  "invoice_due_days",
+  "late_payment_interest_pct",
+  "invoice_reminder_offsets_days",
 ] as const;
 
 export type FirmSettingKey = (typeof FIRM_SETTING_KEYS)[number];
@@ -27,6 +32,11 @@ export interface FirmSettingsValues {
   morning_digest_time: string;
   max_failed_logins: number;
   lockout_minutes: number;
+  default_hourly_rate: number;
+  invoice_number_prefix: string;
+  invoice_due_days: number;
+  late_payment_interest_pct: number;
+  invoice_reminder_offsets_days: number[];
 }
 
 export const FIRM_SETTING_DEFAULTS: FirmSettingsValues = {
@@ -36,6 +46,11 @@ export const FIRM_SETTING_DEFAULTS: FirmSettingsValues = {
   morning_digest_time: "07:30",
   max_failed_logins: 5,
   lockout_minutes: 15,
+  default_hourly_rate: 0,
+  invoice_number_prefix: "INV",
+  invoice_due_days: 30,
+  late_payment_interest_pct: 0,
+  invoice_reminder_offsets_days: [3, 7, 14, 30],
 };
 
 function asNumber(value: Json | null | undefined, fallback: number): number {
@@ -55,6 +70,11 @@ function asTimeString(value: Json | null | undefined, fallback: string): string 
       return `${h.padStart(2, "0")}:${m}`;
     }
   }
+  return fallback;
+}
+
+function asString(value: Json | null | undefined, fallback: string): string {
+  if (typeof value === "string" && value.trim() !== "") return value;
   return fallback;
 }
 
@@ -110,6 +130,26 @@ export const getFirmSettings = createServerFn({ method: "GET" })
       lockout_minutes: asNumber(
         map.get("lockout_minutes"),
         FIRM_SETTING_DEFAULTS.lockout_minutes,
+      ),
+      default_hourly_rate: asNumber(
+        map.get("default_hourly_rate"),
+        FIRM_SETTING_DEFAULTS.default_hourly_rate,
+      ),
+      invoice_number_prefix: asString(
+        map.get("invoice_number_prefix"),
+        FIRM_SETTING_DEFAULTS.invoice_number_prefix,
+      ),
+      invoice_due_days: asNumber(
+        map.get("invoice_due_days"),
+        FIRM_SETTING_DEFAULTS.invoice_due_days,
+      ),
+      late_payment_interest_pct: asNumber(
+        map.get("late_payment_interest_pct"),
+        FIRM_SETTING_DEFAULTS.late_payment_interest_pct,
+      ),
+      invoice_reminder_offsets_days: asNumberArray(
+        map.get("invoice_reminder_offsets_days"),
+        FIRM_SETTING_DEFAULTS.invoice_reminder_offsets_days,
       ),
     };
   });
@@ -176,6 +216,51 @@ export const updateFirmSettings = createServerFn({ method: "POST" })
         throw new Error("Lockout duration must be between 1 and 1,440 minutes.");
       }
       next.lockout_minutes = n;
+    }
+
+    if (input.default_hourly_rate != null) {
+      const n = Number(input.default_hourly_rate);
+      if (!Number.isFinite(n) || n < 0 || n > 100000) {
+        throw new Error("Default hourly rate must be between 0 and 100,000.");
+      }
+      next.default_hourly_rate = Math.round(n * 100) / 100;
+    }
+
+    if (input.invoice_number_prefix != null) {
+      const p = String(input.invoice_number_prefix).trim().toUpperCase();
+      if (!/^[A-Z]{1,8}$/.test(p)) {
+        throw new Error("Invoice number prefix must be 1-8 letters.");
+      }
+      next.invoice_number_prefix = p;
+    }
+
+    if (input.invoice_due_days != null) {
+      const n = Math.round(Number(input.invoice_due_days));
+      if (!Number.isFinite(n) || n < 1 || n > 365) {
+        throw new Error("Invoice due days must be between 1 and 365.");
+      }
+      next.invoice_due_days = n;
+    }
+
+    if (input.late_payment_interest_pct != null) {
+      const n = Number(input.late_payment_interest_pct);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        throw new Error("Late payment interest must be between 0 and 100 percent.");
+      }
+      next.late_payment_interest_pct = Math.round(n * 100) / 100;
+    }
+
+    if (input.invoice_reminder_offsets_days != null) {
+      if (!Array.isArray(input.invoice_reminder_offsets_days) || input.invoice_reminder_offsets_days.length === 0) {
+        throw new Error("At least one invoice reminder offset is required.");
+      }
+      const offsets = input.invoice_reminder_offsets_days
+        .map((v) => Math.round(Number(v)))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (offsets.length === 0) {
+        throw new Error("Invoice reminder offsets must be positive days.");
+      }
+      next.invoice_reminder_offsets_days = Array.from(new Set(offsets)).sort((a, b) => a - b);
     }
 
     if (Object.keys(next).length === 0) {
@@ -255,6 +340,26 @@ export const updateFirmSettings = createServerFn({ method: "POST" })
       lockout_minutes: asNumber(
         map.get("lockout_minutes"),
         FIRM_SETTING_DEFAULTS.lockout_minutes,
+      ),
+      default_hourly_rate: asNumber(
+        map.get("default_hourly_rate"),
+        FIRM_SETTING_DEFAULTS.default_hourly_rate,
+      ),
+      invoice_number_prefix: asString(
+        map.get("invoice_number_prefix"),
+        FIRM_SETTING_DEFAULTS.invoice_number_prefix,
+      ),
+      invoice_due_days: asNumber(
+        map.get("invoice_due_days"),
+        FIRM_SETTING_DEFAULTS.invoice_due_days,
+      ),
+      late_payment_interest_pct: asNumber(
+        map.get("late_payment_interest_pct"),
+        FIRM_SETTING_DEFAULTS.late_payment_interest_pct,
+      ),
+      invoice_reminder_offsets_days: asNumberArray(
+        map.get("invoice_reminder_offsets_days"),
+        FIRM_SETTING_DEFAULTS.invoice_reminder_offsets_days,
       ),
     };
   });

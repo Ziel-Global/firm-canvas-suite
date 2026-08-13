@@ -119,7 +119,7 @@ export function EditCaseSheet({
         },
       }),
     onSuccess: () => {
-      toast.success("Case updated");
+      toast.success("Matter updated");
       queryClient.invalidateQueries({ queryKey: ["case", caseId] });
       queryClient.invalidateQueries({ queryKey: ["case-overview", caseId] });
       queryClient.invalidateQueries({ queryKey: ["cases"] });
@@ -129,7 +129,7 @@ export function EditCaseSheet({
     },
     onError: (err: unknown) => {
       const message =
-        err instanceof Error ? err.message : "Could not update case.";
+        err instanceof Error ? err.message : "Could not update matter.";
       setFormError(message);
       toast.error(message);
     },
@@ -147,7 +147,7 @@ export function EditCaseSheet({
       return;
     }
     if (!caseType) {
-      toast.error("Please select a case type.");
+      toast.error("Please select a matter type.");
       return;
     }
     mutation.mutate();
@@ -165,9 +165,9 @@ export function EditCaseSheet({
     >
       <SheetContent className="flex w-full flex-col sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Edit case</SheetTitle>
+          <SheetTitle>Edit matter</SheetTitle>
           <SheetDescription>
-            Update the case title, client, and type. Status and team are managed
+            Update the matter title, client, and type. Status and team are managed
             separately.
           </SheetDescription>
         </SheetHeader>
@@ -269,7 +269,7 @@ export function EditCaseSheet({
             </div>
 
             <div className="space-y-2">
-              <Label>Case type *</Label>
+              <Label>Matter type *</Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

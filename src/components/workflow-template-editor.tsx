@@ -154,7 +154,7 @@ export function WorkflowTemplateEditor({
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Case type</Label>
+          <Label>Matter type</Label>
           <Input
             value={caseType}
             onChange={(e) => setCaseType(e.target.value)}

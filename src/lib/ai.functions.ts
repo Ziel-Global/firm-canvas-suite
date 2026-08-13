@@ -17,7 +17,7 @@ export interface CaseSummaryReport {
 export const summariseCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("Case ID required.");
+    if (!input?.caseId) throw new Error("Matter ID required.");
     return input;
   })
   .handler(async ({ data, context }): Promise<CaseSummaryReport> => {
@@ -32,7 +32,7 @@ export const summariseCase = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (caseErr) throw new Error(caseErr.message);
-    if (!caseData) throw new Error("Case not found or access denied.");
+    if (!caseData) throw new Error("Matter not found or access denied.");
 
     // ── Current stage ──────────────────────────────────────────────────
     const { data: stages } = await supabase

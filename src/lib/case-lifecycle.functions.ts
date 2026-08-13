@@ -42,7 +42,7 @@ async function assertSuperAdmin(supabase: any, userId: string) {
 export const changeCaseStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; status: CaseStatus }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!CASE_STATUSES.includes(input.status)) {
       throw new Error("Invalid status.");
     }
@@ -76,7 +76,7 @@ export const reassignLead = createServerFn({ method: "POST" })
     /** @deprecated use keepOnTeam */
     keepReadOnly?: boolean;
   }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.newLeadId) throw new Error("A new lead is required.");
     const keepOnTeam =
       input.keepOnTeam !== undefined
@@ -111,7 +111,7 @@ export const reassignLead = createServerFn({ method: "POST" })
       "junior_lawyer",
     ];
     if (!allowedLeadRoles.includes(leadProfile.role)) {
-      throw new Error("Pick a staff member as the case lead.");
+      throw new Error("Pick a staff member as the matter lead.");
     }
 
     const { data: currentLead, error: leadErr } = await supabaseAdmin
@@ -234,13 +234,14 @@ export interface CaseTeamMemberRow {
   isLead: boolean;
   roleOnCase: string | null;
   assignedAt: string | null;
+  billingRate: number | null;
 }
 
 /** List everyone assigned to the case (lead + other lawyers). */
 export const listCaseTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseTeamMemberRow[]> => {
@@ -252,7 +253,7 @@ export const listCaseTeam = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("case_assignments")
-      .select("user_id, is_lead, role_on_case, assigned_at")
+      .select("user_id, is_lead, role_on_case, assigned_at, billing_rate")
       .eq("case_id", data.caseId)
       .order("is_lead", { ascending: false })
       .order("assigned_at", { ascending: true });
@@ -278,9 +279,36 @@ export const listCaseTeam = createServerFn({ method: "GET" })
           isLead: Boolean(r.is_lead),
           roleOnCase: (r.role_on_case as string | null) ?? null,
           assignedAt: (r.assigned_at as string | null) ?? null,
+          billingRate: (r.billing_rate as number | null) ?? null,
         };
       })
       .filter((m): m is CaseTeamMemberRow => m !== null);
+  });
+
+/** Set a team member's per-matter billing rate override. Admins only. */
+export const updateTeamMemberBillingRate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { caseId: string; userId: string; billingRate: number | null }) => {
+    if (!input?.caseId) throw new Error("A matter id is required.");
+    if (!input?.userId) throw new Error("A user is required.");
+    if (input.billingRate != null && (!Number.isFinite(input.billingRate) || input.billingRate < 0)) {
+      throw new Error("Billing rate must be zero or greater.");
+    }
+    return { caseId: input.caseId, userId: input.userId, billingRate: input.billingRate };
+  })
+  .handler(async ({ data, context }): Promise<void> => {
+    const { userId: actorId } = context;
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+    await assertCaseAdmin(supabaseAdmin, actorId);
+
+    const { error } = await supabaseAdmin
+      .from("case_assignments")
+      .update({ billing_rate: data.billingRate })
+      .eq("case_id", data.caseId)
+      .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
   });
 
 /**
@@ -289,7 +317,7 @@ export const listCaseTeam = createServerFn({ method: "GET" })
 export const addCaseTeamMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; userId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.userId) throw new Error("A user is required.");
     return { caseId: input.caseId, userId: input.userId };
   })
@@ -316,7 +344,7 @@ export const addCaseTeamMember = createServerFn({ method: "POST" })
       "junior_lawyer",
     ];
     if (!allowed.includes(profile.role as string)) {
-      throw new Error("Only lawyers (or admins) can be added to a case team.");
+      throw new Error("Only lawyers (or admins) can be added to a matter team.");
     }
 
     const { data: existing } = await supabaseAdmin
@@ -326,7 +354,7 @@ export const addCaseTeamMember = createServerFn({ method: "POST" })
       .eq("user_id", data.userId)
       .maybeSingle();
     if (existing) {
-      throw new Error("That person is already on this case team.");
+      throw new Error("That person is already on this matter team.");
     }
 
     const { error: insErr } = await supabaseAdmin.from("case_assignments").insert({
@@ -358,7 +386,7 @@ export const addCaseTeamMember = createServerFn({ method: "POST" })
 export const removeCaseTeamMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; userId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.userId) throw new Error("A user is required.");
     return { caseId: input.caseId, userId: input.userId };
   })
@@ -376,7 +404,7 @@ export const removeCaseTeamMember = createServerFn({ method: "POST" })
       .eq("user_id", data.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("That person is not on this case team.");
+    if (!row) throw new Error("That person is not on this matter team.");
     if (row.is_lead) {
       throw new Error(
         "Assign a different lead before removing the current lead from the team.",
@@ -450,7 +478,7 @@ export const assignStageAssignee = createServerFn({ method: "POST" })
       if (teamErr) throw new Error(teamErr.message);
       if (!onTeam) {
         throw new Error(
-          "Stages can only be assigned to people on this case team. Add them on the Team tab first.",
+          "Stages can only be assigned to people on this matter team. Add them on the Team tab first.",
         );
       }
     }
@@ -554,7 +582,7 @@ export const createCaseStage = createServerFn({ method: "POST" })
       deadline?: string | null;
       notes?: string | null;
     }) => {
-      if (!input?.caseId) throw new Error("A case id is required.");
+      if (!input?.caseId) throw new Error("A matter id is required.");
       const name = (input.name ?? "").trim();
       if (!name) throw new Error("Stage name is required.");
       return {
@@ -578,7 +606,7 @@ export const createCaseStage = createServerFn({ method: "POST" })
       .eq("id", data.caseId)
       .maybeSingle();
     if (caseErr) throw new Error(caseErr.message);
-    if (!caseRow) throw new Error("Case not found.");
+    if (!caseRow) throw new Error("Matter not found.");
 
     const { data: existing, error: listErr } = await supabaseAdmin
       .from("case_stages")
@@ -781,7 +809,7 @@ export const deleteCaseStage = createServerFn({ method: "POST" })
       .eq("id", stage.case_id)
       .maybeSingle();
     if (caseRow?.current_stage_id === stage.id) {
-      throw new Error("Cannot delete the case's current stage.");
+      throw new Error("Cannot delete the matter's current stage.");
     }
 
     const { deleteStageTask } = await import("@/lib/stage-task-sync");
@@ -814,7 +842,7 @@ export const deleteCaseStage = createServerFn({ method: "POST" })
 export const closeCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; closureSummary: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     const summary = (input.closureSummary ?? "").trim();
     if (summary.length < 3) {
       throw new Error("A closure summary is required.");

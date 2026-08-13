@@ -350,7 +350,7 @@ export const createTask = createServerFn({ method: "POST" })
       );
       if (accessErr) throw new Error(accessErr.message);
       if (access !== "full") {
-        throw new Error("You can only assign case tasks on matters you fully access.");
+        throw new Error("You can only assign matter tasks on matters you fully access.");
       }
     }
 
@@ -364,7 +364,7 @@ export const createTask = createServerFn({ method: "POST" })
       if (teamErr) throw new Error(teamErr.message);
       if (!onTeam) {
         throw new Error(
-          "Tasks on a case can only be assigned to people on that case team.",
+          "Tasks on a matter can only be assigned to people on that matter team.",
         );
       }
     }

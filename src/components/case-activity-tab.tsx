@@ -8,9 +8,9 @@ import { Card } from "@/components/ui/card";
 function actionLabel(action: string | null) {
   switch (action) {
     case "case_created":
-      return "Case created";
+      return "Matter created";
     case "case_status_changed":
-      return "Case status changed";
+      return "Matter status changed";
     case "stage_created":
       return "Stage created";
     case "stage_status_changed":

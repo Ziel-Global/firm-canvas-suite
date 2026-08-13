@@ -114,7 +114,7 @@ serve(async (req) => {
           notifications.push({
             user_id: adminId,
             type: "risk_alert",
-            title: `Case Risk: ${c.title}`,
+            title: `Matter Risk: ${c.title}`,
             body: `${reason} Stage: ${currentStage?.name || 'None'}. Responsible: ${responsibleMember}. Health updated to ${newHealth}.`,
             link: `/cases/${c.id}`
           });

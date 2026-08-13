@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface MemberProductivity {
   id: string;
@@ -238,7 +241,7 @@ export const getApprovalQueueReportData = createServerFn({ method: "GET" })
         id: a.id,
         documentName: a.documents?.title ?? "Unknown Document",
         caseRef: a.cases?.case_ref ?? "N/A",
-        caseTitle: a.cases?.title ?? "Unknown Case",
+        caseTitle: a.cases?.title ?? "Unknown Matter",
         submittedBy: (a.profiles as any)?.full_name ?? "Unknown",
         submittedAt: a.submitted_at,
         waitedDays,
@@ -323,8 +326,206 @@ export const getClientFollowUpReportData = createServerFn({ method: "GET" })
         activeCases: cCases.length,
         lastCommunicationDate: lastAudit ? lastAudit.created_at : null,
         upcomingHearingDate: nextHearing ? nextHearing.starts_at : null,
-        outstandingBilling: 0, // Mocked 
+        outstandingBilling: 0, // Mocked
         isOverdue,
       };
     });
+  });
+
+async function requireBillingReportAccess(supabase: SupabaseClient<Database>) {
+  const { data: role } = await supabase.rpc("current_role");
+  if (role !== "super_admin" && role !== "admin") {
+    throw new Error("Not authorized for this report.");
+  }
+}
+
+export interface ArAgingRow {
+  invoiceId: string;
+  invoiceNumber: string;
+  caseTitle: string | null;
+  clientName: string | null;
+  balance: number;
+  daysOverdue: number;
+  bucket: "current" | "0-30" | "31-60" | "61-90" | "90+";
+}
+
+/** Unpaid invoice balances bucketed by days past due. */
+export const getArAgingReportData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ArAgingRow[]> => {
+    const { supabase } = context;
+    await requireBillingReportAccess(supabase);
+
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, due_date, total, amount_paid, cases(title), clients(full_name)")
+      .in("status", ["sent", "partially_paid", "overdue"]);
+    if (error) throw new Error(error.message);
+
+    const today = new Date();
+    return (data ?? [])
+      .map((r) => {
+        const balance = Math.round((r.total - r.amount_paid) * 100) / 100;
+        const daysOverdue = r.due_date
+          ? Math.max(0, Math.floor((today.getTime() - new Date(r.due_date).getTime()) / 86_400_000))
+          : 0;
+        const bucket: ArAgingRow["bucket"] =
+          daysOverdue === 0 ? "current" : daysOverdue <= 30 ? "0-30" : daysOverdue <= 60 ? "31-60" : daysOverdue <= 90 ? "61-90" : "90+";
+        return {
+          invoiceId: r.id,
+          invoiceNumber: r.invoice_number,
+          caseTitle: (r.cases as { title: string | null } | null)?.title ?? null,
+          clientName: (r.clients as { full_name: string | null } | null)?.full_name ?? null,
+          balance,
+          daysOverdue,
+          bucket,
+        };
+      })
+      .filter((r) => r.balance > 0)
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+  });
+
+export interface BillingHistoryRow {
+  invoiceId: string;
+  invoiceNumber: string;
+  caseTitle: string | null;
+  clientName: string | null;
+  status: string;
+  issueDate: string | null;
+  total: number;
+  amountPaid: number;
+}
+
+/** Invoice history for a date range, most recent first. */
+export const getBillingHistoryReportData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input?: { dateFrom?: string; dateTo?: string }) => input ?? {})
+  .handler(async ({ data, context }): Promise<BillingHistoryRow[]> => {
+    const { supabase } = context;
+    await requireBillingReportAccess(supabase);
+
+    let query = supabase
+      .from("invoices")
+      .select("id, invoice_number, status, issue_date, total, amount_paid, cases(title), clients(full_name)")
+      .neq("status", "draft")
+      .order("issue_date", { ascending: false });
+    if (data.dateFrom) query = query.gte("issue_date", data.dateFrom);
+    if (data.dateTo) query = query.lte("issue_date", data.dateTo);
+
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return (rows ?? []).map((r) => ({
+      invoiceId: r.id,
+      invoiceNumber: r.invoice_number,
+      caseTitle: (r.cases as { title: string | null } | null)?.title ?? null,
+      clientName: (r.clients as { full_name: string | null } | null)?.full_name ?? null,
+      status: r.status,
+      issueDate: r.issue_date,
+      total: r.total,
+      amountPaid: r.amount_paid,
+    }));
+  });
+
+export interface MatterBalanceRow {
+  caseId: string;
+  caseTitle: string;
+  caseRef: string | null;
+  totalBilled: number;
+  totalPaid: number;
+  outstanding: number;
+}
+
+/** Per-matter rollup of billed / paid / outstanding across all its invoices. */
+export const getMatterBalanceReportData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MatterBalanceRow[]> => {
+    const { supabase } = context;
+    await requireBillingReportAccess(supabase);
+
+    const { data: invoices, error } = await supabase
+      .from("invoices")
+      .select("case_id, total, amount_paid, status, cases(title, case_ref)")
+      .neq("status", "draft")
+      .neq("status", "void");
+    if (error) throw new Error(error.message);
+
+    const byCase = new Map<string, MatterBalanceRow>();
+    for (const inv of invoices ?? []) {
+      const c = inv.cases as { title: string | null; case_ref: string | null } | null;
+      const existing = byCase.get(inv.case_id) ?? {
+        caseId: inv.case_id,
+        caseTitle: c?.title ?? "Matter",
+        caseRef: c?.case_ref ?? null,
+        totalBilled: 0,
+        totalPaid: 0,
+        outstanding: 0,
+      };
+      existing.totalBilled = Math.round((existing.totalBilled + inv.total) * 100) / 100;
+      existing.totalPaid = Math.round((existing.totalPaid + inv.amount_paid) * 100) / 100;
+      existing.outstanding = Math.round((existing.totalBilled - existing.totalPaid) * 100) / 100;
+      byCase.set(inv.case_id, existing);
+    }
+
+    return Array.from(byCase.values()).sort((a, b) => b.outstanding - a.outstanding);
+  });
+
+export interface RevenueByTimekeeper {
+  timekeeperId: string;
+  timekeeperName: string;
+  billedHours: number;
+  revenue: number;
+}
+
+export interface RevenueReport {
+  totalRevenue: number;
+  byTimekeeper: RevenueByTimekeeper[];
+}
+
+/** Revenue recognized (invoiced, not draft/void) and fee allocation by timekeeper for billed time. */
+export const getRevenueReportData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input?: { dateFrom?: string; dateTo?: string }) => input ?? {})
+  .handler(async ({ data, context }): Promise<RevenueReport> => {
+    const { supabase } = context;
+    await requireBillingReportAccess(supabase);
+
+    let invoiceQuery = supabase
+      .from("invoices")
+      .select("total, issue_date")
+      .neq("status", "draft")
+      .neq("status", "void");
+    if (data.dateFrom) invoiceQuery = invoiceQuery.gte("issue_date", data.dateFrom);
+    if (data.dateTo) invoiceQuery = invoiceQuery.lte("issue_date", data.dateTo);
+    const { data: invoices, error: invoicesError } = await invoiceQuery;
+    if (invoicesError) throw new Error(invoicesError.message);
+
+    const totalRevenue = Math.round((invoices ?? []).reduce((sum, i) => sum + i.total, 0) * 100) / 100;
+
+    const { data: entries, error: entriesError } = await supabase
+      .from("time_entries")
+      .select("timekeeper_id, duration_minutes, rate, status, profiles!time_entries_timekeeper_id_fkey(full_name)")
+      .eq("status", "billed");
+    if (entriesError) throw new Error(entriesError.message);
+
+    const byTimekeeper = new Map<string, RevenueByTimekeeper>();
+    for (const e of entries ?? []) {
+      if (!e.timekeeper_id) continue;
+      const hours = (e.duration_minutes ?? 0) / 60;
+      const revenue = hours * (e.rate ?? 0);
+      const existing = byTimekeeper.get(e.timekeeper_id) ?? {
+        timekeeperId: e.timekeeper_id,
+        timekeeperName: (e.profiles as { full_name: string | null } | null)?.full_name ?? "Unknown",
+        billedHours: 0,
+        revenue: 0,
+      };
+      existing.billedHours = Math.round((existing.billedHours + hours) * 100) / 100;
+      existing.revenue = Math.round((existing.revenue + revenue) * 100) / 100;
+      byTimekeeper.set(e.timekeeper_id, existing);
+    }
+
+    return {
+      totalRevenue,
+      byTimekeeper: Array.from(byTimekeeper.values()).sort((a, b) => b.revenue - a.revenue),
+    };
   });

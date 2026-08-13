@@ -35,7 +35,7 @@ export const Route = createFileRoute("/clients")({
       { title: "Verdio" },
       {
         name: "description",
-        content: "Firm clients with active cases and hearings.",
+        content: "Firm clients with active matters and hearings.",
       },
     ],
   }),
@@ -46,7 +46,7 @@ type SortKey = "name" | "active_cases" | "last_contact" | "next_hearing";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name (A–Z)" },
-  { value: "active_cases", label: "Most active cases" },
+  { value: "active_cases", label: "Most active matters" },
   { value: "last_contact", label: "Most recent contact" },
   { value: "next_hearing", label: "Next hearing soonest" },
 ];
@@ -149,7 +149,7 @@ function ClientsPage() {
               Clients
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Clients accessible through your assigned cases
+              Clients accessible through your assigned matters
             </p>
           </div>
 
@@ -234,7 +234,7 @@ function ClientsPage() {
             <p className="relative mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
               {search.trim()
                 ? "No clients match your search. Try a different name or reference."
-                : "Clients linked to your cases will appear here."}
+                : "Clients linked to your matters will appear here."}
             </p>
             {canCreate && !search.trim() ? (
               <Button
@@ -262,7 +262,7 @@ function ClientsPage() {
                 {sortKey === "name"
                   ? "name"
                   : sortKey === "active_cases"
-                    ? "active cases"
+                    ? "active matters"
                     : sortKey === "last_contact"
                       ? "last contact"
                       : "next hearing"}

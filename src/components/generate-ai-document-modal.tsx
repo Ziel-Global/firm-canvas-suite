@@ -143,7 +143,7 @@ export function GenerateAIDocumentModal({
               {activeTemplate && schema && (
                 <div className="space-y-4 bg-muted/20 p-4 rounded-md border">
                   <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <FileText className="size-4" /> Case-Specific Facts
+                    <FileText className="size-4" /> Matter-Specific Facts
                   </h4>
                   <div className="grid gap-4">
                     {schema.map(field => (

@@ -233,7 +233,7 @@ export function AppSidebar() {
           <div className={cn("relative px-3 pb-3", collapsed && "lg:px-2")}>
             <Button
               asChild
-              title="New case"
+              title="New matter"
               className={cn(
                 "w-full gap-2 font-semibold",
                 collapsed ? "lg:justify-center lg:px-0" : "justify-start",

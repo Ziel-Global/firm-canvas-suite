@@ -84,12 +84,12 @@ export function CaseLifecycleActions({
     setBusy(true);
     try {
       await close({ data: { caseId, closureSummary: summary } });
-      toast.success("Case closed and closure summary saved.");
+      toast.success("Matter closed and closure summary saved.");
       setCloseOpen(false);
       setSummary("");
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not close case.");
+      toast.error(e instanceof Error ? e.message : "Could not close matter.");
     } finally {
       setBusy(false);
     }
@@ -140,16 +140,16 @@ export function CaseLifecycleActions({
           onClick={() => setCloseOpen(true)}
         >
           <Lock className="size-4" />
-          {isClosed ? "Case closed" : "Close case"}
+          {isClosed ? "Matter closed" : "Close matter"}
         </Button>
       </div>
 
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change case status</DialogTitle>
+            <DialogTitle>Change matter status</DialogTitle>
             <DialogDescription>
-              Update the working status of this case.
+              Update the working status of this matter.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -192,10 +192,10 @@ export function CaseLifecycleActions({
       <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Close case</DialogTitle>
+            <DialogTitle>Close matter</DialogTitle>
             <DialogDescription>
               Closing sets the retention date from firm policy and archives all
-              case documents. This records a closure summary.
+              matter documents. This records a closure summary.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

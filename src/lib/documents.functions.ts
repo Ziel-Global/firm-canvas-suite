@@ -4,9 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
-const BUCKET = "case-documents";
+export const BUCKET = "case-documents";
 
-async function ensureCaseDocumentsBucket() {
+export async function ensureCaseDocumentsBucket() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
   if (listError) throw new Error(listError.message);
@@ -35,7 +35,7 @@ async function ensureCaseDocumentsBucket() {
  * authenticated inserts even when effective_case_access is full; authorization is
  * enforced by the caller before invoking this helper.
  */
-async function uploadToCaseDocuments(
+export async function uploadToCaseDocuments(
   objectName: string,
   bytes: Uint8Array,
   contentType: string,
@@ -70,7 +70,7 @@ async function assertCanUploadToCase(
   );
   if (accessError) throw new Error(accessError.message);
   if (access !== "full") {
-    throw new Error("You do not have permission to upload documents to this case.");
+    throw new Error("You do not have permission to upload documents to this matter.");
   }
 
   const { data: folder, error: folderError } = await supabase
@@ -80,7 +80,7 @@ async function assertCanUploadToCase(
     .eq("case_id", caseId)
     .maybeSingle();
   if (folderError) throw new Error(folderError.message);
-  if (!folder) throw new Error("That document folder was not found for this case.");
+  if (!folder) throw new Error("That document folder was not found for this matter.");
 }
 
 /**
@@ -167,7 +167,7 @@ export interface CaseDocument {
 
 // --- MALWARE SCANNING HOOK ---
 // TODO: Connect to a real scanning service (e.g. AWS Macie, ClamAV, or VirusTotal API)
-async function mockMalwareScan(bytes: Uint8Array, fileName: string): Promise<boolean> {
+export async function mockMalwareScan(bytes: Uint8Array, fileName: string): Promise<boolean> {
   // Mock logic: reject if filename contains 'eicar' or 'malware'
   const lower = fileName.toLowerCase();
   if (lower.includes('eicar') || lower.includes('malware')) {
@@ -196,7 +196,7 @@ export interface DocumentVersionRow {
 export const getCaseFolders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseFolder[]> => {
@@ -217,7 +217,7 @@ export const getCaseFolders = createServerFn({ method: "GET" })
 export const getFolderDocuments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; folderId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.folderId) throw new Error("A folder id is required.");
     return { caseId: input.caseId, folderId: input.folderId };
   })
@@ -333,7 +333,7 @@ export const getFolderDocuments = createServerFn({ method: "GET" })
 export const getDocumentVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; documentId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.documentId) throw new Error("A document id is required.");
     return { caseId: input.caseId, documentId: input.documentId };
   })
@@ -413,7 +413,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
     const documentId = data.get("documentId");
     const note = data.get("note");
     const file = data.get("file");
-    if (typeof caseId !== "string" || !caseId) throw new Error("A case id is required.");
+    if (typeof caseId !== "string" || !caseId) throw new Error("A matter id is required.");
     if (!(file instanceof File) || file.size === 0) throw new Error("A file is required.");
     return {
       caseId,
@@ -567,7 +567,7 @@ export const uploadDocument = createServerFn({ method: "POST" })
 export const getDocumentViewUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; documentId: string; versionId?: string | null }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.documentId) throw new Error("A document id is required.");
     return {
       caseId: input.caseId,
@@ -672,7 +672,7 @@ export const getDocumentViewUrl = createServerFn({ method: "POST" })
 export const restoreDocumentVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; documentId: string; versionId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.documentId) throw new Error("A document id is required.");
     if (!input?.versionId) throw new Error("A version id is required.");
     return input;
@@ -787,7 +787,7 @@ export const searchGlobalDocuments = createServerFn({ method: "GET" })
       case_id: d.case_id ?? d.cases?.id ?? null,
       folder_id: d.folder_id,
       title: d.title ?? "Untitled",
-      case_title: d.cases?.title ?? "Unknown Case",
+      case_title: d.cases?.title ?? "Unknown Matter",
       case_ref: (d.cases?.case_ref as string | null) ?? null,
       doc_type: d.doc_type,
       current_version: d.current_version,
@@ -906,7 +906,7 @@ export const approveDocument = createServerFn({ method: "POST" })
 export const createAiDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; title: string; content: string; docType: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.title) throw new Error("A title is required.");
     if (!input?.content) throw new Error("Content is required.");
     if (!input?.docType) throw new Error("Document type is required.");
@@ -1052,7 +1052,7 @@ export const getDocumentClientShareStatus = createServerFn({ method: "GET" })
         canShare: false,
         clientName: null,
         reason:
-          "This case has no client with a portal login. Link a client user first.",
+          "This matter has no client with a portal login. Link a client user first.",
       };
     }
 
@@ -1097,7 +1097,7 @@ export const shareDocumentWithClient = createServerFn({ method: "POST" })
     const portalClient = await resolveCasePortalClient(supabase, doc.case_id);
     if (!portalClient) {
       throw new Error(
-        "This case has no client with a portal login. Link a client user first.",
+        "This matter has no client with a portal login. Link a client user first.",
       );
     }
 
@@ -1152,7 +1152,7 @@ export const unshareDocumentWithClient = createServerFn({ method: "POST" })
 
     const portalClient = await resolveCasePortalClient(supabase, doc.case_id);
     if (!portalClient) {
-      throw new Error("No portal client is linked to this case.");
+      throw new Error("No portal client is linked to this matter.");
     }
 
     const { error: delErr } = await supabase
@@ -1224,7 +1224,7 @@ async function loadCaseTeamMembers(
 export const getCaseTeamMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseTeamMember[]> => {
@@ -1239,7 +1239,7 @@ export const getCaseTeamMembers = createServerFn({ method: "GET" })
 export const getDocumentVisibility = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string; documentId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     if (!input?.documentId) throw new Error("A document id is required.");
     return input;
   })
@@ -1327,7 +1327,7 @@ export const setDocumentVisibility = createServerFn({ method: "POST" })
         role?: string | null;
       }>;
     }) => {
-      if (!input?.caseId) throw new Error("A case id is required.");
+      if (!input?.caseId) throw new Error("A matter id is required.");
       if (!input?.documentId) throw new Error("A document id is required.");
       if (!["open", "allowlist", "admin_only"].includes(input.mode)) {
         throw new Error("Invalid visibility mode.");

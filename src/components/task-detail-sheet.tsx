@@ -97,7 +97,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                   Workflow stage
                 </div>
                 <p className="mt-1.5 text-sm text-muted-foreground">
-                  This task mirrors a case stage. Open it to mark work complete.
+                  This task mirrors a matter stage. Open it to mark work complete.
                 </p>
                 {task.case_id ? (
                   <Button asChild className="mt-3 w-full" size="sm">
@@ -176,7 +176,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               {(task.case_ref || task.case_title) && task.case_id ? (
                 <DetailRow
                   icon={<FolderKanban className="size-3.5" />}
-                  label="Case"
+                  label="Matter"
                   value={
                     <Link
                       to="/cases/$caseId"

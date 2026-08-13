@@ -72,9 +72,9 @@ function actionLabel(action: string | null) {
     case "client_updated":
       return "Client details updated";
     case "case_created":
-      return "Case created";
+      return "Matter created";
     case "case_status_changed":
-      return "Case status changed";
+      return "Matter status changed";
     case "task_created":
       return "Task created";
     case "task_status_changed":
@@ -171,11 +171,11 @@ function ClientDetailPage() {
                 <div className="flex items-center gap-2">
                   <Briefcase className="size-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-foreground">
-                    Linked cases ({data.cases.length})
+                    Linked matters ({data.cases.length})
                   </h3>
                 </div>
                 {data.cases.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">No cases linked.</p>
+                  <p className="mt-3 text-sm text-muted-foreground">No matters linked.</p>
                 ) : (
                   <ul className="mt-4 divide-y divide-border">
                     {data.cases.map((c) => (

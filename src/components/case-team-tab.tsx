@@ -8,12 +8,14 @@ import {
   addCaseTeamMember,
   listCaseTeam,
   removeCaseTeamMember,
+  updateTeamMemberBillingRate,
 } from "@/lib/case-lifecycle.functions";
 import { listAssignableStaff } from "@/lib/users.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -41,6 +43,7 @@ export function CaseTeamTab({
   const fetchStaff = useServerFn(listAssignableStaff);
   const addMember = useServerFn(addCaseTeamMember);
   const removeMember = useServerFn(removeCaseTeamMember);
+  const setBillingRate = useServerFn(updateTeamMemberBillingRate);
 
   const [pickId, setPickId] = useState("");
 
@@ -73,7 +76,7 @@ export function CaseTeamTab({
       return addMember({ data: { caseId, userId: pickId } });
     },
     onSuccess: (res) => {
-      toast.success(`Added ${res.fullName ?? "lawyer"} to the case team`);
+      toast.success(`Added ${res.fullName ?? "lawyer"} to the matter team`);
       setPickId("");
       invalidate();
     },
@@ -84,8 +87,18 @@ export function CaseTeamTab({
     mutationFn: (userId: string) =>
       removeMember({ data: { caseId, userId } }),
     onSuccess: () => {
-      toast.success("Removed from case team");
+      toast.success("Removed from matter team");
       invalidate();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const rateMutation = useMutation({
+    mutationFn: ({ userId, billingRate }: { userId: string; billingRate: number | null }) =>
+      setBillingRate({ data: { caseId, userId, billingRate } }),
+    onSuccess: () => {
+      toast.success("Billing rate updated");
+      queryClient.invalidateQueries({ queryKey: ["case-team", caseId] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -93,7 +106,7 @@ export function CaseTeamTab({
   if (isLoading) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-muted-foreground">Loading case team…</p>
+        <p className="text-sm text-muted-foreground">Loading matter team…</p>
       </Card>
     );
   }
@@ -118,7 +131,7 @@ export function CaseTeamTab({
           <div>
             <div className="flex items-center gap-2">
               <Users className="size-4 text-muted-foreground" />
-              <h3 className="text-base font-semibold text-foreground">Case team</h3>
+              <h3 className="text-base font-semibold text-foreground">Matter team</h3>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               One lead lawyer, plus as many other lawyers as you need on this
@@ -156,7 +169,13 @@ export function CaseTeamTab({
                       {ROLE_LABELS[lead.role] ?? lead.role}
                     </p>
                   </div>
-                  <Badge className="bg-white/[0.1] text-foreground">Lead</Badge>
+                  <div className="flex items-center gap-2">
+                    <BillingRateField
+                      value={lead.billingRate}
+                      onSave={(rate) => rateMutation.mutate({ userId: lead.userId, billingRate: rate })}
+                    />
+                    <Badge className="bg-white/[0.1] text-foreground">Lead</Badge>
+                  </div>
                 </li>
               ) : null}
               {others.map((m) => (
@@ -173,6 +192,10 @@ export function CaseTeamTab({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <BillingRateField
+                      value={m.billingRate}
+                      onSave={(rate) => rateMutation.mutate({ userId: m.userId, billingRate: rate })}
+                    />
                     <Badge
                       variant="outline"
                       className="border-white/[0.12] text-muted-foreground"
@@ -231,6 +254,35 @@ export function CaseTeamTab({
           </div>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function BillingRateField({
+  value,
+  onSave,
+}: {
+  value: number | null;
+  onSave: (rate: number | null) => void;
+}) {
+  const [text, setText] = useState(value != null ? String(value) : "");
+
+  return (
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span>$</span>
+      <Input
+        type="number"
+        min={0}
+        step="0.01"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          const n = text.trim() === "" ? null : Number(text);
+          if (n !== value) onSave(Number.isFinite(n as number) ? n : null);
+        }}
+        placeholder="rate/hr"
+        className="h-7 w-20 border-white/[0.1] bg-white/[0.03] px-1.5 text-xs"
+      />
     </div>
   );
 }

@@ -47,11 +47,11 @@ const ACTION_BTN =
 function actionLabel(action: string | null) {
   switch (action) {
     case "case_created":
-      return "Case created";
+      return "Matter created";
     case "case_status_changed":
-      return "Case status changed";
+      return "Matter status changed";
     case "case_updated":
-      return "Case details updated";
+      return "Matter details updated";
     case "stage_created":
       return "Stage created";
     case "stage_status_changed":

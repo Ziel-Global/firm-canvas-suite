@@ -32,7 +32,7 @@ export const Route = createFileRoute("/knowledge-base")({
       {
         name: "description",
         content:
-          "Search closed cases for precedents, outcomes, and key decisions.",
+          "Search closed matters for precedents, outcomes, and key decisions.",
       },
     ],
   }),
@@ -123,7 +123,7 @@ function KnowledgeBasePage() {
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Search closed matters for precedents, outcomes, and key decisions.
-              Results respect your case permissions.
+              Results respect your matter permissions.
             </p>
           </div>
 
@@ -187,7 +187,7 @@ function KnowledgeBasePage() {
 
               <div className="space-y-1.5 lg:col-span-2">
                 <Label className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  Case type
+                  Matter type
                 </Label>
                 <select
                   className={selectClass}
@@ -312,8 +312,8 @@ function KnowledgeBasePage() {
               </h3>
               <p className="relative mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                 {hasSearched || Object.keys(activeParams).length > 0
-                  ? "No closed cases match these filters. Broaden keywords, clear the date window, or try another matter type."
-                  : "Search titles, summaries, and topics across closed cases you are permitted to view."}
+                  ? "No closed matters match these filters. Broaden keywords, clear the date window, or try another matter type."
+                  : "Search titles, summaries, and topics across closed matters you are permitted to view."}
               </p>
             </Card>
           )}
@@ -440,7 +440,7 @@ function KBCaseCard({
                 params={{ caseId: record.id }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-white/[0.08]"
               >
-                Open full case
+                Open full matter
                 <ArrowUpRight className="size-3.5" />
               </Link>
             </div>

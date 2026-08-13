@@ -148,7 +148,7 @@ export function NewEventSheet({
       if (ends_at <= starts_at)
         throw new Error("End time must be after the start time.");
       if (eventType === "hearing" && caseId === NO_CASE) {
-        throw new Error("Court hearings must be linked to a case.");
+        throw new Error("Court hearings must be linked to a matter.");
       }
       return create({
         data: {
@@ -168,7 +168,7 @@ export function NewEventSheet({
       const isHearing = created.event_type === "hearing";
       toast.success(
         isHearing
-          ? "Hearing created — visible on this case and in the client portal"
+          ? "Hearing created — visible on this matter and in the client portal"
           : "Event created",
       );
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
@@ -180,7 +180,7 @@ export function NewEventSheet({
 
   const lockedCaseLabel = (() => {
     const match = (cases ?? []).find((c) => c.id === caseId);
-    if (!match) return "This case";
+    if (!match) return "This matter";
     return `${match.case_ref} — ${match.title ?? "Untitled"}`;
   })();
 
@@ -193,8 +193,8 @@ export function NewEventSheet({
           <SheetTitle>New event</SheetTitle>
           <SheetDescription>
             {lockCase
-              ? "Add a commitment to this case calendar. Court hearings also appear in the client portal."
-              : "Add a commitment to the firm calendar. Court hearings linked to a case appear in the client portal."}
+              ? "Add a commitment to this matter calendar. Court hearings also appear in the client portal."
+              : "Add a commitment to the firm calendar. Court hearings linked to a matter appear in the client portal."}
           </SheetDescription>
         </SheetHeader>
 
@@ -265,14 +265,14 @@ export function NewEventSheet({
             </Select>
             {eventType === "hearing" && (
               <p className="text-xs text-muted-foreground">
-                Visible to the case client in their portal.
+                Visible to the matter client in their portal.
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label>
-              Case
+              Matter
               {lockCase || caseRequiredForHearing ? "" : " (optional)"}
               {caseRequiredForHearing && !lockCase ? " (required)" : ""}
             </Label>
@@ -288,7 +288,7 @@ export function NewEventSheet({
                 <SelectTrigger className={FIELD_CLASS}>
                   <SelectValue
                     placeholder={
-                      caseRequiredForHearing ? "Select a case" : "No case"
+                      caseRequiredForHearing ? "Select a matter" : "No matter"
                     }
                   />
                 </SelectTrigger>
@@ -296,11 +296,11 @@ export function NewEventSheet({
                   {caseRequiredForHearing ? (
                     caseId === NO_CASE && (
                       <SelectItem value={NO_CASE} disabled>
-                        Select a case
+                        Select a matter
                       </SelectItem>
                     )
                   ) : (
-                    <SelectItem value={NO_CASE}>No case</SelectItem>
+                    <SelectItem value={NO_CASE}>No matter</SelectItem>
                   )}
                   {(cases ?? []).map((c) => (
                     <SelectItem key={c.id} value={c.id}>

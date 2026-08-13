@@ -118,7 +118,7 @@ export function SmartSearchBar() {
           <div className="max-h-[400px] overflow-y-auto p-1.5">
             {!isSearching && results.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                No matching cases for your query.
+                No matching matters for your query.
               </div>
             ) : (
               results.map((res) => (

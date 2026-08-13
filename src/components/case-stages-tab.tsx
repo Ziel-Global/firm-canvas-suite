@@ -150,10 +150,10 @@ export function CaseStagesTab({
         <Card className="p-6">
           <h3 className="text-sm font-semibold text-foreground">Stages</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            This case has no workflow stages yet.
+            This matter has no workflow stages yet.
             {canManage
               ? " Add stages and set each deadline here — nothing is created automatically."
-              : " An admin needs to add stages and deadlines for this case."}
+              : " An admin needs to add stages and deadlines for this matter."}
           </p>
           {canManage ? (
             <Button
@@ -189,7 +189,7 @@ export function CaseStagesTab({
         <p className="text-sm text-muted-foreground">
           {canManage
             ? "Set each stage deadline manually. Calendar deadline events update when you save a date."
-            : "Stage progress and deadlines for this case."}
+            : "Stage progress and deadlines for this matter."}
         </p>
         {canManage ? (
           <Button

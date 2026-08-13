@@ -90,7 +90,7 @@ export function TaskListView({
             </TableHead>
             {showCase ? (
               <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Case
+                Matter
               </TableHead>
             ) : null}
             <TableHead className="h-11 bg-white/[0.02] text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">

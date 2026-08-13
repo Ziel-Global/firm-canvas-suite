@@ -83,7 +83,7 @@ export function MemberDrillDownSheet({ memberId, memberName, onClose }: MemberDr
                 {bw?.label}
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <Stat icon={<Briefcase className="size-4 text-tag-blue" />} label="Cases" value={data.active_cases} />
+                <Stat icon={<Briefcase className="size-4 text-tag-blue" />} label="Matters" value={data.active_cases} />
                 <Stat icon={<CheckSquare className="size-4 text-tag-blue" />} label="Open Tasks" value={data.open_tasks} />
                 <Stat
                   icon={<AlertTriangle className="size-4 text-priority-high" />}
@@ -94,10 +94,10 @@ export function MemberDrillDownSheet({ memberId, memberName, onClose }: MemberDr
               </div>
             </div>
 
-            {/* Assigned cases */}
-            <Section title="Assigned Cases" icon={<Briefcase className="size-3.5" />}>
+            {/* Assigned matters */}
+            <Section title="Assigned Matters" icon={<Briefcase className="size-3.5" />}>
               {data.cases.length === 0 ? (
-                <p className="text-xs text-muted-foreground px-1">No active cases assigned.</p>
+                <p className="text-xs text-muted-foreground px-1">No active matters assigned.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {data.cases.map((c) => (

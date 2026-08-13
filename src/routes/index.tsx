@@ -188,7 +188,7 @@ function MyWorkspaceDashboard() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your cases, tasks, and hearings · refreshes every 60 seconds
+            Your matters, tasks, and hearings · refreshes every 60 seconds
           </p>
         </div>
         <RefreshButton onClick={() => refetch()} busy={isFetching} />
@@ -196,7 +196,7 @@ function MyWorkspaceDashboard() {
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
-          label="My cases"
+          label="My matters"
           value={d.activeCases}
           icon={<Briefcase className="size-4" />}
           linkTo="/cases"
@@ -235,7 +235,7 @@ function MyWorkspaceDashboard() {
           alert={d.healthCounts.at_risk > 0}
         />
         <KpiCard
-          label="Case overdue"
+          label="Matters overdue"
           value={d.healthCounts.overdue}
           icon={<AlertTriangle className="size-4" />}
           alert={d.healthCounts.overdue > 0}
@@ -337,7 +337,7 @@ function MyWorkspaceDashboard() {
                       </p>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
                         {[t.case_ref, t.case_title].filter(Boolean).join(" · ") ||
-                          "No case"}
+                          "No matter"}
                       </p>
                     </div>
                     <span
@@ -361,12 +361,12 @@ function MyWorkspaceDashboard() {
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <Panel className="min-w-0 overflow-hidden">
           <PanelHeader
-            title="My cases"
+            title="My matters"
             icon={<Briefcase className="size-4" />}
             trailing={
               <Button asChild variant="ghost" size="sm" className="h-8 gap-1 text-xs">
                 <Link to="/cases">
-                  All cases
+                  All matters
                   <ChevronRight className="size-3.5" />
                 </Link>
               </Button>
@@ -375,7 +375,7 @@ function MyWorkspaceDashboard() {
           {isLoading ? (
             <ListSkeleton rows={4} className="mt-4" />
           ) : d.myCases.length === 0 ? (
-            <EmptyState>No active cases on your desk.</EmptyState>
+            <EmptyState>No active matters on your desk.</EmptyState>
           ) : (
             <ul className="mt-3 divide-y divide-white/[0.06]">
               {d.myCases.map((c) => (
@@ -514,7 +514,7 @@ function AdminDashboard() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              label="Active Cases"
+              label="Active Matters"
               value={d.totalActiveCases}
               icon={<Briefcase className="size-4" />}
             />
@@ -542,7 +542,7 @@ function AdminDashboard() {
               icon={<Layers className="size-4" />}
             />
             <p className="mt-2 text-sm text-muted-foreground">
-              View upcoming deadlines, hearings, and events across active cases.
+              View upcoming deadlines, hearings, and events across active matters.
             </p>
             <Button asChild variant="outline" className="mt-5">
               <Link to="/calendar">Open calendar</Link>
@@ -604,7 +604,7 @@ function OperationsDashboard() {
       {/* KPI strip */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard
-          label="Active Cases"
+          label="Active Matters"
           value={d.totalActiveCases}
           icon={<Briefcase className="size-4" />}
         />
@@ -656,7 +656,7 @@ function OperationsDashboard() {
       <section className="grid gap-3 lg:grid-cols-12">
         <Panel className="lg:col-span-8">
           <PanelHeader
-            title="Cases by stage"
+            title="Matters by stage"
             icon={<Layers className="size-4" />}
           />
           {isLoading ? (
@@ -698,7 +698,7 @@ function OperationsDashboard() {
 
         <Panel className="lg:col-span-4">
           <PanelHeader
-            title="By case type"
+            title="By matter type"
             icon={<TrendingUp className="size-4" />}
           />
           {isLoading ? (
@@ -754,7 +754,7 @@ function OperationsDashboard() {
             <div className="mt-6 flex flex-col items-center py-8 text-center">
               <StatusDot status="ontrack" label="" />
               <p className="mt-3 text-sm text-muted-foreground">
-                All cases are on track.
+                All matters are on track.
               </p>
             </div>
           ) : (
@@ -854,7 +854,7 @@ function OperationsDashboard() {
                       <div className="grid w-full min-w-0 grid-cols-3 gap-2">
                         <div className="min-w-0 rounded-lg bg-black/25 px-1.5 py-2 text-center">
                           <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
-                            Cases
+                            Matters
                           </span>
                           <span className="mt-0.5 block text-xs tabular-nums">
                             {m.active_cases}
@@ -891,7 +891,7 @@ function OperationsDashboard() {
               <div className="hidden w-full min-w-0 space-y-1.5 md:block">
                 <div className="grid w-full grid-cols-[minmax(0,1fr)_3.5rem_3.25rem_3.75rem] gap-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   <span>Member</span>
-                  <span className="text-right">Cases</span>
+                  <span className="text-right">Matters</span>
                   <span className="text-right">Tasks</span>
                   <span className="text-right">Overdue</span>
                 </div>

@@ -53,7 +53,7 @@ export async function syncStageAssigneeTask(
   const payload = {
     title: stageTaskTitle(opts.stageName),
     description:
-      "Workflow stage on this matter. Complete it from the case Stages tab.",
+      "Workflow stage on this matter. Complete it from the matter Stages tab.",
     case_id: opts.caseId,
     assignee_id: opts.assigneeId,
     status,

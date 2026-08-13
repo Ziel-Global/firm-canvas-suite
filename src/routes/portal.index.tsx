@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Briefcase, Calendar, Download, FileText, ChevronRight } from "lucide-react";
+import { Briefcase, Calendar, Download, FileText, ChevronRight, Receipt } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 import {
   getPortalDocumentDownloadUrl,
   getPortalHome,
+  getPortalInvoices,
 } from "@/lib/portal.functions";
 import { PremiumLoaderPanel } from "@/components/premium-loader";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -39,14 +40,25 @@ function formatWhen(iso: string | null) {
   }
 }
 
+function money(n: number | null | undefined) {
+  return (n ?? 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
+}
+
 function PortalHomePage() {
   const loadHome = useServerFn(getPortalHome);
   const getDownload = useServerFn(getPortalDocumentDownloadUrl);
+  const loadInvoices = useServerFn(getPortalInvoices);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["portal", "home"],
     queryFn: () => loadHome(),
   });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["portal", "invoices"],
+    queryFn: () => loadInvoices(),
+  });
+  const invoices = (invoicesQuery.data ?? []).slice(0, 3);
 
   const download = useMutation({
     mutationFn: (documentId: string) => getDownload({ data: { documentId } }),
@@ -56,7 +68,7 @@ function PortalHomePage() {
   });
 
   if (isLoading) {
-    return <PremiumLoaderPanel label="Loading your cases…" />;
+    return <PremiumLoaderPanel label="Loading your matters…" />;
   }
 
   if (error || !data) {
@@ -77,7 +89,7 @@ function PortalHomePage() {
           {data.clientName ? `Welcome, ${data.clientName}` : "Your matters"}
         </h1>
         <p className="max-w-xl text-sm text-muted-foreground">
-          Case status, documents shared with you, and upcoming hearing dates —
+          Matter status, documents shared with you, and upcoming hearing dates —
           nothing else from the firm workspace.
         </p>
       </header>
@@ -85,10 +97,10 @@ function PortalHomePage() {
       <section className="space-y-3">
         <div className="flex items-center gap-2 text-foreground">
           <Briefcase className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold tracking-wide">Your cases</h2>
+          <h2 className="text-sm font-semibold tracking-wide">Your matters</h2>
         </div>
         {data.cases.length === 0 ? (
-          <EmptyState message="No cases are linked to your account yet." />
+          <EmptyState message="No matters are linked to your account yet." />
         ) : (
           <ul className="space-y-2">
             {data.cases.map((c) => {
@@ -131,6 +143,51 @@ function PortalHomePage() {
                 </li>
               );
             })}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-foreground">
+            <Receipt className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold tracking-wide">Invoices</h2>
+          </div>
+          {invoicesQuery.data && invoicesQuery.data.length > 0 ? (
+            <Link
+              to="/portal/invoices"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              View all
+            </Link>
+          ) : null}
+        </div>
+        {invoices.length === 0 ? (
+          <EmptyState message="No invoices yet." />
+        ) : (
+          <ul className="space-y-2">
+            {invoices.map((inv) => (
+              <li key={inv.id}>
+                <Link
+                  to="/portal/invoices/$invoiceId"
+                  params={{ invoiceId: inv.id }}
+                  className="glass-card flex items-center justify-between gap-4 rounded-[var(--radius-card)] px-4 py-3.5 transition-colors hover:border-white/20"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-mono text-[11px] text-muted-foreground">{inv.invoice_number}</p>
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {inv.case_title ?? "Matter"}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-medium text-foreground">{money(inv.total)}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {inv.status.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
           </ul>
         )}
       </section>

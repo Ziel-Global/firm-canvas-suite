@@ -33,7 +33,7 @@ export const Route = createFileRoute("/documents")({
   head: () => ({
     meta: [
       { title: "Verdio" },
-      { name: "description", content: "Documents you can access across your cases." },
+      { name: "description", content: "Documents you can access across your matters." },
     ],
   }),
   component: GlobalDocumentsPage,
@@ -172,7 +172,7 @@ function GlobalDocumentsPage() {
     () => [
       {
         value: "",
-        label: "All cases",
+        label: "All matters",
         description: "Every matter you can access",
         icon: <Layers className="size-3.5" />,
       },
@@ -284,14 +284,14 @@ function GlobalDocumentsPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:contents">
                 <PremiumSelect
-                  aria-label="Filter by case"
+                  aria-label="Filter by matter"
                   value={caseId}
                   onChange={setCaseId}
                   options={caseOptions}
-                  emptyLabel="All cases"
+                  emptyLabel="All matters"
                   leadingIcon={<Briefcase className="size-3.5" />}
                   searchable={cases.length > 6}
-                  searchPlaceholder="Search cases…"
+                  searchPlaceholder="Search matters…"
                   className="lg:w-72"
                   contentClassName="lg:w-80"
                 />
@@ -329,11 +329,11 @@ function GlobalDocumentsPage() {
               {documents.map((doc) => {
                 const title = displayTitle(doc.title, doc.doc_type);
                 const caseLine =
-                  doc.case_ref && doc.case_title && doc.case_title !== "Unknown Case"
+                  doc.case_ref && doc.case_title && doc.case_title !== "Unknown Matter"
                     ? `${doc.case_ref} · ${doc.case_title}`
-                    : doc.case_title && doc.case_title !== "Unknown Case"
+                    : doc.case_title && doc.case_title !== "Unknown Matter"
                       ? doc.case_title
-                      : doc.case_ref ?? "Unlinked case";
+                      : doc.case_ref ?? "Unlinked matter";
                 const isOpening = openingId === doc.id;
                 const canOpen = Boolean(doc.case_id);
 
@@ -411,7 +411,7 @@ function GlobalDocumentsPage() {
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => e.stopPropagation()}
                               className="inline-flex min-w-0 items-center gap-1.5 truncate hover:text-foreground/85"
-                              title="Open case documents"
+                              title="Open matter documents"
                             >
                               <Briefcase className="size-3 shrink-0 opacity-60" />
                               <span className="truncate">{caseLine}</span>
@@ -458,13 +458,13 @@ function GlobalDocumentsPage() {
                 No documents match
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Try another search or case. Only files you are permitted to view appear here.
+                Try another search or matter. Only files you are permitted to view appear here.
               </p>
               <Link
                 to="/cases"
                 className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-foreground/85 underline-offset-4 hover:underline"
               >
-                Browse cases
+                Browse matters
                 <ChevronRight className="size-3.5" />
               </Link>
             </div>

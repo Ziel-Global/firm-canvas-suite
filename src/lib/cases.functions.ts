@@ -27,7 +27,7 @@ export interface CaseDetail {
 export const getCaseDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => {
-    if (!input?.id) throw new Error("A case id is required.");
+    if (!input?.id) throw new Error("A matter id is required.");
     return { id: input.id };
   })
   .handler(async ({ data, context }): Promise<CaseDetail> => {
@@ -41,7 +41,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!c) throw new Error("Case not found.");
+    if (!c) throw new Error("Matter not found.");
 
     let client_name: string | null = null;
     if (c.client_id) {
@@ -323,7 +323,7 @@ export const createCase = createServerFn({ method: "POST" })
     if (!title) throw new Error("Title is required.");
     if (!input.client_id) throw new Error("A client is required.");
     if (!CASE_TYPES.includes(input.case_type)) {
-      throw new Error("A valid case type is required.");
+      throw new Error("A valid matter type is required.");
     }
     return {
       title,
@@ -345,7 +345,7 @@ export const createCase = createServerFn({ method: "POST" })
     if (profileError) throw new Error(profileError.message);
     if (!profile?.is_active) throw new Error("Your account is inactive.");
     if (profile.role !== "super_admin" && profile.role !== "admin") {
-      throw new Error("Only admins can create cases.");
+      throw new Error("Only admins can create matters.");
     }
 
     const { data: refData, error: refError } =
@@ -405,11 +405,11 @@ export const updateCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: UpdateCaseInput) => {
     const title = (input.title ?? "").trim();
-    if (!input?.id) throw new Error("A case id is required.");
+    if (!input?.id) throw new Error("A matter id is required.");
     if (!title) throw new Error("Title is required.");
     if (!input.client_id) throw new Error("A client is required.");
     if (!CASE_TYPES.includes(input.case_type)) {
-      throw new Error("A valid case type is required.");
+      throw new Error("A valid matter type is required.");
     }
     return {
       id: input.id,
@@ -432,7 +432,7 @@ export const updateCase = createServerFn({ method: "POST" })
     if (profileError) throw new Error(profileError.message);
     if (!profile?.is_active) throw new Error("Your account is inactive.");
     if (profile.role !== "super_admin" && profile.role !== "admin") {
-      throw new Error("Only admins can edit cases.");
+      throw new Error("Only admins can edit matters.");
     }
 
     const { data: existing, error: existingErr } = await supabaseAdmin
@@ -441,7 +441,7 @@ export const updateCase = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .maybeSingle();
     if (existingErr) throw new Error(existingErr.message);
-    if (!existing) throw new Error("Case not found.");
+    if (!existing) throw new Error("Matter not found.");
 
     const { error: updateError } = await supabaseAdmin
       .from("cases")
@@ -507,7 +507,7 @@ export interface CaseOverview {
 export const getCaseOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => {
-    if (!input?.id) throw new Error("A case id is required.");
+    if (!input?.id) throw new Error("A matter id is required.");
     return { id: input.id };
   })
   .handler(async ({ data, context }): Promise<CaseOverview> => {
@@ -527,7 +527,7 @@ export const getCaseOverview = createServerFn({ method: "GET" })
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!c) throw new Error("Case not found.");
+    if (!c) throw new Error("Matter not found.");
 
     const { data: stages } = await supabase
       .from("case_stages")
@@ -646,7 +646,7 @@ export interface CaseNote {
 export const getCaseNotes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseNote[]> => {
@@ -691,7 +691,7 @@ export const addCaseNote = createServerFn({ method: "POST" })
     body: string;
     isPrincipalOnly?: boolean;
   }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     const body = (input.body ?? "").trim();
     if (!body) throw new Error("Note text is required.");
     return {
@@ -746,7 +746,7 @@ export interface CaseActivityEntry {
 export const getCaseActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseActivityEntry[]> => {
@@ -758,7 +758,7 @@ export const getCaseActivity = createServerFn({ method: "GET" })
       .eq("id", userId)
       .maybeSingle();
     if (caller?.role !== "super_admin" && caller?.role !== "admin") {
-      throw new Error("Only admins can view case activity.");
+      throw new Error("Only admins can view matter activity.");
     }
 
     const { data: acts, error } = await supabase
@@ -811,7 +811,7 @@ export interface CaseAccessRow {
 export const getCaseAccessMatrix = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseAccessRow[]> => {
@@ -869,7 +869,7 @@ export interface CaseStageRow {
 export const getCaseStages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { caseId: string }) => {
-    if (!input?.caseId) throw new Error("A case id is required.");
+    if (!input?.caseId) throw new Error("A matter id is required.");
     return { caseId: input.caseId };
   })
   .handler(async ({ data, context }): Promise<CaseStageRow[]> => {

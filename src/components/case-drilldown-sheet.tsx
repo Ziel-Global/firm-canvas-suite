@@ -74,7 +74,7 @@ export function CaseDrillDownSheet({ caseId, caseTitle, onClose }: CaseDrillDown
 
         {isLoading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-            <PremiumLoader size="md" label="Loading case…" />
+            <PremiumLoader size="md" label="Loading matter…" />
             <InlineLoaderSkeleton lines={4} className="w-full max-w-sm" />
           </div>
         ) : !data ? null : (

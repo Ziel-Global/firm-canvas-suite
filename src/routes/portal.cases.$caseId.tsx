@@ -44,7 +44,7 @@ function PortalCasePage() {
   });
 
   if (isLoading) {
-    return <PremiumLoaderPanel label="Loading case…" />;
+    return <PremiumLoaderPanel label="Loading matter…" />;
   }
 
   if (error || !data) {
@@ -52,7 +52,7 @@ function PortalCasePage() {
       <div className="space-y-4 page-enter">
         <BackLink />
         <div className="glass-card rounded-[var(--radius-card)] p-6 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : "Case not found."}
+          {error instanceof Error ? error.message : "Matter not found."}
         </div>
       </div>
     );
